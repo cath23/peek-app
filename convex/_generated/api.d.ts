@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as desk from "../desk.js";
 import type * as dev_seedDates from "../dev/seedDates.js";
 import type * as dev_seedDemo from "../dev/seedDemo.js";
 import type * as huddles from "../huddles.js";
@@ -23,6 +24,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  desk: typeof desk;
   "dev/seedDates": typeof dev_seedDates;
   "dev/seedDemo": typeof dev_seedDemo;
   huddles: typeof huddles;

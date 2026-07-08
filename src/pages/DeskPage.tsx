@@ -15,11 +15,14 @@ import {
   dmHasUnread,
   useScreenerItems,
   useDeskItems,
+  useDeskLoading,
   useTopics,
   useIsTopicResolved,
   useCreateTopicFromDm,
+  usePeekActions,
   useStarred,
 } from '@/api'
+import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
@@ -36,7 +39,9 @@ export function DeskPage() {
   const location = useLocation()
   const { showToast } = useToast()
   const { state: debug } = useDebug()
-  const { entries: starredAll, isDmStarred, isTopicStarred, toggleDm, toggleTopic } = useStarred()
+  const { entries: starredAll, isDmStarred, isTopicStarred, toggleDm, toggleTopic, isLoading: starredLoading } = useStarred()
+  const deskLoading = useDeskLoading()
+  const actions = usePeekActions()
   const TOPICS = useTopics()
   const createTopicFromDm = useCreateTopicFromDm()
   const isTopicResolved = useIsTopicResolved()
@@ -67,8 +72,10 @@ export function DeskPage() {
     ? [...baseOpenWork].sort((a, b) => Number(topicHasUnread(b.topicId)) - Number(topicHasUnread(a.topicId)))
     : baseOpenWork
 
-  const dismissOpenWork = (id: string) =>
+  const dismissOpenWork = (id: string) => {
     setDismissedOpenWorkIds((prev) => new Set([...prev, id]))
+    actions.removeOpenWorkItem(id)
+  }
 
   // Starred mixes DMs and topics. Sort each entry's unreadness based on its kind's toggle.
   const baseStarred = debug.desk.starredHasData ? starredAll : []
@@ -85,8 +92,16 @@ export function DeskPage() {
   // moves the highlight to that section.
   const selectionAnchor: SectionKey | null = selected?.section ?? null
 
-  const dismissScreener = (id: string) =>
+  const dismissScreener = (id: string) => {
     setDismissedScreenerIds((prev) => new Set([...prev, id]))
+    actions.dismissScreenerItem(id)
+  }
+
+  /** "Later" hides the item now; it reappears after the snooze window. */
+  const laterScreener = (id: string) => {
+    setDismissedScreenerIds((prev) => new Set([...prev, id]))
+    actions.snoozeScreenerItem(id)
+  }
 
   const selectTopic = (topicId: string, section: SectionKey) => {
     const topic = TOPICS?.find((t) => t.id === topicId)
@@ -169,12 +184,17 @@ export function DeskPage() {
         <div className="flex flex-col h-full">
           <ContainerHeader title="Desk" />
           <div className="flex-1 overflow-y-auto pt-4 pb-3 px-3 flex flex-col gap-1">
+            {(deskLoading || starredLoading) ? (
+            <SkeletonSidebarList rows={8} />
+            ) : (
+            <>
             {/* Screener - only shows when toggled on AND has items */}
             {debug.desk.showScreener && screenerItems.length > 0 && (
               <>
                 <ScreenerSection
                   items={screenerItems}
                   onDismiss={dismissScreener}
+                  onLater={laterScreener}
                 />
                 <Divider className="my-2" />
               </>
@@ -330,6 +350,8 @@ export function DeskPage() {
             </div>
 
             <Divider className="my-2" />
+            </>
+            )}
           </div>
         </div>
       }

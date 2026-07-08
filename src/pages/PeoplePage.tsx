@@ -34,7 +34,7 @@ export function PeoplePage() {
   const { dmId: lastDmId, setLastDmId } = useLastSelection()
   const { id: routeId } = useParams<{ id: string }>()
   const [teamsExpanded, setTeamsExpanded] = useState(true)
-  const { entries: starredEntries } = useStarred()
+  const { entries: starredEntries, isLoading: starredLoading } = useStarred()
   const { state: debug } = useDebug()
   const showUnreads = debug.unreads.people
 
@@ -123,7 +123,7 @@ export function PeoplePage() {
             prop2ndActionTooltip="Sort by"
           />
           <div className="flex-1 overflow-y-auto pt-4 pb-3 px-3 flex flex-col gap-1">
-            {DMS === undefined ? (
+            {DMS === undefined || starredLoading ? (
               <SkeletonSidebarList rows={8} />
             ) : (
               <>

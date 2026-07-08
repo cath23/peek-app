@@ -40,6 +40,9 @@ export function usePeekActions() {
   const toggleReactionRemote = useMutation(api.messages.toggleReaction)
   const createHuddleRemote = useMutation(api.huddles.create)
   const removeHuddleRemote = useMutation(api.huddles.remove)
+  const dismissScreenerRemote = useMutation(api.desk.dismissScreenerItem)
+  const snoozeScreenerRemote = useMutation(api.desk.snoozeScreenerItem)
+  const removeOpenWorkRemote = useMutation(api.desk.removeOpenWorkItem)
 
   const persistMessage = (
     parentKind: 'topic' | 'dm' | 'huddle',
@@ -305,6 +308,18 @@ export function usePeekActions() {
     deleteHuddle(huddleId: string) {
       m.setDeletedHuddleIds((prev) => new Set([...prev, huddleId]))
       if (hasConvex) void removeHuddleRemote({ key: huddleId })
+    },
+
+    // ── Desk (pages keep their instant local hide; these persist it) ──
+    dismissScreenerItem(id: string) {
+      if (hasConvex) void dismissScreenerRemote({ id })
+    },
+    /** "Later" — the item reappears after the default snooze (24h). */
+    snoozeScreenerItem(id: string) {
+      if (hasConvex) void snoozeScreenerRemote({ id })
+    },
+    removeOpenWorkItem(id: string) {
+      if (hasConvex) void removeOpenWorkRemote({ id })
     },
   }
 }

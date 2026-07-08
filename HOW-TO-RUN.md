@@ -1,80 +1,72 @@
 # How to run Peek (simple guide)
 
-*Written 2026-07-08. This guide gets updated as the backend work progresses —
+*Written 2026-07-08, updated the same day after the Phase 2 data swap —
 if something here doesn't match what you see, ask Claude to update it.*
 
 ## The picture in plain words
 
 - The app you see in the browser is the **storefront**.
 - The **database** (a service called Convex, running in the cloud) is the
-  **storage room** where real messages will live permanently.
-- Right now the storefront still displays **fake sample data** that is written
-  inside the code itself. The storage room is built, connected, and already
-  contains a copy of the sample data — but the storefront doesn't take
-  anything from it yet. Connecting them, screen by screen, is the current
-  work (Phase 2 of PRODUCTION-PLAN.md).
+  **storage room** where everything lives permanently.
+- **As of today the storefront reads from the storage room** — people,
+  topics, messages, replies, resolutions, reactions, huddles, and your
+  starred/screener/open-work lists all come from the database, and the
+  things you do (send, reply, resolve, react, star, dismiss) are **really
+  saved**. Refresh, restart, come back tomorrow: still there.
 - **Sign-in doesn't exist yet.** It arrives in Phase 3. Until then the app
   always pretends you are the user called "You".
 
-## Running the app TODAY (fake data)
+## Running the app
 
-One command in the terminal, from the project folder:
+1. Terminal 1: `npx convex dev` (the "phone line" to the database — leave
+   it running)
+2. Terminal 2: `npm run dev` (the app)
+3. Open the address it prints (usually http://localhost:5173).
 
-```
-npm run dev
-```
-
-Open the address it prints (usually http://localhost:5173). Everything you
-see is the fake sample data. Nothing you do is saved — refresh and it resets.
-
-## The database: three useful commands
-
-These work today. They only touch the storage room — the app won't look
-different yet.
+The app shows whatever is **in the database**:
 
 | What you want | Command |
 |---|---|
 | Look inside the database (opens a website) | `npx convex dashboard` |
-| Empty the database completely ("brand-new workspace") | `npx convex run dev/seedDemo:wipe` |
-| Fill the database with the demo dataset again | `npx convex run dev/seedDemo:seed '{"wipe": true}'` |
+| A brand-new, **empty** workspace (what real customers see on day one) | `npx convex run dev/seedDemo:wipe` |
+| The familiar **demo dataset** (sample conversations) | `npx convex run dev/seedDemo:seed '{"wipe": true}'` |
 
-One extra thing: for the database commands (and later for the real app) a
-helper needs to be running in a second terminal:
+Switch between the two freely — it's the same app, just different contents
+in the storage room.
 
-```
-npx convex dev
-```
+## The demo dataset is kept forever (decision 2026-07-08)
 
-Leave it running — it's the "phone line" between your computer and the
-database. You already did this once when you signed in with GitHub; you can
-keep it running whenever you work on the app.
+The sample data is preserved in two places and will never be deleted:
 
-## LATER — the real app (this is the part that doesn't work yet)
+- `src/data/` — the sample conversations as code (also the visual
+  reference the pixel-perfect rule checks against, and what tests and
+  Storybook use).
+- `convex/dev/seedDemo.ts` — the loader that fills any database
+  deployment with that sample data.
 
-**When Phase 2 is finished**, the formula becomes:
+**To set up a separate demo instance later** (a demo that runs alongside
+the real app, never touching real customer data): create a second Convex
+deployment (`npx convex dev` in a copy of the project, or a named
+deployment from the Convex dashboard), run the *fill* command against it,
+and point that copy of the app at it via its own `VITE_CONVEX_URL`. The
+real app launches with an empty database; the demo instance carries the
+sample data.
 
-1. Terminal 1: `npx convex dev` (the phone line)
-2. Terminal 2: `npm run dev` (the app)
-3. The app now shows whatever is **in the database**:
-   - After the *empty* command above → a brand-new, empty workspace
-     (this is what real customers would see on day one).
-   - After the *fill* command above → the familiar demo conversations.
-4. Things you write are **really saved** — refresh, restart, come back
-   tomorrow: still there.
-5. There will also be an `npm run dev:mock` command to run the old
-   fake-data version for comparison. *(Not created yet.)*
+## LATER — what the next phases add
 
-**When Phase 3 is finished**, the same two commands also give you:
+**Phase 3 (sign-in):** a login screen (email/password or Google). Each
+person who signs in gets their own identity, and the app keeps their data
+under their account — the "wiped data + sign in + keeps data for
+logged-in users" setup you asked about.
 
-6. A sign-in screen (email/password or Google). Each person who signs in
-   gets their own identity, and the app keeps their data under their
-   account — this is the "wiped data + sign in + keeps data for logged-in
-   users" setup you asked about.
+**Phase 4 (multi-user):** other people sign up, appear in your People
+list, and you communicate with live updates on both screens.
 
 ## Cheat sheet
 
-| I want to… | Today | After Phase 2 | After Phase 3 |
-|---|---|---|---|
-| See the app with sample data | `npm run dev` | fill DB, then run both terminals | same |
-| See a fresh empty workspace | *(not visible yet)* | empty DB, then run both terminals | same, plus sign-up creates your account |
-| Sign in as a real user | *(doesn't exist)* | *(doesn't exist)* | yes — built in this phase |
+| I want to… | Today | After Phase 3 |
+|---|---|---|
+| See the app with sample data | fill DB, then run both terminals | same (on the demo instance) |
+| See a fresh empty workspace | empty DB, then run both terminals | same, plus sign-up creates your account |
+| Sign in as a real user | *(doesn't exist)* | yes — built in this phase |
+| Keep my changes after refresh | yes (as "You") | yes (as your own account) |

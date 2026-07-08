@@ -347,9 +347,22 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       `editHuddleSeedBody` stays session-local by design (separate from
       the real message body). Local `extraTopics`/`extraHuddles`/
       `createdHuddles` now cover only the optimistic window
-- [ ] Entity swap 8 — stars/screener/open-work (per-user tables), then
-      delete the override providers + mock bridges; optimistic updates
-      audit on composer send
+- [x] **Entity swap 8 — stars/screener/open-work** (2026-07-08):
+      `convex/desk.ts` — starsList/toggleStar (create-on-demand DM for
+      first star on a conversation-less person), screenerList (snoozed
+      filtered)/dismiss/snooze, openWorkList/remove, **and urgentList
+      derived per §4.4 ahead of schedule** (urgent message OR unread reply
+      on one, newer than the readState watermark — verified pixel-equal to
+      the mock Urgent list, and empty in a fresh workspace). Seam:
+      StarredProvider Convex-backed with an optimistic toggle overlay
+      (+isLoading); useScreenerItems/useDeskItems/useDeskLoading;
+      DeskPage wires remote dismiss/snooze/remove ("Later" now actually
+      snoozes 24h — it was unwired), sidebar skeletons on Desk/People
+      while lists load
+- [ ] Phase 2 close-out: delete the override providers + mock bridges
+      (all layers now cover only the optimistic window), drop `seedKey`
+      usage notes, regression sweep (tests + Storybook + QA checklist
+      incl. the deferred Phase 1 pass)
 - [ ] `src/api/internal/` stores empty → deleted; app runs entirely on
       Convex with hardcoded seed user
 - [ ] Regression: tests + Storybook + QA checklist (incl. the deferred
@@ -408,6 +421,12 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   same day): UI fidelity is never traded for speed, seeded demo data
   keeps rendering exactly as designed via the seedKey bridges, and the §5
   formatting rules are production spec (they format real data).
+- 2026-07-08 — **The demo dataset is kept permanently** (user request):
+  `src/data/` mocks + `convex/dev/seedDemo.ts` are never deleted by the
+  Phase 2 close-out — they are the pixel-perfect visual reference, the
+  test/Storybook fixture, and the loader for a future standalone **demo
+  instance** (separate Convex deployment + seed; recipe in HOW-TO-RUN.md).
+  The real app still launches empty.
 - 2026-07-08 — Skeleton/empty design review rulings (user): (1) skeletons
   appear only when loading actually takes time — 150ms delayed reveal, no
   flash on fast loads; (2) loading keeps real chrome, only the data region
