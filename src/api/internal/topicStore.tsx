@@ -27,6 +27,11 @@ interface TopicStoreValue {
   extraTopics: Topic[]
   /** Resolve huddles for a topic (static + runtime). */
   getHuddlesForTopic: (topicId: string) => Huddle[]
+  /** Runtime-created huddles only (DM promotions) — merged over the Convex
+   *  list during the Phase 2 transition. */
+  getExtraHuddlesForTopic: (topicId: string) => Huddle[]
+  /** Runtime-only variant of findAllHuddlesByOriginDm (Convex transition). */
+  findExtraHuddlesByOriginDm: (dmId: number) => Huddle[]
   /** Look up a topic by id. */
   findTopic: (topicId: string) => Topic | undefined
   /** Find the huddle that was promoted from the given DM (searches static + runtime). Returns the first match if multiple exist. */
@@ -91,6 +96,24 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
 
   const getHuddlesForTopic = useCallback(
     (topicId: string) => [...(TOPIC_HUDDLES[topicId] ?? []), ...(extraHuddles[topicId] ?? [])],
+    [extraHuddles],
+  )
+
+  const getExtraHuddlesForTopic = useCallback(
+    (topicId: string) => extraHuddles[topicId] ?? [],
+    [extraHuddles],
+  )
+
+  const findExtraHuddlesByOriginDm = useCallback(
+    (dmId: number): Huddle[] => {
+      const result: Huddle[] = []
+      for (const huddles of Object.values(extraHuddles)) {
+        for (const h of huddles) {
+          if (h.originDmId === dmId) result.push(h)
+        }
+      }
+      return result
+    },
     [extraHuddles],
   )
 
@@ -168,8 +191,8 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo<TopicStoreValue>(
-    () => ({ topics, extraTopics, getHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, createTopicFromDm }),
-    [topics, extraTopics, getHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, createTopicFromDm],
+    () => ({ topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm }),
+    [topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm],
   )
 
   return <TopicStoreContext.Provider value={value}>{children}</TopicStoreContext.Provider>

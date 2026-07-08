@@ -18,8 +18,8 @@ import { hasConvex, useDmRuntime } from './store'
 import { useHuddleLookup } from './huddles'
 import type { ConversationData, ConvGroup, Huddle, ReactionData, ReplyData } from './types'
 
-/** Row shape returned by convex/messages.ts list/get. */
-interface RemoteMessage {
+/** Row shape returned by convex/messages.ts list/get. Seam-internal. */
+export interface RemoteMessage {
   id: string
   authorName: string
   createdAt: number
@@ -69,7 +69,7 @@ function toReplyData(r: RemoteReply, mock: ReplyData | undefined): ReplyData {
  * reactions (per-user rows come later) and the seeded unread flags
  * (readState is Phase 4).
  */
-function toConversationData(r: RemoteMessage, mock: ConversationData | undefined): ConversationData {
+export function toConversationData(r: RemoteMessage, mock: ConversationData | undefined): ConversationData {
   return {
     id: r.id,
     authorName: r.authorName,
@@ -277,11 +277,18 @@ export function useDmMessages(dmId: number | null): DmMessages {
 export function useHuddleMessages(huddle: Huddle | null): ConversationData[] {
   const o = useTopicMutations()
   if (!huddle) return []
-  return [
-    ...(huddle.conversation ? [huddle.conversation] : []),
-    ...(huddle.extraConvs ?? []),
-    ...(o.huddleSentMessages[huddle.id] ?? []),
-  ].map((c) => mergeConv(c, o))
+  const base = [...(huddle.conversation ? [huddle.conversation] : []), ...(huddle.extraConvs ?? [])]
+  const sentLocal = o.huddleSentMessages[huddle.id] ?? []
+  if (hasConvex) {
+    // base comes remote-shaped via useHuddleLookup (server replyCounts);
+    // local sends cover the optimistic window only.
+    const baseIds = new Set(base.map((c) => c.id))
+    return [
+      ...base.map((c) => mergeConv(c, o, false)),
+      ...sentLocal.filter((c) => !baseIds.has(c.id)).map((c) => mergeConv(c, o)),
+    ]
+  }
+  return [...base, ...sentLocal].map((c) => mergeConv(c, o))
 }
 
 /**

@@ -38,9 +38,11 @@ export function usePeekActions() {
   const setResolutionRemote = useMutation(api.messages.setResolution)
   const setHighlightRemote = useMutation(api.messages.setHighlight)
   const toggleReactionRemote = useMutation(api.messages.toggleReaction)
+  const createHuddleRemote = useMutation(api.huddles.create)
+  const removeHuddleRemote = useMutation(api.huddles.remove)
 
   const persistMessage = (
-    parentKind: 'topic' | 'dm',
+    parentKind: 'topic' | 'dm' | 'huddle',
     parentKey: string,
     msg: ConversationData,
     dmPartnerName?: string,
@@ -119,6 +121,7 @@ export function usePeekActions() {
         body: text,
       }
       m.setHuddleSentMessages((prev) => ({ ...prev, [huddleId]: [...(prev[huddleId] ?? []), newMsg] }))
+      persistMessage('huddle', huddleId, newMsg)
     },
 
     deleteTopicMessage(topicId: string, messageId: string) {
@@ -271,6 +274,14 @@ export function usePeekActions() {
         },
       }
       m.setCreatedHuddles((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newHuddle] }))
+      if (hasConvex && newHuddle.conversation) {
+        void createHuddleRemote({
+          topicKey: topicId,
+          seedKey: newHuddleId,
+          memberNames: members,
+          firstMessage: { seedKey: newHuddle.conversation.id, body: firstMessageText },
+        })
+      }
       return newHuddleId
     },
 
@@ -285,11 +296,15 @@ export function usePeekActions() {
         lastActivity: 'Today',
       }
       m.setCreatedHuddles((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newHuddle] }))
+      if (hasConvex) {
+        void createHuddleRemote({ topicKey: topicId, seedKey: newHuddleId, memberNames: members })
+      }
       return newHuddleId
     },
 
     deleteHuddle(huddleId: string) {
       m.setDeletedHuddleIds((prev) => new Set([...prev, huddleId]))
+      if (hasConvex) void removeHuddleRemote({ key: huddleId })
     },
   }
 }

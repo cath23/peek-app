@@ -8,7 +8,7 @@ import { ThreadPanel } from '@/components/ThreadPanel'
 import { HuddleCard } from '@/components/HuddleCard'
 import { StartHuddleDialog, type StartHuddleResult } from '@/components/StartHuddleDialog'
 import { DateDivider } from '@/components/ui/DateDivider'
-import { SkeletonConversationList } from '@/components/ui/Skeleton'
+import { SkeletonConversationList, SkeletonHuddleGrid } from '@/components/ui/Skeleton'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopicTabs, type TopicTab } from '@/components/ui/TopicTabs'
@@ -19,6 +19,7 @@ import {
   useHuddleMessages,
   useThread,
   useHuddleLookup,
+  useHuddlesLoading,
   useTopicLookup,
   useIsTopicResolved,
   usePeekActions,
@@ -61,6 +62,7 @@ export function useTopicView({
   const { isTopicStarred, toggleTopic } = useStarred()
   const findTopic = useTopicLookup()
   const huddleLookup = useHuddleLookup()
+  const huddlesLoading = useHuddlesLoading()
   const isTopicResolved = useIsTopicResolved()
   const actions = usePeekActions()
   const { state: debug } = useDebug()
@@ -541,7 +543,11 @@ export function useTopicView({
       {/* Huddles tab (V1 only) */}
       {huddleVariant === 1 && activeTab === 'huddles' && (
         <>
-          {currentHuddles.length === 0 && !isCreatingHuddle ? (
+          {huddlesLoading ? (
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <SkeletonHuddleGrid />
+            </div>
+          ) : currentHuddles.length === 0 && !isCreatingHuddle ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4">
               <EmptyState message="No huddles yet - start a private discussion with a few people or AI." />
               <button

@@ -37,3 +37,9 @@ export function dayKey(createdAt: number): string {
   const d = new Date(createdAt)
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
+
+/** `'MMMM d'` — the promotion divider's date (per topicStore.formatPromotedAt). */
+export function formatPromotedAt(createdAt: number): string {
+  const d = new Date(createdAt)
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`
+}

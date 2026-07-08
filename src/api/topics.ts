@@ -82,18 +82,30 @@ export interface CreateTopicFromDmResult {
 export function useCreateTopicFromDm(): (input: CreateTopicFromDmInput) => CreateTopicFromDmResult {
   const createLocal = useTopicStore().createTopicFromDm
   const createRemote = useMutation(api.topics.create)
+  const createHuddleFromDmRemote = useMutation(api.huddles.createFromDm)
   return useCallback(
     (input: CreateTopicFromDmInput) => {
       const result = createLocal(input)
       if (hasConvex) {
-        void createRemote({
-          title: input.title,
-          seedKey: result.topicId,
-          inviteeNames: input.invitees.map((p) => p.name),
-        })
+        // Sequenced: the huddle resolves its topic by the shared seedKey,
+        // so the topic must exist first.
+        void (async () => {
+          await createRemote({
+            title: input.title,
+            seedKey: result.topicId,
+            inviteeNames: input.invitees.map((p) => p.name),
+          })
+          await createHuddleFromDmRemote({
+            topicKey: result.topicId,
+            seedKey: result.huddleId,
+            originDmKey: String(input.dmId),
+            seedMessageKey: input.seedMessageId,
+            memberNames: [input.dmName],
+          })
+        })()
       }
       return result
     },
-    [createLocal, createRemote],
+    [createLocal, createRemote, createHuddleFromDmRemote],
   )
 }

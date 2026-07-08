@@ -11,29 +11,25 @@ import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/s
 import { highlightType } from './schema'
 import type { Doc, Id } from './_generated/dataModel'
 
-const parentKindArg = v.union(v.literal('topic'), v.literal('dm'))
+const parentKindArg = v.union(v.literal('topic'), v.literal('dm'), v.literal('huddle'))
 
 async function resolveParentId(
   ctx: QueryCtx | MutationCtx,
-  kind: 'topic' | 'dm',
+  kind: 'topic' | 'dm' | 'huddle',
   key: string,
 ): Promise<string | null> {
-  if (kind === 'topic') {
-    const topics = await ctx.db.query('topics').collect()
-    const t = topics.find((t) => t.seedKey === key || (t._id as string) === key)
-    return t ? (t._id as string) : null
-  }
-  const dms = await ctx.db.query('dmConversations').collect()
-  const d = dms.find((d) => d.seedKey === key || (d._id as string) === key)
-  return d ? (d._id as string) : null
+  const table = kind === 'topic' ? 'topics' : kind === 'dm' ? 'dmConversations' : 'huddles'
+  const rows = await ctx.db.query(table).collect()
+  const hit = rows.find((r) => r.seedKey === key || (r._id as string) === key)
+  return hit ? (hit._id as string) : null
 }
 
-async function userNames(ctx: QueryCtx | MutationCtx): Promise<Map<Id<'users'>, string>> {
+export async function userNames(ctx: QueryCtx | MutationCtx): Promise<Map<Id<'users'>, string>> {
   const users = await ctx.db.query('users').collect()
   return new Map(users.map((u) => [u._id, u.seedKey === 'you' ? 'You' : u.name]))
 }
 
-async function youUser(ctx: QueryCtx | MutationCtx): Promise<Doc<'users'> | null> {
+export async function youUser(ctx: QueryCtx | MutationCtx): Promise<Doc<'users'> | null> {
   return ctx.db
     .query('users')
     .withIndex('by_seedKey', (q) => q.eq('seedKey', 'you'))
@@ -42,7 +38,7 @@ async function youUser(ctx: QueryCtx | MutationCtx): Promise<Doc<'users'> | null
 
 /** Per-user rows → the aggregate array the cards render (§4.6): first-seen
  *  emoji order, count, owner 'yours' when the current user is among them. */
-async function aggregateReactions(
+export async function aggregateReactions(
   ctx: QueryCtx | MutationCtx,
   messageId: Id<'messages'>,
   youId: Id<'users'> | undefined,
@@ -66,7 +62,7 @@ async function aggregateReactions(
   return agg
 }
 
-async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
+export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
   const resolvedByReply = m.resolvedByReplyId ? await ctx.db.get(m.resolvedByReplyId) : null
   return {
     id: m.seedKey ?? (m._id as string),

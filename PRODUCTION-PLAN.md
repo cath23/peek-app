@@ -333,12 +333,23 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       the toggled emoji (components untouched, optimistic display kept).
       Reply reactions stay session-local (the reactions table is
       message-keyed; revisit if reply reactions should persist)
-- [ ] Entity-by-entity hook swap continues, deleting the matching override
-      layer each time: huddles + promotion → stars/screener/open-work;
-      optimistic updates on composer send. (`extraTopics` in topicStore
-      survives until the huddles+promotion swap — createTopicFromDm still
-      creates the local seed huddle. Once all layers are gone, delete the
-      override providers + the mock bridges.)
+- [x] **Entity swap 7 — huddles + promotion** (2026-07-08):
+      `convex/huddles.ts` — one `list` query returns every huddle fully
+      shaped (members in order, preview conversation = seed DM message for
+      promoted / first message otherwise, extraConvs, lastActivityMs,
+      promotion metadata); `create`/`createFromDm`/`remove` (remove
+      cascades messages+replies+reactions); `messages.send` accepts
+      huddle parents. Seam: `useHuddleLookup`/`usePromotedHuddleLookup`
+      merge remote + session-local (remote wins), `useHuddlesLoading` →
+      `SkeletonHuddleGrid` on the huddles tab; `useHuddleMessages` dedupes
+      local sends. `useCreateTopicFromDm` chains topic → huddle mutations
+      (huddle resolves its topic by the shared seedKey).
+      `editHuddleSeedBody` stays session-local by design (separate from
+      the real message body). Local `extraTopics`/`extraHuddles`/
+      `createdHuddles` now cover only the optimistic window
+- [ ] Entity swap 8 — stars/screener/open-work (per-user tables), then
+      delete the override providers + mock bridges; optimistic updates
+      audit on composer send
 - [ ] `src/api/internal/` stores empty → deleted; app runs entirely on
       Convex with hardcoded seed user
 - [ ] Regression: tests + Storybook + QA checklist (incl. the deferred
