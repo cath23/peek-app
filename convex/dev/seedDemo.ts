@@ -74,6 +74,16 @@ async function wipeAll(ctx: MutationCtx) {
   }
 }
 
+/** Empty the database completely (the "fresh workspace" state production
+ *  launches in). Run: npx convex run dev/seedDemo:wipe */
+export const wipe = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    await wipeAll(ctx)
+    return { wiped: true }
+  },
+})
+
 export const seed = internalMutation({
   args: { wipe: v.optional(v.boolean()) },
   handler: async (ctx, { wipe }) => {
