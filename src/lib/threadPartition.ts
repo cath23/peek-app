@@ -1,11 +1,11 @@
 import type { ReplyData } from '@/data/replyData'
 
 /** Result of splitting a reply list around a promotion event. */
-export interface PartitionResult {
+export interface PartitionResult<T extends ReplyData = ReplyData> {
   /** Replies rendered above the divider — static replies + pre-promotion sentReplies. */
-  above: ReplyData[]
+  above: T[]
   /** Replies rendered below the divider — post-promotion sentReplies. */
-  below: ReplyData[]
+  below: T[]
 }
 
 /**
@@ -18,15 +18,15 @@ export interface PartitionResult {
  * - When `promotedAtMs` is undefined (no promotion or no chronological anchor),
  *   no split happens: all sentReplies are merged with replies into `above`.
  */
-export function partitionRepliesAroundPromotion({
+export function partitionRepliesAroundPromotion<T extends ReplyData>({
   replies,
   sentReplies,
   promotedAtMs,
 }: {
-  replies: ReplyData[]
-  sentReplies: ReplyData[]
+  replies: T[]
+  sentReplies: T[]
   promotedAtMs: number | undefined
-}): PartitionResult {
+}): PartitionResult<T> {
   if (promotedAtMs == null) {
     return { above: [...replies, ...sentReplies], below: [] }
   }

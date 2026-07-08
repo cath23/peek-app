@@ -12,13 +12,19 @@ import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopicTabs, type TopicTab } from '@/components/ui/TopicTabs'
 import { IconButton } from '@/components/ui/IconButton'
-import { TOPIC_CONVERSATIONS, type ConversationData, type HighlightType, type ReactionData } from '@/data/topicData'
-import { DM_CONVERSATIONS } from '@/data/dmData'
-import { type Huddle } from '@/data/huddleData'
-import { REPLIES, type ReplyData } from '@/data/replyData'
-import { useStarred } from '@/lib/starred'
-import { useTopicStore } from '@/lib/topicStore'
-import { useTopicMutations } from '@/lib/topicMutations'
+import {
+  CURRENT_USER_NAME,
+  useTopicMessages,
+  useHuddleMessages,
+  useThread,
+  useHuddleLookup,
+  useTopicLookup,
+  useIsTopicResolved,
+  usePeekActions,
+  useStarred,
+  type ConversationData,
+  type Huddle,
+} from '@/api'
 import { useLastSelection } from '@/lib/lastSelection'
 import { useDebug } from '@/lib/debug'
 import { useNavigate } from 'react-router-dom'
@@ -52,68 +58,37 @@ export function useTopicView({
   const navigate = useNavigate()
   const { setPendingDmThreadId, pendingTopicThread, setPendingTopicThread } = useLastSelection()
   const { isTopicStarred, toggleTopic } = useStarred()
-  const { getHuddlesForTopic, findTopic } = useTopicStore()
+  const findTopic = useTopicLookup()
+  const huddleLookup = useHuddleLookup()
+  const isTopicResolved = useIsTopicResolved()
+  const actions = usePeekActions()
   const { state: debug } = useDebug()
   const huddleVariant = debug.huddles.variant
   const topic = topicId != null ? findTopic(topicId) : undefined
 
-  // Mutation state lives at the app level so a topic's runtime data (sent
-  // messages, replies, resolutions, etc.) survives navigating away and back.
-  const {
-    sentMessages,
-    setSentMessages,
-    deletedIds,
-    setDeletedIds,
-    resolvedOverrides,
-    setResolvedOverrides,
-    sentReplies,
-    setSentReplies,
-    bodyOverrides,
-    setBodyOverrides,
-    highlightOverrides,
-    setHighlightOverrides,
-    createdHuddles,
-    setCreatedHuddles,
-    deletedHuddleIds,
-    setDeletedHuddleIds,
-    huddleBodyOverrides,
-    setHuddleBodyOverrides,
-    huddleSentMessages,
-    setHuddleSentMessages,
-    reactionOverrides,
-    setReactionOverrides,
-    isTopicResolved,
-  } = useTopicMutations()
-
   // Derived: a topic is "resolved" iff every non-deleted conv in it is resolved.
   // Single source of truth for the dashed-circle vs checkmark icon everywhere.
   const topicResolved = topicId != null ? isTopicResolved(topicId) : false
-
-  const handleReactionsChange = (id: string, next: ReactionData[]) =>
-    setReactionOverrides((prev) => ({ ...prev, [id]: next }))
 
   // Thread + huddle UI state stays local — it's transient view state, not data.
   const [threadConvId, setThreadConvId] = useState<string | null>(null)
   const [selectedHuddleId, setSelectedHuddleId] = useState<string | null>(null)
   const [isCreatingHuddle, setIsCreatingHuddle] = useState(false)
 
-  const currentGroups = topicId != null ? (TOPIC_CONVERSATIONS[topicId] ?? []) : []
-  const currentSent = topicId != null ? (sentMessages[topicId] ?? []) : []
-  const currentHuddles = topicId != null
-    ? [...getHuddlesForTopic(topicId), ...(createdHuddles[topicId] ?? [])]
-        .filter((h) => !deletedHuddleIds.has(h.id))
-        .map((h) => {
-          if (!h.conversation) return h
-          const override = huddleBodyOverrides[h.conversation.id]
-          if (override) return { ...h, conversation: { ...h.conversation, body: override } }
-          return h
-        })
-    : []
+  // All data arrives merged from the seam — overrides applied, deletions
+  // filtered, replyCount final. Nothing below touches override maps.
+  const {
+    groups: currentGroups,
+    sent: currentSent,
+    openCount,
+    resolvedCount,
+    members: topicMembers,
+    hasAnyPublicMessages,
+  } = useTopicMessages(topicId)
+  const currentHuddles = topicId != null ? huddleLookup(topicId) : []
 
   /** When the topic was promoted from a DM, this is the seed huddle. Drives the DM-origin empty state. */
   const originHuddle = currentHuddles.find((h) => h.originDmId !== undefined)
-  const hasAnyPublicMessages =
-    currentGroups.some((g) => g.convs.some((c) => !deletedIds.has(c.id))) || currentSent.length > 0
 
   /** V2 huddle main-view: when set, the rightPanel renders the huddle's content
    *  (header in huddleMode, body of extraConvs) instead of the topic's content.
@@ -127,60 +102,29 @@ export function useTopicView({
   const isV2HuddleView = v2SelectedHuddle != null
   const v2HuddleNameLabel = v2SelectedHuddle
     ? (() => {
-        const others = v2SelectedHuddle.members.filter((n) => n !== 'You')
+        const others = v2SelectedHuddle.members.filter((n) => n !== CURRENT_USER_NAME)
         return others.length > 0 ? others.join(', ') : v2SelectedHuddle.members.join(', ')
       })()
     : ''
 
-  const allCurrentConvs = [
-    ...currentGroups.flatMap((g) => g.convs).filter((c) => !deletedIds.has(c.id)),
-    ...currentSent,
-  ]
-  // Includes seed conv + extraConvs + runtime huddleSentMessages across all huddles
-  // in this topic, so clicking any huddle conv card can resolve via this lookup pool.
-  // Empty huddles (no seed conversation) contribute only their extras.
-  const allHuddleConvs: ConversationData[] = currentHuddles.flatMap((h) => [
-    ...(h.conversation ? [h.conversation] : []),
-    ...(h.extraConvs ?? []),
-    ...(huddleSentMessages[h.id] ?? []),
-  ])
+  /** Merged messages for the V2 huddle main view (seed + extras + runtime-sent). */
+  const v2HuddleConvs = useHuddleMessages(v2SelectedHuddle ?? null)
 
-  /** When the open thread is a promoted huddle's seed message, find that huddle so we can
-   *  source the seed message from DM_CONVERSATIONS and render the promotion divider + button. */
+  /** When the open thread is a promoted huddle's seed message, find that huddle so
+   *  we can render the promotion divider + "Open in DMs" button. */
   const promotedHuddleForThread = threadConvId
     ? currentHuddles.find((h) => h.seedMessageId === threadConvId && h.originDmId !== undefined)
     : undefined
 
-  /** Look up the seed message from DM_CONVERSATIONS when threadConvId points there. */
-  const dmSeedConv: ConversationData | undefined = (() => {
-    if (!promotedHuddleForThread || promotedHuddleForThread.originDmId === undefined) return undefined
-    const groups = DM_CONVERSATIONS[promotedHuddleForThread.originDmId]
-    if (!groups) return undefined
-    for (const g of groups) {
-      const found = g.convs.find((c) => c.id === threadConvId)
-      if (found) return found
-    }
-    return undefined
-  })()
-
-  const threadConvRaw = threadConvId
-    ? allCurrentConvs.find((c) => c.id === threadConvId)
-      ?? allHuddleConvs.find((c) => c.id === threadConvId)
-      ?? dmSeedConv
-    : null
-  const threadConv = threadConvRaw
-    ? {
-        ...threadConvRaw,
-        ...(threadConvRaw.id in bodyOverrides ? { body: bodyOverrides[threadConvRaw.id] } : {}),
-        ...(threadConvRaw.id in highlightOverrides ? { highlightType: highlightOverrides[threadConvRaw.id] } : {}),
-      }
-    : null
-  const rawThreadReplies = threadConvId ? (REPLIES[threadConvId] ?? []) : []
-  const threadReplies = rawThreadReplies.map((r) => ({
+  // Global merged thread lookup — spans topic messages, huddle messages, and the
+  // DM seed message of promoted huddles (message ids are globally unique).
+  const thread = useThread(threadConvId)
+  const threadConv = thread.conversation
+  const threadReplies = thread.replies.map((r) => ({
     ...r,
     isNew: r.isNew && (r.isUrgent || showUnreads),
   }))
-  const threadSentReplies = threadConvId ? (sentReplies[threadConvId] ?? []) : []
+  const threadSentReplies = thread.sentReplies
 
   /** Open a regular (non-huddle) thread. Clears any previously-selected huddle so
    *  the ThreadPanel doesn't keep showing huddle members/lock when the user clicks
@@ -207,94 +151,24 @@ export function useTopicView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingTopicThread, topicId])
 
-  const isConvResolved = (id: string, initial = false) => resolvedOverrides[id]?.resolved ?? initial
-  const getConvResolvedBy = (id: string, initial = '') => resolvedOverrides[id]?.resolvedBy ?? initial
-  const getConvResolutionMsg = (id: string, initial = '') => resolvedOverrides[id]?.message ?? initial
-
-  const openCount     = allCurrentConvs.filter((c) => !isConvResolved(c.id, c.isResolved)).length
-  const resolvedCount = allCurrentConvs.filter((c) =>  isConvResolved(c.id, c.isResolved)).length
-
-  // Topic members = invitees (added when topic was created) ∪ authors who have posted (top-level + replies).
-  const replyAuthors = allCurrentConvs.flatMap((c) => (REPLIES[c.id] ?? []).map((r) => r.authorName))
-  const topicMembers = Array.from(new Set([
-    ...(topic?.invitees ?? []),
-    ...allCurrentConvs.map((c) => c.authorName),
-    ...replyAuthors,
-  ]))
-
-  const handleResolvedChange = (id: string, resolved: boolean, resolvedBy?: string, message?: string) =>
-    setResolvedOverrides((prev) => ({ ...prev, [id]: { resolved, resolvedBy, message } }))
-  const handleHighlightChange = (id: string, hl: HighlightType | undefined) =>
-    setHighlightOverrides((prev) => ({ ...prev, [id]: hl }))
-  const handleBodyChange = (id: string, body: string) =>
-    setBodyOverrides((prev) => ({ ...prev, [id]: body }))
-
-  const handleSendReply = ({ text, resolution, highlightType, attachments }: SendPayload) => {
+  const handleSendReply = (payload: SendPayload) => {
     if (!threadConvId) return
-    let newReplyId: string | undefined
-    if (text || attachments?.length) {
-      const now = Date.now()
-      newReplyId = `reply_${now}`
-      const newReply: ReplyData = {
-        id: newReplyId,
-        authorName: 'You',
-        timestamp: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        body: text,
-        highlightType,
-        createdAtMs: now,
-        attachments,
-      }
-      setSentReplies((prev) => ({ ...prev, [threadConvId]: [...(prev[threadConvId] ?? []), newReply] }))
-    }
-    if (resolution) {
-      // Stamp resolvedByReplyId so editing this reply later can surface the resolution inline.
-      setResolvedOverrides((prev) => ({
-        ...prev,
-        [threadConvId]: { resolved: true, resolvedBy: 'You', message: resolution.message, resolvedByReplyId: newReplyId },
-      }))
-    }
+    actions.sendReply(threadConvId, payload)
   }
 
   const handleDeleteReply = (replyId: string) => {
     if (!threadConvId) return
-    setSentReplies((prev) => ({ ...prev, [threadConvId]: (prev[threadConvId] ?? []).filter((r) => r.id !== replyId) }))
+    actions.deleteReply(threadConvId, replyId)
   }
 
-  const handleSend = ({ text, resolution, highlightType, attachments }: SendPayload) => {
+  const handleSend = (payload: SendPayload) => {
     if (topicId == null) return
-    if (text || attachments?.length) {
-      const newMsg: ConversationData = {
-        id: `sent_${Date.now()}`,
-        authorName: 'You',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        body: text,
-        highlightType,
-        isResolved: resolution ? true : undefined,
-        resolvedBy: resolution ? 'You' : undefined,
-        resolutionMessage: resolution?.message || undefined,
-        attachments,
-      }
-      setSentMessages((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newMsg] }))
-    } else if (resolution) {
-      setSentMessages((prev) => {
-        const msgs = prev[topicId] ?? []
-        if (msgs.length === 0) return prev
-        const updated = [...msgs]
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          isResolved: true,
-          resolvedBy: 'You',
-          resolutionMessage: resolution.message || undefined,
-        }
-        return { ...prev, [topicId]: updated }
-      })
-    }
+    actions.sendTopicMessage(topicId, payload)
   }
 
   const handleDelete = (id: string) => {
     if (topicId == null) return
-    setSentMessages((prev) => ({ ...prev, [topicId]: (prev[topicId] ?? []).filter((m) => m.id !== id) }))
-    setDeletedIds((prev) => new Set([...prev, id]))
+    actions.deleteTopicMessage(topicId, id)
   }
 
   // The huddle creator (HuddleCreator) owns its own recipient/query/focus state and
@@ -304,36 +178,12 @@ export function useTopicView({
   /** V2 huddle main-view compose box: writes a top-level message into the selected huddle. */
   const handleHuddleMessageSend = ({ text }: SendPayload) => {
     if (!text || !v2SelectedHuddle) return
-    const now = Date.now()
-    const newMsg: ConversationData = {
-      id: `hsent_${now}`,
-      authorName: 'You',
-      timestamp: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      body: text,
-    }
-    setHuddleSentMessages((prev) => ({
-      ...prev,
-      [v2SelectedHuddle.id]: [...(prev[v2SelectedHuddle.id] ?? []), newMsg],
-    }))
+    actions.sendHuddleMessage(v2SelectedHuddle.id, text)
   }
 
   const handleCreateHuddle = (recipients: string[], firstMessage: string) => {
     if (!firstMessage || recipients.length === 0 || topicId == null) return
-    const newHuddleId = `h_new_${Date.now()}`
-    const newHuddle: Huddle = {
-      id: newHuddleId,
-      topicId,
-      members: ['You', ...recipients],
-      state: 'active',
-      lastActivity: 'Today',
-      conversation: {
-        id: `hc_new_${Date.now()}`,
-        authorName: 'You',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        body: firstMessage,
-      },
-    }
-    setCreatedHuddles((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newHuddle] }))
+    actions.createHuddle(topicId, recipients, firstMessage)
     setIsCreatingHuddle(false)
   }
 
@@ -341,22 +191,13 @@ export function useTopicView({
    *  the user lands inside it and writes their first via the huddle's compose box. */
   const handleStartHuddleFromDialog = ({ invitees }: StartHuddleResult) => {
     if (topicId == null || invitees.length === 0) return
-    const newHuddleId = `h_new_${Date.now()}`
-    const newHuddle: Huddle = {
-      id: newHuddleId,
-      topicId,
-      members: ['You', ...invitees.map((p) => p.name)],
-      state: 'active',
-      lastActivity: 'Today',
-      // No conversation set — empty huddle.
-    }
-    setCreatedHuddles((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newHuddle] }))
+    const newHuddleId = actions.createEmptyHuddle(topicId, invitees.map((p) => p.name))
     setIsCreatingHuddle(false)
     navigate(`/topics/${topicId}?huddle=${newHuddleId}`)
   }
 
   const handleDeleteHuddle = (huddleId: string) => {
-    setDeletedHuddleIds((prev) => new Set([...prev, huddleId]))
+    actions.deleteHuddle(huddleId)
     if (selectedHuddleId === huddleId) {
       setSelectedHuddleId(null)
       setThreadConvId(null)
@@ -441,58 +282,50 @@ export function useTopicView({
       {/* V2 huddle main view — replaces the topic body when a huddle is selected via the sidebar tree.
           Body shows huddle.conversation (seed; for DM-promoted huddles this is the original DM message)
           followed by extraConvs and any huddleSentMessages posted by the user. */}
-      {isV2HuddleView && (() => {
-        // Empty huddles (no seed) just show extras + runtime messages, or nothing.
-        const huddleConvs: ConversationData[] = [
-          ...(v2SelectedHuddle.conversation ? [v2SelectedHuddle.conversation] : []),
-          ...(v2SelectedHuddle.extraConvs ?? []),
-          ...(huddleSentMessages[v2SelectedHuddle.id] ?? []),
-        ]
-        return (
-          <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto flex flex-col">
-              <div className="flex-1 min-h-0" />
-              <div className="shrink-0 flex flex-col px-4 py-4 gap-2">
-                {huddleConvs.length === 0 ? (
-                  <div className="py-6 flex items-center justify-center">
-                    <span className="text-caption text-text-muted">No messages yet — start the conversation below.</span>
-                  </div>
-                ) : (
-                <div className="flex flex-col gap-2">
-                  <DateDivider label={v2SelectedHuddle.lastActivity} className="sticky top-0 z-10 bg-bg-surface" />
-                  {huddleConvs.map((c) => (
-                    <ConversationCard
-                      key={`${v2SelectedHuddle.id}_${c.id}`}
-                      authorName={c.authorName}
-                      timestamp={c.timestamp}
-                      body={bodyOverrides[c.id] ?? c.body}
-                        attachments={c.attachments}
-                      reactions={reactionOverrides[c.id] ?? c.reactions}
-                      highlightType={c.id in highlightOverrides ? highlightOverrides[c.id] : c.highlightType}
-                      replyCount={(REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (sentReplies[c.id]?.length ?? 0)}
-                      isResolved={isConvResolved(c.id, c.isResolved)}
-                      resolvedBy={getConvResolvedBy(c.id, c.resolvedBy)}
-                      resolutionMessage={getConvResolutionMsg(c.id, c.resolutionMessage)}
-                      showCreateTopic={false}
-                      isSelected={threadConvId === c.id}
-                      onResolvedChange={(resolved, resolvedBy, message) => handleResolvedChange(c.id, resolved, resolved ? (resolvedBy ?? 'You') : undefined, message)}
-                      onReactionsChange={(next) => handleReactionsChange(c.id, next)}
-                      onHighlightChange={(hl) => handleHighlightChange(c.id, hl)}
-                      onBodyChange={(b) => handleBodyChange(c.id, b)}
-                      onClick={() => openThread(c.id)}
-                      onReply={() => openThread(c.id)}
-                    />
-                  ))}
+      {isV2HuddleView && (
+        <>
+          <div ref={scrollRef} className="flex-1 overflow-y-auto flex flex-col">
+            <div className="flex-1 min-h-0" />
+            <div className="shrink-0 flex flex-col px-4 py-4 gap-2">
+              {v2HuddleConvs.length === 0 ? (
+                <div className="py-6 flex items-center justify-center">
+                  <span className="text-caption text-text-muted">No messages yet — start the conversation below.</span>
                 </div>
-                )}
+              ) : (
+              <div className="flex flex-col gap-2">
+                <DateDivider label={v2SelectedHuddle.lastActivity} className="sticky top-0 z-10 bg-bg-surface" />
+                {v2HuddleConvs.map((c) => (
+                  <ConversationCard
+                    key={`${v2SelectedHuddle.id}_${c.id}`}
+                    authorName={c.authorName}
+                    timestamp={c.timestamp}
+                    body={c.body}
+                    attachments={c.attachments}
+                    reactions={c.reactions}
+                    highlightType={c.highlightType}
+                    replyCount={c.replyCount}
+                    isResolved={c.isResolved}
+                    resolvedBy={c.resolvedBy}
+                    resolutionMessage={c.resolutionMessage}
+                    showCreateTopic={false}
+                    isSelected={threadConvId === c.id}
+                    onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
+                    onReactionsChange={(next) => actions.setReactions(c.id, next)}
+                    onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
+                    onBodyChange={(b) => actions.editBody(c.id, b)}
+                    onClick={() => openThread(c.id)}
+                    onReply={() => openThread(c.id)}
+                  />
+                ))}
               </div>
+              )}
             </div>
-            <div className="p-3">
-              <ComposeBox onSend={handleHuddleMessageSend} contextLabel={`Huddle · ${v2HuddleNameLabel}`} />
-            </div>
-          </>
-        )
-      })()}
+          </div>
+          <div className="p-3">
+            <ComposeBox onSend={handleHuddleMessageSend} contextLabel={`Huddle · ${v2HuddleNameLabel}`} />
+          </div>
+        </>
+      )}
 
       {/* Conversations tab — also the only body in V2/V3 (no tabs). Suppressed when a V2 huddle is open. */}
       {!isV2HuddleView && (huddleVariant !== 1 || activeTab === 'conversations') && (() => {
@@ -504,13 +337,11 @@ export function useTopicView({
         if (huddleVariant === 3) {
           const map = new Map<string, V3Group>()
           for (const group of currentGroups) {
-            const filtered = group.convs.filter((c) => !deletedIds.has(c.id))
-            if (filtered.length === 0) continue
-            map.set(group.dateLabel, { dateLabel: group.dateLabel, convs: filtered, sent: [], huddles: [] })
+            map.set(group.dateLabel, { dateLabel: group.dateLabel, convs: group.convs, sent: [], huddles: [] })
           }
           // Member-of huddles with a seed; empty huddles can't exist in V3 anyway.
           const v3Huddles = currentHuddles.filter(
-            (h) => h.conversation != null && h.members.includes('You')
+            (h) => h.conversation != null && h.members.includes(CURRENT_USER_NAME)
           )
           for (const h of v3Huddles) {
             const date = h.lastActivity
@@ -541,23 +372,23 @@ export function useTopicView({
                         key={`${topicId}_${c.id}`}
                         authorName={c.authorName}
                         timestamp={c.timestamp}
-                        body={bodyOverrides[c.id] ?? c.body}
+                        body={c.body}
                         attachments={c.attachments}
-                        reactions={reactionOverrides[c.id] ?? c.reactions}
-                        highlightType={c.id in highlightOverrides ? highlightOverrides[c.id] : c.highlightType}
-                        replyCount={(REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (sentReplies[c.id]?.length ?? 0)}
+                        reactions={c.reactions}
+                        highlightType={c.highlightType}
+                        replyCount={c.replyCount}
                         hasNewMessage={c.hasNewMessage && (c.isUrgent || showUnreads)}
                         hasNewReply={c.hasNewReply && (c.isUrgent || showUnreads)}
                         isUrgent={c.isUrgent}
-                        isResolved={isConvResolved(c.id, c.isResolved)}
-                        resolvedBy={getConvResolvedBy(c.id, c.resolvedBy)}
-                        resolutionMessage={getConvResolutionMsg(c.id, c.resolutionMessage)}
+                        isResolved={c.isResolved}
+                        resolvedBy={c.resolvedBy}
+                        resolutionMessage={c.resolutionMessage}
                         showCreateTopic={false}
                         isSelected={threadConvId === c.id}
-                        onResolvedChange={(resolved, resolvedBy, message) => handleResolvedChange(c.id, resolved, resolved ? (resolvedBy ?? 'You') : undefined, message)}
-                        onReactionsChange={(next) => handleReactionsChange(c.id, next)}
-                        onHighlightChange={(hl) => handleHighlightChange(c.id, hl)}
-                        onBodyChange={(b) => handleBodyChange(c.id, b)}
+                        onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
+                        onReactionsChange={(next) => actions.setReactions(c.id, next)}
+                        onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
+                        onBodyChange={(b) => actions.editBody(c.id, b)}
                         onClick={() => openThread(c.id)}
                         onReply={() => openThread(c.id)}
                         onDelete={() => handleDelete(c.id)}
@@ -568,20 +399,20 @@ export function useTopicView({
                         key={m.id}
                         authorName={m.authorName}
                         timestamp={m.timestamp}
-                        body={bodyOverrides[m.id] ?? m.body}
+                        body={m.body}
                         attachments={m.attachments}
-                        reactions={reactionOverrides[m.id] ?? m.reactions}
-                        highlightType={m.id in highlightOverrides ? highlightOverrides[m.id] : m.highlightType}
-                        replyCount={sentReplies[m.id]?.length ?? 0}
-                        isResolved={isConvResolved(m.id, m.isResolved)}
-                        resolvedBy={getConvResolvedBy(m.id, m.resolvedBy)}
-                        resolutionMessage={getConvResolutionMsg(m.id, m.resolutionMessage)}
+                        reactions={m.reactions}
+                        highlightType={m.highlightType}
+                        replyCount={m.replyCount}
+                        isResolved={m.isResolved}
+                        resolvedBy={m.resolvedBy}
+                        resolutionMessage={m.resolutionMessage}
                         showCreateTopic={false}
                         isSelected={threadConvId === m.id}
-                        onResolvedChange={(resolved, resolvedBy, message) => handleResolvedChange(m.id, resolved, resolved ? (resolvedBy ?? 'You') : undefined, message)}
-                        onReactionsChange={(next) => handleReactionsChange(m.id, next)}
-                        onHighlightChange={(hl) => handleHighlightChange(m.id, hl)}
-                        onBodyChange={(b) => handleBodyChange(m.id, b)}
+                        onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(m.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
+                        onReactionsChange={(next) => actions.setReactions(m.id, next)}
+                        onHighlightChange={(hl) => actions.setHighlight(m.id, hl)}
+                        onBodyChange={(b) => actions.editBody(m.id, b)}
                         onClick={() => openThread(m.id)}
                         onReply={() => openThread(m.id)}
                         onDelete={() => handleDelete(m.id)}
@@ -614,28 +445,28 @@ export function useTopicView({
                   {currentGroups.map((group) => (
                     <div key={group.dateLabel} className="flex flex-col gap-2">
                       <DateDivider label={group.dateLabel} className="sticky top-0 z-10 bg-bg-surface" />
-                      {group.convs.filter((c) => !deletedIds.has(c.id)).map((c) => (
+                      {group.convs.map((c) => (
                         <ConversationCard
                           key={`${topicId}_${c.id}`}
                           authorName={c.authorName}
                           timestamp={c.timestamp}
-                          body={bodyOverrides[c.id] ?? c.body}
-                        attachments={c.attachments}
-                          reactions={reactionOverrides[c.id] ?? c.reactions}
-                          highlightType={c.id in highlightOverrides ? highlightOverrides[c.id] : c.highlightType}
-                          replyCount={(REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (sentReplies[c.id]?.length ?? 0)}
+                          body={c.body}
+                          attachments={c.attachments}
+                          reactions={c.reactions}
+                          highlightType={c.highlightType}
+                          replyCount={c.replyCount}
                           hasNewMessage={c.hasNewMessage && (c.isUrgent || showUnreads)}
                           hasNewReply={c.hasNewReply && (c.isUrgent || showUnreads)}
                           isUrgent={c.isUrgent}
-                          isResolved={isConvResolved(c.id, c.isResolved)}
-                          resolvedBy={getConvResolvedBy(c.id, c.resolvedBy)}
-                          resolutionMessage={getConvResolutionMsg(c.id, c.resolutionMessage)}
+                          isResolved={c.isResolved}
+                          resolvedBy={c.resolvedBy}
+                          resolutionMessage={c.resolutionMessage}
                           showCreateTopic={false}
                           isSelected={threadConvId === c.id}
-                          onResolvedChange={(resolved, resolvedBy, message) => handleResolvedChange(c.id, resolved, resolved ? (resolvedBy ?? 'You') : undefined, message)}
-                          onReactionsChange={(next) => handleReactionsChange(c.id, next)}
-                          onHighlightChange={(hl) => handleHighlightChange(c.id, hl)}
-                          onBodyChange={(b) => handleBodyChange(c.id, b)}
+                          onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
+                          onReactionsChange={(next) => actions.setReactions(c.id, next)}
+                          onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
+                          onBodyChange={(b) => actions.editBody(c.id, b)}
                           onClick={() => openThread(c.id)}
                           onReply={() => openThread(c.id)}
                           onDelete={() => handleDelete(c.id)}
@@ -652,20 +483,20 @@ export function useTopicView({
                           key={m.id}
                           authorName={m.authorName}
                           timestamp={m.timestamp}
-                          body={bodyOverrides[m.id] ?? m.body}
-                        attachments={m.attachments}
-                          reactions={reactionOverrides[m.id] ?? m.reactions}
-                          highlightType={m.id in highlightOverrides ? highlightOverrides[m.id] : m.highlightType}
-                          replyCount={sentReplies[m.id]?.length ?? 0}
-                          isResolved={isConvResolved(m.id, m.isResolved)}
-                          resolvedBy={getConvResolvedBy(m.id, m.resolvedBy)}
-                          resolutionMessage={getConvResolutionMsg(m.id, m.resolutionMessage)}
+                          body={m.body}
+                          attachments={m.attachments}
+                          reactions={m.reactions}
+                          highlightType={m.highlightType}
+                          replyCount={m.replyCount}
+                          isResolved={m.isResolved}
+                          resolvedBy={m.resolvedBy}
+                          resolutionMessage={m.resolutionMessage}
                           showCreateTopic={false}
                           isSelected={threadConvId === m.id}
-                          onResolvedChange={(resolved, resolvedBy, message) => handleResolvedChange(m.id, resolved, resolved ? (resolvedBy ?? 'You') : undefined, message)}
-                          onReactionsChange={(next) => handleReactionsChange(m.id, next)}
-                          onHighlightChange={(hl) => handleHighlightChange(m.id, hl)}
-                          onBodyChange={(b) => handleBodyChange(m.id, b)}
+                          onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(m.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
+                          onReactionsChange={(next) => actions.setReactions(m.id, next)}
+                          onHighlightChange={(hl) => actions.setHighlight(m.id, hl)}
+                          onBodyChange={(b) => actions.editBody(m.id, b)}
                           onClick={() => openThread(m.id)}
                           onReply={() => openThread(m.id)}
                           onDelete={() => handleDelete(m.id)}
@@ -781,7 +612,7 @@ export function useTopicView({
       conversation={threadConv}
       replies={threadReplies}
       sentReplies={threadSentReplies}
-      isResolved={isConvResolved(threadConv.id, threadConv.isResolved)}
+      isResolved={threadConv.isResolved ?? false}
       huddleMembers={
         // V2 huddle view already shows lock + members in the rightPanel header,
         // so we suppress the duplicate pill on ThreadPanel.
@@ -794,33 +625,23 @@ export function useTopicView({
           ? currentHuddles.find((h) => h.id === selectedHuddleId)?.members.length
           : undefined
       }
-      replyBodyOverrides={bodyOverrides}
-      replyHighlightOverrides={highlightOverrides}
-      replyReactionOverrides={reactionOverrides}
-      initialReactions={threadConvId ? reactionOverrides[threadConvId] ?? threadConv.reactions : threadConv.reactions}
+      initialReactions={threadConv.reactions}
       onInitialReactionsChange={
         threadConvId
-          ? (next) => setReactionOverrides((prev) => ({ ...prev, [threadConvId]: next }))
+          ? (next) => actions.setReactions(threadConvId, next)
           : undefined
       }
       initialHighlightType={threadConv.highlightType}
       onInitialHighlightChange={
         threadConvId
-          ? (hl) => setHighlightOverrides((prev) => ({ ...prev, [threadConvId]: hl }))
+          ? (hl) => actions.setHighlight(threadConvId, hl)
           : undefined
       }
-      resolvedByReplyId={threadConvId ? resolvedOverrides[threadConvId]?.resolvedByReplyId : undefined}
-      resolutionMsg={threadConvId ? resolvedOverrides[threadConvId]?.message : undefined}
+      resolvedByReplyId={thread.resolvedByReplyId}
+      resolutionMsg={thread.resolutionMessage}
       onResolutionChange={
         threadConvId
-          ? (resolved, message) => setResolvedOverrides((prev) => {
-              const existing = prev[threadConvId]
-              if (resolved) {
-                return { ...prev, [threadConvId]: { resolved: true, resolvedBy: 'You', message, resolvedByReplyId: existing?.resolvedByReplyId } }
-              }
-              // Reopen — clear everything including the reply pointer.
-              return { ...prev, [threadConvId]: { resolved: false } }
-            })
+          ? (resolved, message) => actions.setThreadResolution(threadConvId, resolved, message)
           : undefined
       }
       promotionDivider={
@@ -858,12 +679,12 @@ export function useTopicView({
       onDeleteReply={handleDeleteReply}
       onInitialBodyChange={
         selectedHuddleId && threadConvId
-          ? (newBody: string) => setHuddleBodyOverrides((prev) => ({ ...prev, [threadConvId]: newBody }))
+          ? (newBody: string) => actions.editHuddleSeedBody(threadConvId, newBody)
           : undefined
       }
-      onReplyBodyChange={(replyId, body) => setBodyOverrides((prev) => ({ ...prev, [replyId]: body }))}
-      onReplyHighlightChange={(replyId, hl) => setHighlightOverrides((prev) => ({ ...prev, [replyId]: hl }))}
-      onReplyReactionsChange={(replyId, next) => setReactionOverrides((prev) => ({ ...prev, [replyId]: next }))}
+      onReplyBodyChange={(replyId, body) => actions.editBody(replyId, body)}
+      onReplyHighlightChange={(replyId, hl) => actions.setHighlight(replyId, hl)}
+      onReplyReactionsChange={(replyId, next) => actions.setReactions(replyId, next)}
     />
   ) : undefined
 

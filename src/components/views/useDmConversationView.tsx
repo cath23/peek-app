@@ -5,13 +5,17 @@ import { ThreadPanel } from '@/components/ThreadPanel'
 import { DateDivider } from '@/components/ui/DateDivider'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { DM_CONVERSATIONS } from '@/data/dmData'
-import { REPLIES, type ReplyData } from '@/data/replyData'
-import { type ConversationData } from '@/data/topicData'
-import { PEOPLE } from '@/data/peopleData'
-import { useStarred } from '@/lib/starred'
-import { useTopicStore } from '@/lib/topicStore'
-import { useTopicMutations } from '@/lib/topicMutations'
+import {
+  PEOPLE,
+  CURRENT_USER_NAME,
+  useDmMessages,
+  useThread,
+  usePromotedHuddleLookup,
+  useTopicLookup,
+  useIsTopicResolved,
+  usePeekActions,
+  useStarred,
+} from '@/api'
 import { useLastSelection } from '@/lib/lastSelection'
 import type { StartTopicResult } from '@/components/CreateTopicDialog'
 
@@ -32,31 +36,19 @@ interface ViewSlots {
 }
 
 export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnreads = false, onStartTopicFromDm }: UseDmConversationViewArgs): ViewSlots {
-  const [sentMessages, setSentMessages] = useState<Record<number, ConversationData[]>>({})
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
-  const [resolvedOverrides, setResolvedOverrides] = useState<Record<string, { resolved: boolean; resolvedBy?: string; message?: string; resolvedByReplyId?: string }>>({})
   const [threadConvId, setThreadConvId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const { isDmStarred, toggleDm } = useStarred()
-  const { findAllHuddlesByOriginDm, findTopic } = useTopicStore()
+  const findTopic = useTopicLookup()
+  const isTopicResolved = useIsTopicResolved()
+  const promotedHuddleLookup = usePromotedHuddleLookup()
   const { pendingDmThreadId, setPendingDmThreadId } = useLastSelection()
-  const {
-    // Replies are id-keyed and shared across DM and Huddle entry points so a
-    // reply posted from either thread panel shows up on both — below the promotion
-    // divider when the message has been promoted to a topic.
-    sentReplies,
-    setSentReplies,
-    bodyOverrides,
-    setBodyOverrides,
-    highlightOverrides,
-    setHighlightOverrides,
-    reactionOverrides,
-    setReactionOverrides,
-    isTopicResolved,
-  } = useTopicMutations()
+  const actions = usePeekActions()
 
-  const dmGroups = dmId != null ? (DM_CONVERSATIONS[dmId] ?? []) : []
-  const currentSent = dmId != null ? (sentMessages[dmId] ?? []) : []
+  // Merged data from the seam — overrides applied, deletions filtered,
+  // replyCount final. DM sends live in the seam store, so they survive
+  // navigating away and back (same as topic sends).
+  const { groups: dmGroups, sent: currentSent } = useDmMessages(dmId)
 
   const dmPartner = dmName ? PEOPLE.find((p) => p.name === dmName) : undefined
   const dmContext = dmPartner ? { participants: [dmPartner] } : undefined
@@ -66,7 +58,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
       ? (data: StartTopicResult) => onStartTopicFromDm(dmId, dmName, seedMessageId, data)
       : undefined
 
-  const promotedHuddles = dmId != null ? findAllHuddlesByOriginDm(dmId) : []
+  const promotedHuddles = dmId != null ? promotedHuddleLookup(dmId) : []
   /** Map from seed message id to its huddle context, for rendering the anchor on the right card
    *  AND the inline promotion divider in the thread panel. */
   const huddleContextByMessageId = new Map<string, { topicId: string; topicTitle: string; topicResolved: boolean; promotedAt: string; promotedAtMs?: number }>()
@@ -91,107 +83,39 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
     setPendingDmThreadId(null)
   }, [dmId, pendingDmThreadId, setPendingDmThreadId])
 
-  const allConvs = [...dmGroups.flatMap((g) => g.convs), ...currentSent]
-  const threadConvRaw = threadConvId ? allConvs.find((c) => c.id === threadConvId) : null
-  // Merge id-keyed body / highlight overrides so the panel reflects edits made from
-  // either the DM ConversationCard list or the topic/huddle thread panel.
-  const threadConv = threadConvRaw
-    ? {
-        ...threadConvRaw,
-        ...(threadConvRaw.id in bodyOverrides ? { body: bodyOverrides[threadConvRaw.id] } : {}),
-        ...(threadConvRaw.id in highlightOverrides ? { highlightType: highlightOverrides[threadConvRaw.id] } : {}),
-      }
-    : null
-  const rawThreadReplies = threadConvId ? (REPLIES[threadConvId] ?? []) : []
-  const threadReplies = rawThreadReplies.map((r) => ({
+  // Global merged thread lookup — replies posted from either the DM or the huddle
+  // entry point show up on both (they share the message id).
+  const thread = useThread(threadConvId)
+  const threadConv = thread.conversation
+  const threadReplies = thread.replies.map((r) => ({
     ...r,
     isNew: r.isNew && (r.isUrgent || showUnreads),
   }))
-  const threadSentReplies = threadConvId ? (sentReplies[threadConvId] ?? []) : []
-
-  const isConvResolved = (id: string, initial = false) =>
-    resolvedOverrides[id]?.resolved ?? initial
-  const getConvResolvedBy = (id: string, initial = '') =>
-    resolvedOverrides[id]?.resolvedBy ?? initial
-  const getConvResolutionMsg = (id: string, initial = '') =>
-    resolvedOverrides[id]?.message ?? initial
-
-  const handleResolvedChange = (id: string, resolved: boolean, resolvedBy?: string, message?: string) =>
-    setResolvedOverrides((prev) => ({ ...prev, [id]: { resolved, resolvedBy, message } }))
+  const threadSentReplies = thread.sentReplies
 
   const openThread = (convId: string) => setThreadConvId(convId)
   const closeThread = () => setThreadConvId(null)
 
   const handleSendReply = ({ text, resolution, attachments }: SendPayload) => {
     if (!threadConvId) return
-    let newReplyId: string | undefined
-    if (text || attachments?.length) {
-      const now = Date.now()
-      newReplyId = `reply_${now}`
-      const newReply: ReplyData = {
-        id: newReplyId,
-        authorName: 'You',
-        timestamp: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        body: text,
-        createdAtMs: now,
-        attachments,
-      }
-      setSentReplies((prev) => ({
-        ...prev,
-        [threadConvId]: [...(prev[threadConvId] ?? []), newReply],
-      }))
-    }
-    if (resolution) {
-      // Stamp resolvedByReplyId so editing this reply later can surface the resolution inline.
-      setResolvedOverrides((prev) => ({
-        ...prev,
-        [threadConvId]: { resolved: true, resolvedBy: 'You', message: resolution.message, resolvedByReplyId: newReplyId },
-      }))
-    }
+    // DM replies never carry a highlight (matches pre-seam behavior).
+    actions.sendReply(threadConvId, { text, resolution, attachments })
   }
 
   const handleDeleteReply = (replyId: string) => {
     if (!threadConvId) return
-    setSentReplies((prev) => ({
-      ...prev,
-      [threadConvId]: (prev[threadConvId] ?? []).filter((r) => r.id !== replyId),
-    }))
+    actions.deleteReply(threadConvId, replyId)
   }
 
   const handleSend = ({ text, resolution, attachments }: SendPayload) => {
     if (dmId == null) return
-    if (text || attachments?.length) {
-      const newMsg: ConversationData = {
-        id: `sent_${Date.now()}`,
-        authorName: 'You',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        body: text,
-        isResolved: resolution ? true : undefined,
-        resolvedBy: resolution ? 'You' : undefined,
-        resolutionMessage: resolution?.message || undefined,
-        attachments,
-      }
-      setSentMessages((prev) => ({ ...prev, [dmId]: [...(prev[dmId] ?? []), newMsg] }))
-    } else if (resolution) {
-      setSentMessages((prev) => {
-        const msgs = prev[dmId] ?? []
-        if (msgs.length === 0) return prev
-        const updated = [...msgs]
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          isResolved: true,
-          resolvedBy: 'You',
-          resolutionMessage: resolution.message || undefined,
-        }
-        return { ...prev, [dmId]: updated }
-      })
-    }
+    // DM messages never carry a highlight (matches pre-seam behavior).
+    actions.sendDmMessage(dmId, { text, resolution, attachments })
   }
 
   const handleDelete = (id: string) => {
     if (dmId == null) return
-    setSentMessages((prev) => ({ ...prev, [dmId]: (prev[dmId] ?? []).filter((m) => m.id !== id) }))
-    setDeletedIds((prev) => new Set([...prev, id]))
+    actions.deleteDmMessage(dmId, id)
   }
 
   // Close thread when switching DMs — but skip the initial mount, since we may have
@@ -241,31 +165,31 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
           {dmGroups.map((group) => (
             <div key={group.dateLabel} className="flex flex-col gap-2">
               <DateDivider label={group.dateLabel} className="sticky top-0 z-10 bg-bg-surface" />
-              {group.convs.filter((c) => !deletedIds.has(c.id)).map((c) => (
+              {group.convs.map((c) => (
                 <ConversationCard
                   key={`${dmId}_${c.id}`}
                   authorName={c.authorName}
                   timestamp={c.timestamp}
-                  body={bodyOverrides[c.id] ?? c.body}
+                  body={c.body}
                   attachments={c.attachments}
-                  reactions={reactionOverrides[c.id] ?? c.reactions}
-                  highlightType={c.id in highlightOverrides ? highlightOverrides[c.id] : c.highlightType}
-                  replyCount={(REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (sentReplies[c.id]?.length ?? 0)}
+                  reactions={c.reactions}
+                  highlightType={c.highlightType}
+                  replyCount={c.replyCount}
                   hasNewMessage={c.hasNewMessage && (c.isUrgent || showUnreads)}
                   hasNewReply={c.hasNewReply && (c.isUrgent || showUnreads)}
                   isUrgent={c.isUrgent}
-                  isResolved={isConvResolved(c.id, c.isResolved)}
-                  resolvedBy={getConvResolvedBy(c.id, c.resolvedBy)}
-                  resolutionMessage={getConvResolutionMsg(c.id, c.resolutionMessage)}
+                  isResolved={c.isResolved}
+                  resolvedBy={c.resolvedBy}
+                  resolutionMessage={c.resolutionMessage}
                   isSelected={threadConvId === c.id}
                   showCreateTopic={!huddleContextByMessageId.has(c.id)}
                   dmContext={dmContext}
                   huddleContext={huddleContextByMessageId.get(c.id)}
                   onStartTopicFromDm={makeStartTopicHandler(c.id)}
-                  onResolvedChange={(resolved, resolvedBy, message) => handleResolvedChange(c.id, resolved, resolved ? (resolvedBy ?? 'You') : undefined, message)}
-                  onReactionsChange={(next) => setReactionOverrides((prev) => ({ ...prev, [c.id]: next }))}
-                  onBodyChange={(b) => setBodyOverrides((prev) => ({ ...prev, [c.id]: b }))}
-                  onHighlightChange={(hl) => setHighlightOverrides((prev) => ({ ...prev, [c.id]: hl }))}
+                  onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
+                  onReactionsChange={(next) => actions.setReactions(c.id, next)}
+                  onBodyChange={(b) => actions.editBody(c.id, b)}
+                  onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
                   onClick={() => openThread(c.id)}
                   onReply={() => openThread(c.id)}
                   onDelete={() => handleDelete(c.id)}
@@ -282,23 +206,23 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
                   key={m.id}
                   authorName={m.authorName}
                   timestamp={m.timestamp}
-                  body={bodyOverrides[m.id] ?? m.body}
+                  body={m.body}
                   attachments={m.attachments}
-                  reactions={reactionOverrides[m.id] ?? m.reactions}
-                  highlightType={m.id in highlightOverrides ? highlightOverrides[m.id] : m.highlightType}
-                  replyCount={sentReplies[m.id]?.length ?? 0}
-                  isResolved={isConvResolved(m.id, m.isResolved)}
-                  resolvedBy={getConvResolvedBy(m.id, m.resolvedBy)}
-                  resolutionMessage={getConvResolutionMsg(m.id, m.resolutionMessage)}
+                  reactions={m.reactions}
+                  highlightType={m.highlightType}
+                  replyCount={m.replyCount}
+                  isResolved={m.isResolved}
+                  resolvedBy={m.resolvedBy}
+                  resolutionMessage={m.resolutionMessage}
                   isSelected={threadConvId === m.id}
                   showCreateTopic={!huddleContextByMessageId.has(m.id)}
                   dmContext={dmContext}
                   huddleContext={huddleContextByMessageId.get(m.id)}
                   onStartTopicFromDm={makeStartTopicHandler(m.id)}
-                  onResolvedChange={(resolved, resolvedBy, message) => handleResolvedChange(m.id, resolved, resolved ? (resolvedBy ?? 'You') : undefined, message)}
-                  onReactionsChange={(next) => setReactionOverrides((prev) => ({ ...prev, [m.id]: next }))}
-                  onBodyChange={(b) => setBodyOverrides((prev) => ({ ...prev, [m.id]: b }))}
-                  onHighlightChange={(hl) => setHighlightOverrides((prev) => ({ ...prev, [m.id]: hl }))}
+                  onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(m.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
+                  onReactionsChange={(next) => actions.setReactions(m.id, next)}
+                  onBodyChange={(b) => actions.editBody(m.id, b)}
+                  onHighlightChange={(hl) => actions.setHighlight(m.id, hl)}
                   onClick={() => openThread(m.id)}
                   onReply={() => openThread(m.id)}
                   onDelete={() => handleDelete(m.id)}
@@ -321,34 +245,25 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
       conversation={threadConv}
       replies={threadReplies}
       sentReplies={threadSentReplies}
-      isResolved={isConvResolved(threadConv.id, threadConv.isResolved)}
-      dmMembers={dmName ? ['You', dmName] : []}
-      replyBodyOverrides={bodyOverrides}
-      replyHighlightOverrides={highlightOverrides}
-      replyReactionOverrides={reactionOverrides}
-      initialReactions={threadConvId ? reactionOverrides[threadConvId] ?? threadConv.reactions : threadConv.reactions}
+      isResolved={threadConv.isResolved ?? false}
+      dmMembers={dmName ? [CURRENT_USER_NAME, dmName] : []}
+      initialReactions={threadConv.reactions}
       onInitialReactionsChange={
         threadConvId
-          ? (next) => setReactionOverrides((prev) => ({ ...prev, [threadConvId]: next }))
+          ? (next) => actions.setReactions(threadConvId, next)
           : undefined
       }
       initialHighlightType={threadConv.highlightType}
       onInitialHighlightChange={
         threadConvId
-          ? (hl) => setHighlightOverrides((prev) => ({ ...prev, [threadConvId]: hl }))
+          ? (hl) => actions.setHighlight(threadConvId, hl)
           : undefined
       }
-      resolvedByReplyId={threadConvId ? resolvedOverrides[threadConvId]?.resolvedByReplyId : undefined}
-      resolutionMsg={threadConvId ? resolvedOverrides[threadConvId]?.message : undefined}
+      resolvedByReplyId={thread.resolvedByReplyId}
+      resolutionMsg={thread.resolutionMessage}
       onResolutionChange={
         threadConvId
-          ? (resolved, message) => setResolvedOverrides((prev) => {
-              const existing = prev[threadConvId]
-              if (resolved) {
-                return { ...prev, [threadConvId]: { resolved: true, resolvedBy: 'You', message, resolvedByReplyId: existing?.resolvedByReplyId } }
-              }
-              return { ...prev, [threadConvId]: { resolved: false } }
-            })
+          ? (resolved, message) => actions.setThreadResolution(threadConvId, resolved, message)
           : undefined
       }
       promotionDivider={
@@ -365,9 +280,9 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
       onClose={closeThread}
       onSendReply={handleSendReply}
       onDeleteReply={handleDeleteReply}
-      onReplyBodyChange={(replyId, body) => setBodyOverrides((prev) => ({ ...prev, [replyId]: body }))}
-      onReplyHighlightChange={(replyId, hl) => setHighlightOverrides((prev) => ({ ...prev, [replyId]: hl }))}
-      onReplyReactionsChange={(replyId, next) => setReactionOverrides((prev) => ({ ...prev, [replyId]: next }))}
+      onReplyBodyChange={(replyId, body) => actions.editBody(replyId, body)}
+      onReplyHighlightChange={(replyId, hl) => actions.setHighlight(replyId, hl)}
+      onReplyReactionsChange={(replyId, next) => actions.setReactions(replyId, next)}
     />
   ) : undefined
 

@@ -7,23 +7,13 @@ import { Divider } from '@/components/ui/Divider'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StarredSection, type StarredItem } from '@/components/ui/StarredSection'
 import { useDmConversationView } from '@/components/views/useDmConversationView'
-import { useStarred } from '@/lib/starred'
+import { DM_DIRECTORY, dmHasUnread, useCreateTopicFromDm, useStarred } from '@/api'
 import { useDebug } from '@/lib/debug'
-import { useTopicStore } from '@/lib/topicStore'
 import { useLastSelection } from '@/lib/lastSelection'
 import { useToast } from '@/lib/toast'
-import { dmHasUnread } from '@/data/dmData'
 import type { StartTopicResult } from '@/components/CreateTopicDialog'
 
-const DMS = [
-  { id: 1, name: 'Alice Johnson',  isUnread: false },
-  { id: 2, name: 'Daniel Stanton', isUnread: false },
-  { id: 3, name: 'Hallie Pratt',   isUnread: false },
-  { id: 4, name: 'Greg Bothman',   isUnread: false },
-  { id: 5, name: 'Juan Foley',     isUnread: false },
-  { id: 6, name: 'Amie Miles',     isUnread: false },
-  { id: 7, name: 'Zack Bright',    isUnread: false },
-]
+const DMS = DM_DIRECTORY.map((d) => ({ id: d.dmId, name: d.name }))
 
 const TEAMS = [
   { id: 10, name: 'Account Management' },
@@ -41,7 +31,7 @@ export function PeoplePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()
-  const { createTopicFromDm } = useTopicStore()
+  const createTopicFromDm = useCreateTopicFromDm()
   const { dmId: lastDmId, setLastDmId } = useLastSelection()
   const { id: routeId } = useParams<{ id: string }>()
   const [teamsExpanded, setTeamsExpanded] = useState(true)

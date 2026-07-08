@@ -13,7 +13,7 @@ import { useTopicMutations } from '@/lib/topicMutations'
 import { useTopicStore } from '@/lib/topicStore'
 import { useDmRuntime } from './store'
 import { useHuddleLookup } from './huddles'
-import type { ConversationData, ConvGroup, ReactionData, ReplyData } from './types'
+import type { ConversationData, ConvGroup, Huddle, ReactionData, ReplyData } from './types'
 
 /** A reply as rendered in a thread: static shape + runtime reactions. */
 export interface ThreadReply extends ReplyData {
@@ -127,6 +127,21 @@ export function useDmMessages(dmId: number | null): DmMessages {
     .filter((g) => g.convs.length > 0)
   const sent = (sentDmMessages[dmId] ?? []).map((c) => mergeConv(c, o))
   return { groups, sent }
+}
+
+/**
+ * Merged top-level messages inside a huddle: seed conversation (if any),
+ * static extras, and runtime-sent messages — in that order, as the huddle
+ * main view renders them.
+ */
+export function useHuddleMessages(huddle: Huddle | null): ConversationData[] {
+  const o = useTopicMutations()
+  if (!huddle) return []
+  return [
+    ...(huddle.conversation ? [huddle.conversation] : []),
+    ...(huddle.extraConvs ?? []),
+    ...(o.huddleSentMessages[huddle.id] ?? []),
+  ].map((c) => mergeConv(c, o))
 }
 
 /**

@@ -6,8 +6,7 @@ import { IconButton } from './ui/IconButton'
 import { ThreadReplyCard } from './ThreadReplyCard'
 import { ComposeBox, type SendPayload } from './ui/ComposeBox'
 import { DateDivider } from './ui/DateDivider'
-import type { ConversationData, HighlightType, ReactionData } from '@/data/topicData'
-import type { ReplyData } from '@/data/replyData'
+import type { ConversationData, HighlightType, ReactionData, ThreadReply } from '@/api'
 import { PinnedMessage } from './ui/PinnedMessage'
 import { partitionRepliesAroundPromotion } from '@/lib/threadPartition'
 
@@ -15,8 +14,9 @@ import { partitionRepliesAroundPromotion } from '@/lib/threadPartition'
 
 interface ThreadPanelProps {
   conversation: ConversationData
-  replies: ReplyData[]
-  sentReplies: ReplyData[]
+  /** Merged replies (body/highlight/reactions already applied by the seam). */
+  replies: ThreadReply[]
+  sentReplies: ThreadReply[]
   isResolved?: boolean
   /** When set, shows member avatars in the header (for Huddle threads) */
   huddleMemberCount?: number
@@ -24,10 +24,6 @@ interface ThreadPanelProps {
   huddleMembers?: string[]
   /** DM thread participants - shows You + the other person in the header pill */
   dmMembers?: string[]
-  /** Per-reply overrides keyed by reply id. Used to surface persisted body / highlight / reactions. */
-  replyBodyOverrides?: Record<string, string>
-  replyHighlightOverrides?: Record<string, HighlightType | undefined>
-  replyReactionOverrides?: Record<string, ReactionData[]>
   /** Reactions on the initial (pinned) message — needed when the panel renders the initial as a
    *  ThreadReplyCard (huddle case) so reactions added on this side persist & mirror to the DM side. */
   initialReactions?: ReactionData[]
@@ -72,9 +68,6 @@ export function ThreadPanel({
   huddleMemberCount,
   huddleMembers = [],
   dmMembers = [],
-  replyBodyOverrides = {},
-  replyHighlightOverrides = {},
-  replyReactionOverrides = {},
   promotionDivider,
   initialReactions,
   onInitialReactionsChange,
@@ -203,12 +196,10 @@ export function ThreadPanel({
             <ThreadReplyCard
               authorName={reply.authorName}
               timestamp={reply.timestamp}
-              body={replyBodyOverrides[reply.id] ?? reply.body}
+              body={reply.body}
               attachments={reply.attachments}
-              highlightType={
-                reply.id in replyHighlightOverrides ? replyHighlightOverrides[reply.id] : reply.highlightType
-              }
-              reactions={replyReactionOverrides[reply.id]}
+              highlightType={reply.highlightType}
+              reactions={reply.reactions}
               isNew={reply.isNew}
               isUrgent={reply.isUrgent}
               ownsResolution={resolvedByReplyId === reply.id}
@@ -262,12 +253,10 @@ export function ThreadPanel({
               key={reply.id}
               authorName={reply.authorName}
               timestamp={reply.timestamp}
-              body={replyBodyOverrides[reply.id] ?? reply.body}
+              body={reply.body}
               attachments={reply.attachments}
-              highlightType={
-                reply.id in replyHighlightOverrides ? replyHighlightOverrides[reply.id] : reply.highlightType
-              }
-              reactions={replyReactionOverrides[reply.id]}
+              highlightType={reply.highlightType}
+              reactions={reply.reactions}
               isNew={reply.isNew}
               isUrgent={reply.isUrgent}
               ownsResolution={resolvedByReplyId === reply.id}

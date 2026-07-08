@@ -9,14 +9,18 @@ import { PersonRow } from '@/components/ui/PersonRow'
 import { ScreenerSection } from '@/components/ScreenerSection'
 import { useDmConversationView } from '@/components/views/useDmConversationView'
 import { useTopicView } from '@/components/views/useTopicView'
-import { SCREENER_ITEMS } from '@/data/screenerData'
-import { OPEN_WORK_ITEMS, URGENT_ITEMS } from '@/data/deskData'
-import { topicHasUnread } from '@/data/topicData'
-import { dmHasUnread } from '@/data/dmData'
+import {
+  dmNameById,
+  topicHasUnread,
+  dmHasUnread,
+  useScreenerItems,
+  useDeskItems,
+  useTopics,
+  useIsTopicResolved,
+  useCreateTopicFromDm,
+  useStarred,
+} from '@/api'
 import { useDebug } from '@/lib/debug'
-import { useStarred } from '@/lib/starred'
-import { useTopicStore } from '@/lib/topicStore'
-import { useTopicMutations } from '@/lib/topicMutations'
 import { useToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import type { StartTopicResult } from '@/components/CreateTopicDialog'
@@ -27,30 +31,23 @@ type Selected =
   | { kind: 'dm'; dmId: number; dmName: string; section: SectionKey }
   | { kind: 'topic'; topicId: string; topicTitle: string; topicResolved: boolean; section: SectionKey }
 
-const DM_NAMES: Record<number, string> = {
-  1: 'Alice Johnson',
-  2: 'Daniel Stanton',
-  3: 'Hallie Pratt',
-  4: 'Greg Bothman',
-  5: 'Juan Foley',
-  6: 'Amie Miles',
-  7: 'Zack Bright',
-}
-
 export function DeskPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()
   const { state: debug } = useDebug()
   const { entries: starredAll, isDmStarred, isTopicStarred, toggleDm, toggleTopic } = useStarred()
-  const { topics: TOPICS, createTopicFromDm } = useTopicStore()
-  const { isTopicResolved } = useTopicMutations()
+  const TOPICS = useTopics()
+  const createTopicFromDm = useCreateTopicFromDm()
+  const isTopicResolved = useIsTopicResolved()
+  const allScreenerItems = useScreenerItems()
+  const { openWork: OPEN_WORK_ITEMS, urgent: URGENT_ITEMS } = useDeskItems()
   const [selected, setSelected] = useState<Selected | null>(null)
   const [dismissedScreenerIds, setDismissedScreenerIds] = useState<Set<string>>(new Set())
   const [dismissedOpenWorkIds, setDismissedOpenWorkIds] = useState<Set<string>>(new Set())
   const [starredExpanded, setStarredExpanded] = useState(true)
 
-  const screenerItems = SCREENER_ITEMS
+  const screenerItems = allScreenerItems
     .slice(0, debug.desk.screenerItemsCount)
     .filter((i) => !dismissedScreenerIds.has(i.id))
 
@@ -97,7 +94,7 @@ export function DeskPage() {
     setSelected({ kind: 'topic', topicId, topicTitle: topic.title, topicResolved: isTopicResolved(topicId), section })
   }
   const selectDm = (dmId: number, fallbackName: string, section: SectionKey) => {
-    const dmName = DM_NAMES[dmId] ?? fallbackName
+    const dmName = dmNameById(dmId) ?? fallbackName
     setSelected({ kind: 'dm', dmId, dmName, section })
   }
 

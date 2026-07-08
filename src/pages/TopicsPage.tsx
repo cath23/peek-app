@@ -4,10 +4,8 @@ import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
 import { PersonRow } from '@/components/ui/PersonRow'
 import { useTopicView } from '@/components/views/useTopicView'
-import { topicHasUnread } from '@/data/topicData'
+import { CURRENT_USER_NAME, topicHasUnread, useTopics, useIsTopicResolved, useHuddleLookup } from '@/api'
 import { useDebug } from '@/lib/debug'
-import { useTopicStore } from '@/lib/topicStore'
-import { useTopicMutations } from '@/lib/topicMutations'
 import { useLastSelection } from '@/lib/lastSelection'
 
 export function TopicsPage() {
@@ -16,8 +14,9 @@ export function TopicsPage() {
   const [searchParams] = useSearchParams()
   const { topicId: lastTopicId, setLastTopicId } = useLastSelection()
   const { state: debug } = useDebug()
-  const { topics: TOPICS, getHuddlesForTopic } = useTopicStore()
-  const { isTopicResolved, createdHuddles, deletedHuddleIds } = useTopicMutations()
+  const TOPICS = useTopics()
+  const isTopicResolved = useIsTopicResolved()
+  const huddleLookup = useHuddleLookup()
   const showUnreads = debug.unreads.topics
   const huddleVariant = debug.huddles.variant
 
@@ -46,9 +45,7 @@ export function TopicsPage() {
 
   /** Huddles you're a member of, for a given topic. Used to render the V2 sidebar tree. */
   const huddlesForSidebar = (topicId: string) =>
-    [...getHuddlesForTopic(topicId), ...(createdHuddles[topicId] ?? [])]
-      .filter((h) => !deletedHuddleIds.has(h.id))
-      .filter((h) => h.members.includes('You'))
+    huddleLookup(topicId).filter((h) => h.members.includes(CURRENT_USER_NAME))
 
   // Always alphabetical by title; unread-first overlay when the toggle is on.
   const alphaSorted = [...TOPICS].sort((a, b) =>
@@ -146,7 +143,7 @@ export function TopicsPage() {
                         </svg>
                         {topicHuddles.map((h) => {
                           // Show comma-joined member names, excluding "You" (matches group-DM convention)
-                          const others = h.members.filter((n) => n !== 'You')
+                          const others = h.members.filter((n) => n !== CURRENT_USER_NAME)
                           const label = others.length > 0 ? others.join(', ') : h.members.join(', ')
                           return (
                             <div key={h.id} className="relative pl-3">
