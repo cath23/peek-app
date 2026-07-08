@@ -326,6 +326,10 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   work); the domain-model seed provisions (§1 extra users, §5 date strategy,
   per-table seed notes) apply to the fixture only — the client-side
   timestamp/date-label formatting rules in §5 remain production spec.
+- 2026-07-08 — Phase 2 choices (user): Convex **cloud free plan** (not
+  local anonymous); loading states are **skeleton placeholders** matching
+  card/list layouts (design in Figma with tokens before building; empty
+  states designed in the same pass).
 - 2026-07-08 — Phase 1 seam built (5 commits, batch A–D + finalization).
   Deliberate behavior change: DM sent messages now live in the seam store
   and survive navigation (previously hook-local and lost — matches topics
