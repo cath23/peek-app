@@ -262,10 +262,29 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       build, storybook build all green)
 - [ ] QA-plan regression checklist (manual visual pass — user)
 
-### Phase 2 — Convex persistence *(break down when Phase 1 is done)*
-- [ ] Schema + free-plan deployment · loading/empty/error-state designs ·
-      entity-by-entity hook swap · optional dev-only demo fixture ·
-      TopicMutationsProvider deleted · prod starts empty
+### Phase 2 — Convex persistence
+- [x] `convex/schema.ts` from the domain model (13 tables; unified messages
+      table; standard `_generated` stubs hand-written until the first
+      `npx convex dev` regenerates them; `npx tsc -p convex` green)
+- [x] Dev-only demo fixture `convex/dev/seedDemo.ts` (+ `seedDates.ts`
+      London calendar math, 18 unit tests): the full mock→records
+      transform — never runs against prod
+- [ ] **USER STEP — provision a deployment**: run `npx convex dev` once
+      (interactive login; choose cloud free plan, or local/anonymous dev).
+      Then `npx convex run dev/seedDemo:seed '{"wipe": true}'` to load the
+      demo dataset into the dev deployment
+- [ ] **USER STEP — loading/empty/error-state design direction** (needed
+      before the first visible entity swap; see decision log)
+- [ ] Wire `ConvexProvider` into the seam (`VITE_CONVEX_URL`); mocks remain
+      the fallback until each entity swaps
+- [ ] Entity-by-entity hook swap, deleting the matching override layer each
+      time: people → topics → messages → replies → resolutions/highlights →
+      reactions (becomes `toggleReaction`) → huddles + promotion →
+      stars/screener/open-work; optimistic updates on composer send
+- [ ] `src/api/internal/` stores empty → deleted; app runs entirely on
+      Convex with hardcoded seed user
+- [ ] Regression: tests + Storybook + QA checklist (incl. the deferred
+      Phase 1 pass)
 
 ### Phase 3 — Auth + profiles *(coarse until Phase 2)*
 - [ ] Convex Auth setup · login/profile UI designed in Figma then built ·
