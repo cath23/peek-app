@@ -33,6 +33,39 @@ async function userNames(ctx: QueryCtx | MutationCtx): Promise<Map<Id<'users'>, 
   return new Map(users.map((u) => [u._id, u.seedKey === 'you' ? 'You' : u.name]))
 }
 
+async function youUser(ctx: QueryCtx | MutationCtx): Promise<Doc<'users'> | null> {
+  return ctx.db
+    .query('users')
+    .withIndex('by_seedKey', (q) => q.eq('seedKey', 'you'))
+    .unique()
+}
+
+/** Per-user rows → the aggregate array the cards render (§4.6): first-seen
+ *  emoji order, count, owner 'yours' when the current user is among them. */
+async function aggregateReactions(
+  ctx: QueryCtx | MutationCtx,
+  messageId: Id<'messages'>,
+  youId: Id<'users'> | undefined,
+): Promise<{ emoji: string; count: number; owner: 'yours' | 'others' }[] | undefined> {
+  const rows = await ctx.db
+    .query('reactions')
+    .withIndex('by_message', (q) => q.eq('messageId', messageId))
+    .collect()
+  if (rows.length === 0) return undefined
+  rows.sort((a, b) => a._creationTime - b._creationTime)
+  const agg: { emoji: string; count: number; owner: 'yours' | 'others' }[] = []
+  for (const r of rows) {
+    const entry = agg.find((e) => e.emoji === r.emoji)
+    if (entry) {
+      entry.count++
+      if (r.userId === youId) entry.owner = 'yours'
+    } else {
+      agg.push({ emoji: r.emoji, count: 1, owner: r.userId === youId ? 'yours' : 'others' })
+    }
+  }
+  return agg
+}
+
 async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
   const resolvedByReply = m.resolvedByReplyId ? await ctx.db.get(m.resolvedByReplyId) : null
   return {
@@ -61,13 +94,18 @@ export const list = query({
       .withIndex('by_parent', (q) => q.eq('parentKind', parentKind).eq('parentId', parentId))
       .collect()
     const names = await userNames(ctx)
+    const you = await youUser(ctx)
     const shaped = []
     for (const m of rows.sort((a, b) => a.createdAt - b.createdAt)) {
       const replies = await ctx.db
         .query('replies')
         .withIndex('by_message', (q) => q.eq('messageId', m._id))
         .collect()
-      shaped.push({ ...(await shape(ctx, m, names)), replyCount: replies.length })
+      shaped.push({
+        ...(await shape(ctx, m, names)),
+        replyCount: replies.length,
+        reactions: await aggregateReactions(ctx, m._id, you?._id),
+      })
     }
     return shaped
   },
@@ -86,7 +124,37 @@ export const get = query({
       m = normalized ? await ctx.db.get(normalized) : null
     }
     if (!m) return null
-    return shape(ctx, m, await userNames(ctx))
+    const you = await youUser(ctx)
+    return {
+      ...(await shape(ctx, m, await userNames(ctx))),
+      reactions: await aggregateReactions(ctx, m._id, you?._id),
+    }
+  },
+})
+
+/** Add or remove the current user's reaction (per-user rows, §2.7). */
+export const toggleReaction = mutation({
+  args: { key: v.string(), emoji: v.string() },
+  handler: async (ctx, { key, emoji }) => {
+    const m = await findByKey(ctx, key)
+    if (!m) return // reply reactions stay session-local until modeled (§2.7 is message-keyed)
+    const you = await youUser(ctx)
+    if (!you) throw new Error("Seed user missing — run dev/seedDemo:seed first (Phase 2 uses the hardcoded 'you' identity)")
+    const mine = await ctx.db
+      .query('reactions')
+      .withIndex('by_message_user', (q) => q.eq('messageId', m._id).eq('userId', you._id))
+      .collect()
+    const existing = mine.find((r) => r.emoji === emoji)
+    if (existing) {
+      await ctx.db.delete(existing._id)
+    } else {
+      await ctx.db.insert('reactions', {
+        messageId: m._id,
+        userId: you._id,
+        emoji,
+        createdAt: Date.now(),
+      })
+    }
   },
 })
 

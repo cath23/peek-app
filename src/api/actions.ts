@@ -37,6 +37,7 @@ export function usePeekActions() {
   const removeReplyRemote = useMutation(api.replies.remove)
   const setResolutionRemote = useMutation(api.messages.setResolution)
   const setHighlightRemote = useMutation(api.messages.setHighlight)
+  const toggleReactionRemote = useMutation(api.messages.toggleReaction)
 
   const persistMessage = (
     parentKind: 'topic' | 'dm',
@@ -150,10 +151,26 @@ export function usePeekActions() {
       if (hasConvex) void setHighlightRemote({ key: id, highlightType })
     },
 
-    setReactions(id: string, reactions: ReactionData[]) {
-      // Phase 2 TODO: becomes toggleReaction(messageId, emoji) with per-user
-      // rows; the aggregate-array shape mirrors today's card-side logic.
-      m.setReactionOverrides((prev) => ({ ...prev, [id]: reactions }))
+    /**
+     * Cards keep computing the next aggregate array (instant, pixel-exact);
+     * the seam diffs it against `prev` to find the emoji the user toggled
+     * and persists that as a per-user row. Only the current user's own
+     * reaction can change client-side, so exactly one emoji flips its
+     * 'yours' flag per call. Without `prev` (reply reactions — not modeled
+     * server-side yet) the change stays session-local.
+     */
+    setReactions(id: string, reactions: ReactionData[], prev?: ReactionData[]) {
+      m.setReactionOverrides((prevMap) => ({ ...prevMap, [id]: reactions }))
+      if (!hasConvex || prev === undefined) return
+      const emojis = new Set([...prev.map((r) => r.emoji), ...reactions.map((r) => r.emoji)])
+      for (const emoji of emojis) {
+        const wasYours = prev.find((r) => r.emoji === emoji)?.owner === 'yours'
+        const isYours = reactions.find((r) => r.emoji === emoji)?.owner === 'yours'
+        if (wasYours !== isYours) {
+          void toggleReactionRemote({ key: id, emoji })
+          return
+        }
+      }
     },
 
     // ── Resolution ──

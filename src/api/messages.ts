@@ -33,6 +33,8 @@ interface RemoteMessage {
   attachments?: string[]
   /** Derived server-side (list only). */
   replyCount?: number
+  /** Aggregated server-side from per-user rows (§4.6). */
+  reactions?: ReactionData[]
 }
 
 /** Row shape returned by convex/replies.ts list. */
@@ -79,7 +81,7 @@ function toConversationData(r: RemoteMessage, mock: ConversationData | undefined
     resolvedBy: r.resolvedBy,
     resolutionMessage: r.resolutionMessage,
     attachments: r.attachments ?? mock?.attachments,
-    reactions: mock?.reactions,
+    reactions: r.reactions,
     hasNewMessage: mock?.hasNewMessage,
     hasNewReply: mock?.hasNewReply,
     replyCount: r.replyCount ?? mock?.replyCount,

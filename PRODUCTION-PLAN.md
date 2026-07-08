@@ -325,13 +325,20 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       topic resolution (§4.1) now derived server-side in `topics.list` and
       `useIsTopicResolved` reads it in Convex mode (verified: seeded topics
       4+5 resolved, matching mocks)
+- [x] **Entity swap 6 — reactions** (2026-07-08): server aggregates the
+      per-user rows into the cards' `{emoji, count, owner}` shape
+      (first-seen order — verified pixel-equal to mocks incl. 'yours');
+      `messages.toggleReaction` add/removes the current user's row; the
+      seam diffs the card-computed next aggregate against `prev` to find
+      the toggled emoji (components untouched, optimistic display kept).
+      Reply reactions stay session-local (the reactions table is
+      message-keyed; revisit if reply reactions should persist)
 - [ ] Entity-by-entity hook swap continues, deleting the matching override
-      layer each time: reactions (becomes `toggleReaction`) →
-      huddles + promotion → stars/screener/open-work; optimistic updates
-      on composer send. (`extraTopics` in topicStore survives until the
-      huddles+promotion swap — createTopicFromDm still creates the local
-      seed huddle. Once all layers are gone, delete the override
-      providers + the mock bridges.)
+      layer each time: huddles + promotion → stars/screener/open-work;
+      optimistic updates on composer send. (`extraTopics` in topicStore
+      survives until the huddles+promotion swap — createTopicFromDm still
+      creates the local seed huddle. Once all layers are gone, delete the
+      override providers + the mock bridges.)
 - [ ] `src/api/internal/` stores empty → deleted; app runs entirely on
       Convex with hardcoded seed user
 - [ ] Regression: tests + Storybook + QA checklist (incl. the deferred
