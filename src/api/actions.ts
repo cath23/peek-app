@@ -1,0 +1,218 @@
+/**
+ * Write functions — the seam's mutation surface.
+ *
+ * Phase 1 internals: the exact setter logic previously inlined in
+ * useTopicView / useDmConversationView, now stamped with CURRENT_USER_NAME
+ * instead of a scattered 'You' literal. Phase 2 swaps each function to a
+ * Convex mutation (domain model §2, §7 "runtime state" table).
+ */
+import { useTopicMutations } from '@/lib/topicMutations'
+import { useDmRuntime } from './store'
+import { CURRENT_USER_NAME } from './currentUser'
+import type { ConversationData, HighlightType, Huddle, ReactionData, ReplyData } from './types'
+
+export interface SendMessagePayload {
+  text: string
+  resolution?: { message: string }
+  highlightType?: HighlightType
+  /** Figma frame ids attached via the launcher's find flow. */
+  attachments?: string[]
+}
+
+const nowTimestamp = (now = Date.now()) =>
+  new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+export function usePeekActions() {
+  const m = useTopicMutations()
+  const { setSentDmMessages } = useDmRuntime()
+
+  const buildMessage = ({ text, resolution, highlightType, attachments }: SendMessagePayload): ConversationData => ({
+    id: `sent_${Date.now()}`,
+    authorName: CURRENT_USER_NAME,
+    timestamp: nowTimestamp(),
+    body: text,
+    highlightType,
+    isResolved: resolution ? true : undefined,
+    resolvedBy: resolution ? CURRENT_USER_NAME : undefined,
+    resolutionMessage: resolution?.message || undefined,
+    attachments,
+  })
+
+  /** Resolution sent with no text: resolve the last runtime-sent message. */
+  const resolveLastSent = (msgs: ConversationData[], message: string): ConversationData[] => {
+    if (msgs.length === 0) return msgs
+    const updated = [...msgs]
+    updated[updated.length - 1] = {
+      ...updated[updated.length - 1],
+      isResolved: true,
+      resolvedBy: CURRENT_USER_NAME,
+      resolutionMessage: message || undefined,
+    }
+    return updated
+  }
+
+  return {
+    // ── Messages ──
+    sendTopicMessage(topicId: string, payload: SendMessagePayload) {
+      if (payload.text || payload.attachments?.length) {
+        const newMsg = buildMessage(payload)
+        m.setSentMessages((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newMsg] }))
+      } else if (payload.resolution) {
+        const message = payload.resolution.message
+        m.setSentMessages((prev) => ({ ...prev, [topicId]: resolveLastSent(prev[topicId] ?? [], message) }))
+      }
+    },
+
+    sendDmMessage(dmId: number, payload: SendMessagePayload) {
+      if (payload.text || payload.attachments?.length) {
+        const newMsg = buildMessage(payload)
+        setSentDmMessages((prev) => ({ ...prev, [dmId]: [...(prev[dmId] ?? []), newMsg] }))
+      } else if (payload.resolution) {
+        const message = payload.resolution.message
+        setSentDmMessages((prev) => ({ ...prev, [dmId]: resolveLastSent(prev[dmId] ?? [], message) }))
+      }
+    },
+
+    /** Top-level message posted inside a huddle (V2 huddle main view). */
+    sendHuddleMessage(huddleId: string, text: string) {
+      if (!text) return
+      const now = Date.now()
+      const newMsg: ConversationData = {
+        id: `hsent_${now}`,
+        authorName: CURRENT_USER_NAME,
+        timestamp: nowTimestamp(now),
+        body: text,
+      }
+      m.setHuddleSentMessages((prev) => ({ ...prev, [huddleId]: [...(prev[huddleId] ?? []), newMsg] }))
+    },
+
+    deleteTopicMessage(topicId: string, messageId: string) {
+      m.setSentMessages((prev) => ({ ...prev, [topicId]: (prev[topicId] ?? []).filter((msg) => msg.id !== messageId) }))
+      m.setDeletedIds((prev) => new Set([...prev, messageId]))
+    },
+
+    deleteDmMessage(dmId: number, messageId: string) {
+      setSentDmMessages((prev) => ({ ...prev, [dmId]: (prev[dmId] ?? []).filter((msg) => msg.id !== messageId) }))
+      m.setDeletedIds((prev) => new Set([...prev, messageId]))
+    },
+
+    /** Body edit — id-keyed, applies to messages and replies alike. */
+    editBody(id: string, body: string) {
+      m.setBodyOverrides((prev) => ({ ...prev, [id]: body }))
+    },
+
+    /** Body edit for a huddle's SEED conversation (drives the card preview). */
+    editHuddleSeedBody(conversationId: string, body: string) {
+      m.setHuddleBodyOverrides((prev) => ({ ...prev, [conversationId]: body }))
+    },
+
+    setHighlight(id: string, highlightType: HighlightType | undefined) {
+      m.setHighlightOverrides((prev) => ({ ...prev, [id]: highlightType }))
+    },
+
+    setReactions(id: string, reactions: ReactionData[]) {
+      // Phase 2 TODO: becomes toggleReaction(messageId, emoji) with per-user
+      // rows; the aggregate-array shape mirrors today's card-side logic.
+      m.setReactionOverrides((prev) => ({ ...prev, [id]: reactions }))
+    },
+
+    // ── Resolution ──
+    /** Card-level resolve/reopen (conv menu / resolve dialog). Replaces the
+     *  whole override — a reply pointer from an earlier `→ msg` is dropped,
+     *  matching the previous card behavior. */
+    setResolution(id: string, resolved: boolean, resolvedBy?: string, message?: string) {
+      m.setResolvedOverrides((prev) => ({ ...prev, [id]: { resolved, resolvedBy, message } }))
+    },
+
+    /** Thread-panel resolution edit: resolving keeps the reply pointer so the
+     *  owning reply card can keep editing it inline; reopening clears all. */
+    setThreadResolution(id: string, resolved: boolean, message?: string) {
+      m.setResolvedOverrides((prev) => {
+        const existing = prev[id]
+        if (resolved) {
+          return {
+            ...prev,
+            [id]: { resolved: true, resolvedBy: CURRENT_USER_NAME, message, resolvedByReplyId: existing?.resolvedByReplyId },
+          }
+        }
+        return { ...prev, [id]: { resolved: false } }
+      })
+    },
+
+    // ── Replies ──
+    /** Send a reply; a `→ msg` resolution stamps resolvedByReplyId so the
+     *  reply card can surface the resolution inline later. */
+    sendReply(messageId: string, payload: SendMessagePayload) {
+      const { text, resolution, highlightType, attachments } = payload
+      let newReplyId: string | undefined
+      if (text || attachments?.length) {
+        const now = Date.now()
+        newReplyId = `reply_${now}`
+        const newReply: ReplyData = {
+          id: newReplyId,
+          authorName: CURRENT_USER_NAME,
+          timestamp: nowTimestamp(now),
+          body: text,
+          highlightType,
+          createdAtMs: now,
+          attachments,
+        }
+        m.setSentReplies((prev) => ({ ...prev, [messageId]: [...(prev[messageId] ?? []), newReply] }))
+      }
+      if (resolution) {
+        m.setResolvedOverrides((prev) => ({
+          ...prev,
+          [messageId]: {
+            resolved: true,
+            resolvedBy: CURRENT_USER_NAME,
+            message: resolution.message,
+            resolvedByReplyId: newReplyId,
+          },
+        }))
+      }
+    },
+
+    deleteReply(messageId: string, replyId: string) {
+      m.setSentReplies((prev) => ({ ...prev, [messageId]: (prev[messageId] ?? []).filter((r) => r.id !== replyId) }))
+    },
+
+    // ── Huddles ──
+    /** Inline (V1/V3) creation: people + first message. Returns the new id. */
+    createHuddle(topicId: string, members: string[], firstMessageText: string): string {
+      const newHuddleId = `h_new_${Date.now()}`
+      const newHuddle: Huddle = {
+        id: newHuddleId,
+        topicId,
+        members: [CURRENT_USER_NAME, ...members],
+        state: 'active',
+        lastActivity: 'Today',
+        conversation: {
+          id: `hc_new_${Date.now()}`,
+          authorName: CURRENT_USER_NAME,
+          timestamp: nowTimestamp(),
+          body: firstMessageText,
+        },
+      }
+      m.setCreatedHuddles((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newHuddle] }))
+      return newHuddleId
+    },
+
+    /** V2 dialog creation: members only, no seed message. Returns the new id. */
+    createEmptyHuddle(topicId: string, members: string[]): string {
+      const newHuddleId = `h_new_${Date.now()}`
+      const newHuddle: Huddle = {
+        id: newHuddleId,
+        topicId,
+        members: [CURRENT_USER_NAME, ...members],
+        state: 'active',
+        lastActivity: 'Today',
+      }
+      m.setCreatedHuddles((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newHuddle] }))
+      return newHuddleId
+    },
+
+    deleteHuddle(huddleId: string) {
+      m.setDeletedHuddleIds((prev) => new Set([...prev, huddleId]))
+    },
+  }
+}
