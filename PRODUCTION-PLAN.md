@@ -269,14 +269,17 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
 - [x] Dev-only demo fixture `convex/dev/seedDemo.ts` (+ `seedDates.ts`
       London calendar math, 18 unit tests): the full mock→records
       transform — never runs against prod
-- [ ] **USER STEP — provision a deployment**: run `npx convex dev` once
-      (interactive login; choose cloud free plan, or local/anonymous dev).
-      Then `npx convex run dev/seedDemo:seed '{"wipe": true}'` to load the
-      demo dataset into the dev deployment
-- [ ] **USER STEP — loading/empty/error-state design direction** (needed
-      before the first visible entity swap; see decision log)
-- [ ] Wire `ConvexProvider` into the seam (`VITE_CONVEX_URL`); mocks remain
-      the fallback until each entity swaps
+- [x] **USER STEP — provision a deployment** ✅ 2026-07-08: cloud dev
+      `hallowed-stork-966` live, demo dataset seeded and verified
+- [ ] **USER STEP — loading/empty-state design review**: skeleton + empty
+      designs built in Figma 2026-07-08 ("Peek: Claude to Figma" →
+      *Loading & Empty States* page: 6 skeleton components, 4 loading
+      panels, 6 empty-state panels) — **awaiting user approval** before the
+      React build + first visible entity swap. Error states deferred to
+      Phase 5 (error boundaries)
+- [x] Wire `ConvexProvider` into the seam (`VITE_CONVEX_URL`); mocks remain
+      the fallback until each entity swaps (commit 6a2d437; `hasConvex`
+      gate, `seedKey` transition bridge)
 - [ ] Entity-by-entity hook swap, deleting the matching override layer each
       time: people → topics → messages → replies → resolutions/highlights →
       reactions (becomes `toggleReaction`) → huddles + promotion →
