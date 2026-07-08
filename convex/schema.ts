@@ -88,7 +88,9 @@ export default defineSchema({
     attachments: v.optional(v.array(v.string())),
     /** Mock message id ('t1_c1', 'dm1_c3', …) — transitional bridge. */
     seedKey: v.optional(v.string()),
-  }).index('by_parent', ['parentKind', 'parentId']),
+  })
+    .index('by_parent', ['parentKind', 'parentId'])
+    .index('by_seedKey', ['seedKey']),
 
   // §2.6 — replyCount is DERIVED (§4.2); isNew is DERIVED via readState (§4.3)
   replies: defineTable({

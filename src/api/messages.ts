@@ -6,14 +6,77 @@
  * computed. Components receive final values and never see override maps.
  * Phase 2 swaps each hook's internals to a Convex query.
  */
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import { TOPIC_CONVERSATIONS } from '@/data/topicData'
 import { DM_CONVERSATIONS } from '@/data/dmData'
 import { REPLIES } from '@/data/replyData'
 import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useTopicStore } from '@/api/internal/topicStore'
-import { useDmRuntime } from './store'
+import { formatDateLabel, formatTimestamp, dayKey } from './format'
+import { hasConvex, useDmRuntime } from './store'
 import { useHuddleLookup } from './huddles'
 import type { ConversationData, ConvGroup, Huddle, ReactionData, ReplyData } from './types'
+
+/** Row shape returned by convex/messages.ts list/get. */
+interface RemoteMessage {
+  id: string
+  authorName: string
+  createdAt: number
+  body: string
+  isUrgent?: boolean
+  highlightType?: ConversationData['highlightType']
+  isResolved?: boolean
+  resolvedBy?: string
+  resolutionMessage?: string
+  attachments?: string[]
+}
+
+/**
+ * Remote row → presentation shape. The mock record with the same id (when
+ * one exists) bridges the fields whose entities haven't swapped yet:
+ * reactions (per-user rows come later) and the seeded unread flags
+ * (readState is Phase 4).
+ */
+function toConversationData(r: RemoteMessage, mock: ConversationData | undefined): ConversationData {
+  return {
+    id: r.id,
+    authorName: r.authorName,
+    timestamp: formatTimestamp(r.createdAt),
+    body: r.body,
+    isUrgent: r.isUrgent,
+    highlightType: r.highlightType,
+    isResolved: r.isResolved,
+    resolvedBy: r.resolvedBy,
+    resolutionMessage: r.resolutionMessage,
+    attachments: r.attachments ?? mock?.attachments,
+    reactions: mock?.reactions,
+    hasNewMessage: mock?.hasNewMessage,
+    hasNewReply: mock?.hasNewReply,
+    replyCount: mock?.replyCount,
+  }
+}
+
+/** Group remote rows (already oldest-first) into per-local-day ConvGroups. */
+function groupRemoteByDay(rows: RemoteMessage[], toConv: (r: RemoteMessage) => ConversationData): ConvGroup[] {
+  const groups: { key: string; dateLabel: string; convs: ConversationData[] }[] = []
+  for (const r of rows) {
+    const key = dayKey(r.createdAt)
+    let group = groups.length > 0 && groups[groups.length - 1].key === key ? groups[groups.length - 1] : undefined
+    if (!group) {
+      group = { key, dateLabel: formatDateLabel(r.createdAt), convs: [] }
+      groups.push(group)
+    }
+    group.convs.push(toConv(r))
+  }
+  return groups.map(({ dateLabel, convs }) => ({ dateLabel, convs }))
+}
+
+function mockMessagesById(groups: ConvGroup[] | undefined): Map<string, ConversationData> {
+  const map = new Map<string, ConversationData>()
+  for (const g of groups ?? []) for (const c of g.convs) map.set(c.id, c)
+  return map
+}
 
 /** A reply as rendered in a thread: static shape + runtime reactions. */
 export interface ThreadReply extends ReplyData {
@@ -21,7 +84,7 @@ export interface ThreadReply extends ReplyData {
 }
 
 export interface TopicMessages {
-  /** Static conversation groups — deletions filtered, overrides merged. */
+  /** Persisted conversation groups — deletions filtered, overrides merged. */
   groups: ConvGroup[]
   /** Runtime-sent messages — overrides merged. Rendered under "Today". */
   sent: ConversationData[]
@@ -32,6 +95,8 @@ export interface TopicMessages {
   /** Invitees ∪ message authors ∪ static reply authors (display names). */
   members: string[]
   hasAnyPublicMessages: boolean
+  /** True while the Convex query is in flight — render a skeleton, not an empty state. */
+  isLoading: boolean
 }
 
 export interface ThreadData {
@@ -79,22 +144,36 @@ const EMPTY_TOPIC: TopicMessages = {
   resolvedCount: 0,
   members: [],
   hasAnyPublicMessages: false,
+  isLoading: false,
 }
 
 export function useTopicMessages(topicId: string | null): TopicMessages {
   const o = useTopicMutations()
   const { findTopic } = useTopicStore()
+  const remote = useQuery(
+    api.messages.list,
+    hasConvex && topicId != null ? { parentKind: 'topic', parentKey: topicId } : 'skip',
+  )
   if (topicId == null) return EMPTY_TOPIC
 
   const topic = findTopic(topicId)
-  const staticGroups = TOPIC_CONVERSATIONS[topicId] ?? []
-  const groups = staticGroups
-    .map((g) => ({
-      dateLabel: g.dateLabel,
-      convs: g.convs.filter((c) => !o.deletedIds.has(c.id)).map((c) => mergeConv(c, o)),
-    }))
-    .filter((g) => g.convs.length > 0)
-  const sent = (o.sentMessages[topicId] ?? []).map((c) => mergeConv(c, o))
+  const sentLocal = o.sentMessages[topicId] ?? []
+  let groups: ConvGroup[]
+  if (hasConvex) {
+    if (remote === undefined) return { ...EMPTY_TOPIC, isLoading: true }
+    const mockById = mockMessagesById(TOPIC_CONVERSATIONS[topicId])
+    const sentIds = new Set(sentLocal.map((c) => c.id))
+    const rows = remote.filter((r) => !sentIds.has(r.id) && !o.deletedIds.has(r.id))
+    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id)), o))
+  } else {
+    groups = (TOPIC_CONVERSATIONS[topicId] ?? [])
+      .map((g) => ({
+        dateLabel: g.dateLabel,
+        convs: g.convs.filter((c) => !o.deletedIds.has(c.id)).map((c) => mergeConv(c, o)),
+      }))
+      .filter((g) => g.convs.length > 0)
+  }
+  const sent = sentLocal.map((c) => mergeConv(c, o))
   const all = [...groups.flatMap((g) => g.convs), ...sent]
 
   const openCount = all.filter((c) => !(c.isResolved ?? false)).length
@@ -103,30 +182,45 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
   const members = Array.from(
     new Set([...(topic?.invitees ?? []), ...all.map((c) => c.authorName), ...replyAuthors]),
   )
-  const hasAnyPublicMessages =
-    staticGroups.some((g) => g.convs.some((c) => !o.deletedIds.has(c.id))) || sent.length > 0
+  const hasAnyPublicMessages = all.length > 0
 
-  return { groups, sent, all, openCount, resolvedCount, members, hasAnyPublicMessages }
+  return { groups, sent, all, openCount, resolvedCount, members, hasAnyPublicMessages, isLoading: false }
 }
 
 export interface DmMessages {
   groups: ConvGroup[]
   sent: ConversationData[]
+  /** True while the Convex query is in flight — render a skeleton, not an empty state. */
+  isLoading: boolean
 }
 
 export function useDmMessages(dmId: number | null): DmMessages {
   const o = useTopicMutations()
   const { sentDmMessages } = useDmRuntime()
-  if (dmId == null) return { groups: [], sent: [] }
+  const remote = useQuery(
+    api.messages.list,
+    hasConvex && dmId != null ? { parentKind: 'dm', parentKey: String(dmId) } : 'skip',
+  )
+  if (dmId == null) return { groups: [], sent: [], isLoading: false }
 
-  const groups = (DM_CONVERSATIONS[dmId] ?? [])
-    .map((g) => ({
-      dateLabel: g.dateLabel,
-      convs: g.convs.filter((c) => !o.deletedIds.has(c.id)).map((c) => mergeConv(c, o)),
-    }))
-    .filter((g) => g.convs.length > 0)
-  const sent = (sentDmMessages[dmId] ?? []).map((c) => mergeConv(c, o))
-  return { groups, sent }
+  const sentLocal = sentDmMessages[dmId] ?? []
+  let groups: ConvGroup[]
+  if (hasConvex) {
+    if (remote === undefined) return { groups: [], sent: [], isLoading: true }
+    const mockById = mockMessagesById(DM_CONVERSATIONS[dmId])
+    const sentIds = new Set(sentLocal.map((c) => c.id))
+    const rows = remote.filter((r) => !sentIds.has(r.id) && !o.deletedIds.has(r.id))
+    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id)), o))
+  } else {
+    groups = (DM_CONVERSATIONS[dmId] ?? [])
+      .map((g) => ({
+        dateLabel: g.dateLabel,
+        convs: g.convs.filter((c) => !o.deletedIds.has(c.id)).map((c) => mergeConv(c, o)),
+      }))
+      .filter((g) => g.convs.length > 0)
+  }
+  const sent = sentLocal.map((c) => mergeConv(c, o))
+  return { groups, sent, isLoading: false }
 }
 
 /**
@@ -155,6 +249,10 @@ export function useThread(messageId: string | null): ThreadData {
   const { topics } = useTopicStore()
   const { sentDmMessages } = useDmRuntime()
   const huddleLookup = useHuddleLookup()
+  // Refresh fallback: a message sent in an earlier session exists only in
+  // Convex — the local pools below can't see it (mock data + this session's
+  // sent stores only).
+  const remoteMsg = useQuery(api.messages.get, hasConvex && messageId ? { key: messageId } : 'skip')
 
   if (!messageId) {
     return { conversation: null, replies: [], sentReplies: [], resolvedByReplyId: undefined, resolutionMessage: undefined }
@@ -194,7 +292,7 @@ export function useThread(messageId: string | null): ThreadData {
     return undefined
   }
 
-  const raw = find()
+  const raw = find() ?? (remoteMsg ? toConversationData(remoteMsg, undefined) : undefined)
   const conversation = raw ? mergeConv(raw, o) : null
   const replies = (REPLIES[messageId] ?? []).map((r) => mergeReply(r, o))
   const sentReplies = (o.sentReplies[messageId] ?? []).map((r) => mergeReply(r, o))

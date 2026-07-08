@@ -6,8 +6,10 @@
  * instead of a scattered 'You' literal. Phase 2 swaps each function to a
  * Convex mutation (domain model §2, §7 "runtime state" table).
  */
+import { useMutation } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import { useTopicMutations } from '@/api/internal/topicMutations'
-import { useDmRuntime } from './store'
+import { hasConvex, useDmRuntime } from './store'
 import { CURRENT_USER_NAME } from './currentUser'
 import type { ConversationData, HighlightType, Huddle, ReactionData, ReplyData } from './types'
 
@@ -25,6 +27,32 @@ const nowTimestamp = (now = Date.now()) =>
 export function usePeekActions() {
   const m = useTopicMutations()
   const { setSentDmMessages } = useDmRuntime()
+  // Convex double-writes (no-ops without a deployment): the optimistic local
+  // copy renders instantly; the record shares its id via seedKey so the
+  // reactive read dedupes when it catches up.
+  const sendRemote = useMutation(api.messages.send)
+  const editBodyRemote = useMutation(api.messages.editBody)
+  const removeRemote = useMutation(api.messages.remove)
+
+  const persistMessage = (
+    parentKind: 'topic' | 'dm',
+    parentKey: string,
+    msg: ConversationData,
+    dmPartnerName?: string,
+  ) => {
+    if (!hasConvex) return
+    void sendRemote({
+      parentKind,
+      parentKey,
+      seedKey: msg.id,
+      body: msg.body,
+      highlightType: msg.highlightType,
+      resolved: msg.isResolved,
+      resolutionMessage: msg.resolutionMessage,
+      attachments: msg.attachments,
+      dmPartnerName,
+    })
+  }
 
   const buildMessage = ({ text, resolution, highlightType, attachments }: SendMessagePayload): ConversationData => ({
     id: `sent_${Date.now()}`,
@@ -57,16 +85,18 @@ export function usePeekActions() {
       if (payload.text || payload.attachments?.length) {
         const newMsg = buildMessage(payload)
         m.setSentMessages((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newMsg] }))
+        persistMessage('topic', topicId, newMsg)
       } else if (payload.resolution) {
         const message = payload.resolution.message
         m.setSentMessages((prev) => ({ ...prev, [topicId]: resolveLastSent(prev[topicId] ?? [], message) }))
       }
     },
 
-    sendDmMessage(dmId: number, payload: SendMessagePayload) {
+    sendDmMessage(dmId: number, payload: SendMessagePayload, dmPartnerName?: string) {
       if (payload.text || payload.attachments?.length) {
         const newMsg = buildMessage(payload)
         setSentDmMessages((prev) => ({ ...prev, [dmId]: [...(prev[dmId] ?? []), newMsg] }))
+        persistMessage('dm', String(dmId), newMsg, dmPartnerName)
       } else if (payload.resolution) {
         const message = payload.resolution.message
         setSentDmMessages((prev) => ({ ...prev, [dmId]: resolveLastSent(prev[dmId] ?? [], message) }))
@@ -89,16 +119,21 @@ export function usePeekActions() {
     deleteTopicMessage(topicId: string, messageId: string) {
       m.setSentMessages((prev) => ({ ...prev, [topicId]: (prev[topicId] ?? []).filter((msg) => msg.id !== messageId) }))
       m.setDeletedIds((prev) => new Set([...prev, messageId]))
+      if (hasConvex) void removeRemote({ key: messageId })
     },
 
     deleteDmMessage(dmId: number, messageId: string) {
       setSentDmMessages((prev) => ({ ...prev, [dmId]: (prev[dmId] ?? []).filter((msg) => msg.id !== messageId) }))
       m.setDeletedIds((prev) => new Set([...prev, messageId]))
+      if (hasConvex) void removeRemote({ key: messageId })
     },
 
-    /** Body edit — id-keyed, applies to messages and replies alike. */
+    /** Body edit — id-keyed, applies to messages and replies alike.
+     *  (The Convex write only lands for messages; reply ids miss until the
+     *  replies entity swaps.) */
     editBody(id: string, body: string) {
       m.setBodyOverrides((prev) => ({ ...prev, [id]: body }))
+      if (hasConvex) void editBodyRemote({ key: id, body })
     },
 
     /** Body edit for a huddle's SEED conversation (drives the card preview). */

@@ -8,6 +8,7 @@ import { ThreadPanel } from '@/components/ThreadPanel'
 import { HuddleCard } from '@/components/HuddleCard'
 import { StartHuddleDialog, type StartHuddleResult } from '@/components/StartHuddleDialog'
 import { DateDivider } from '@/components/ui/DateDivider'
+import { SkeletonConversationList } from '@/components/ui/Skeleton'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopicTabs, type TopicTab } from '@/components/ui/TopicTabs'
@@ -84,6 +85,7 @@ export function useTopicView({
     resolvedCount,
     members: topicMembers,
     hasAnyPublicMessages,
+    isLoading,
   } = useTopicMessages(topicId)
   const currentHuddles = topicId != null ? huddleLookup(topicId) : []
 
@@ -363,6 +365,7 @@ export function useTopicView({
           <div ref={scrollRef} className="flex-1 overflow-y-auto flex flex-col">
             <div className="flex-1 min-h-0" />
             <div className="shrink-0 flex flex-col px-4 py-4 gap-2">
+              {isLoading && <SkeletonConversationList />}
               {huddleVariant === 3 ? (
                 v3Groups.map((group) => (
                   <div key={group.dateLabel} className="flex flex-col gap-2">
@@ -508,7 +511,7 @@ export function useTopicView({
               )}
             </div>
           </div>
-          {!hasAnyPublicMessages && (
+          {!isLoading && !hasAnyPublicMessages && (
             <div className="px-3 pt-2">
               {/* TODO: wire onInviteMembers to the invite-members dialog */}
               <NewTopicBanner title={topicTitle} />

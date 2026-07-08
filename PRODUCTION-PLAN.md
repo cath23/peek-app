@@ -296,8 +296,21 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       the client id via seedKey, merge dedupes); seeded topics bridge
       invitees from mocks (seed wrote no topicMembers rows); ConvexProvider
       always mounted (placeholder client + 'skip' when no deployment)
+- [x] **Entity swap 3 — messages** (2026-07-08): `convex/messages.ts`
+      (list/get/send/editBody/remove, `by_seedKey` index);
+      `src/api/format.ts` = the §5 client formatting module (9 unit
+      tests); `useTopicMessages`/`useDmMessages` Convex-backed with
+      `isLoading` → `SkeletonConversationList` in both conversation views;
+      sends/edits/deletes double-write (optimistic local + Convex, seedKey
+      = client id, reads dedupe); first message to a person without a
+      conversation creates the DM record on demand (`dmPartnerName`);
+      `useThread` gets a Convex `get` fallback so threads on
+      prior-session messages open after refresh. Still local-only until
+      their entities swap: replies, reactions, resolutions/highlights
+      (their overrides merge on top of Convex rows), unread flags
+      (Phase 4 readState), huddle messages.
 - [ ] Entity-by-entity hook swap continues, deleting the matching override
-      layer each time: messages → replies → resolutions/highlights →
+      layer each time: replies → resolutions/highlights →
       reactions (becomes `toggleReaction`) → huddles + promotion →
       stars/screener/open-work; optimistic updates on composer send.
       (`extraTopics` in topicStore survives until huddles+promotion swap —
@@ -351,6 +364,14 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   local anonymous); loading states are **skeleton placeholders** matching
   card/list layouts (design in Figma with tokens before building; empty
   states designed in the same pass).
+- 2026-07-08 — **Product goal reaffirmed (user): the deliverable is the
+  real from-scratch app** — log in as the first user, start in empty
+  states, other users join and communicate. Consequences: demo-dataset
+  pixel-fidelity (seed bridges, mock joins) is downgraded to best-effort
+  dev tooling, never a gate; remaining Phase 2 swaps proceed at pace
+  (persistence is required for the goal regardless), then Phase 3 auth is
+  the headline milestone, then Phase 4 multi-user. The §5 formatting rules
+  remain production spec (they format real data).
 - 2026-07-08 — Skeleton/empty design review rulings (user): (1) skeletons
   appear only when loading actually takes time — 150ms delayed reveal, no
   flash on fast loads; (2) loading keeps real chrome, only the data region

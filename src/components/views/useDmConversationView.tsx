@@ -6,6 +6,7 @@ import { ThreadPanel } from '@/components/ThreadPanel'
 import { DateDivider } from '@/components/ui/DateDivider'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SkeletonConversationList } from '@/components/ui/Skeleton'
 import {
   usePeople,
   CURRENT_USER_NAME,
@@ -49,7 +50,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
   // Merged data from the seam — overrides applied, deletions filtered,
   // replyCount final. DM sends live in the seam store, so they survive
   // navigating away and back (same as topic sends).
-  const { groups: dmGroups, sent: currentSent } = useDmMessages(dmId)
+  const { groups: dmGroups, sent: currentSent, isLoading } = useDmMessages(dmId)
 
   const people = usePeople()
   const dmPartner = dmName ? people?.find((p) => p.name === dmName) : undefined
@@ -112,7 +113,8 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
   const handleSend = ({ text, resolution, attachments }: SendPayload) => {
     if (dmId == null) return
     // DM messages never carry a highlight (matches pre-seam behavior).
-    actions.sendDmMessage(dmId, { text, resolution, attachments })
+    // dmName lets the backend create the conversation on first message.
+    actions.sendDmMessage(dmId, { text, resolution, attachments }, dmName)
   }
 
   const handleDelete = (id: string) => {
@@ -164,6 +166,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
       <div ref={scrollRef} className="flex-1 overflow-y-auto flex flex-col">
         <div className="flex-1 min-h-0" />
         <div className="shrink-0 flex flex-col px-4 py-4 gap-2">
+          {isLoading && <SkeletonConversationList />}
           {dmGroups.map((group) => (
             <div key={group.dateLabel} className="flex flex-col gap-2">
               <DateDivider label={group.dateLabel} className="sticky top-0 z-10 bg-bg-surface" />
@@ -234,7 +237,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
           )}
         </div>
       </div>
-      {dmGroups.length === 0 && currentSent.length === 0 && (
+      {!isLoading && dmGroups.length === 0 && currentSent.length === 0 && (
         <div className="px-3 pt-2">
           <NewTopicBanner kind="dm" title={dmName} />
         </div>
