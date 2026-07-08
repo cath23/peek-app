@@ -7,7 +7,7 @@ import { DateDivider } from '@/components/ui/DateDivider'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
 import {
-  PEOPLE,
+  usePeople,
   CURRENT_USER_NAME,
   useDmMessages,
   useThread,
@@ -51,7 +51,8 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
   // navigating away and back (same as topic sends).
   const { groups: dmGroups, sent: currentSent } = useDmMessages(dmId)
 
-  const dmPartner = dmName ? PEOPLE.find((p) => p.name === dmName) : undefined
+  const people = usePeople()
+  const dmPartner = dmName ? people?.find((p) => p.name === dmName) : undefined
   const dmContext = dmPartner ? { participants: [dmPartner] } : undefined
 
   const makeStartTopicHandler = (seedMessageId: string) =>

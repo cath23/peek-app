@@ -271,19 +271,37 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       transform — never runs against prod
 - [x] **USER STEP — provision a deployment** ✅ 2026-07-08: cloud dev
       `hallowed-stork-966` live, demo dataset seeded and verified
-- [ ] **USER STEP — loading/empty-state design review**: skeleton + empty
-      designs built in Figma 2026-07-08 ("Peek: Claude to Figma" →
-      *Loading & Empty States* page: 6 skeleton components, 4 loading
-      panels, 6 empty-state panels) — **awaiting user approval** before the
-      React build + first visible entity swap. Error states deferred to
-      Phase 5 (error boundaries)
+- [x] **USER STEP — loading/empty-state design review** ✅ 2026-07-08:
+      Figma designs ("Peek: Claude to Figma" → *Loading & Empty States*
+      page) approved with rulings — see decision log. Error states deferred
+      to Phase 5 (error boundaries)
+- [x] Skeleton React components (`src/components/ui/Skeleton.tsx` + story):
+      bar/row/sidebar-list/conversation-card primitives, `bg-inset` +
+      `animate-pulse`, wrapped in `animate-skeleton-in` (150ms delayed
+      reveal — fast loads never flash a skeleton)
+- [x] Beginning-of-conversation banner everywhere it applies (review
+      ruling): any topic with no public messages + empty DMs
+      (`NewTopicBanner kind='dm'`, no invite button)
 - [x] Wire `ConvexProvider` into the seam (`VITE_CONVEX_URL`); mocks remain
       the fallback until each entity swaps (commit 6a2d437; `hasConvex`
       gate, `seedKey` transition bridge)
-- [ ] Entity-by-entity hook swap, deleting the matching override layer each
-      time: people → topics → messages → replies → resolutions/highlights →
+- [x] **Entity swaps 1+2 — people + topics** (2026-07-08): first public
+      Convex functions (`convex/people.ts` list, `convex/topics.ts`
+      list/create); `usePeople()` hook (avatars stay client-side
+      `avatarFor`); `useTopics`/`useTopicLookup` Convex-backed with
+      `undefined` loading state + sidebar skeletons in
+      TopicsPage/PeoplePage; People list = ALL workspace people (ruling),
+      synthetic dmIds for people without a seeded conversation; topic
+      creation double-writes (optimistic local + `topics.create` sharing
+      the client id via seedKey, merge dedupes); seeded topics bridge
+      invitees from mocks (seed wrote no topicMembers rows); ConvexProvider
+      always mounted (placeholder client + 'skip' when no deployment)
+- [ ] Entity-by-entity hook swap continues, deleting the matching override
+      layer each time: messages → replies → resolutions/highlights →
       reactions (becomes `toggleReaction`) → huddles + promotion →
-      stars/screener/open-work; optimistic updates on composer send
+      stars/screener/open-work; optimistic updates on composer send.
+      (`extraTopics` in topicStore survives until huddles+promotion swap —
+      createTopicFromDm still creates the local seed huddle)
 - [ ] `src/api/internal/` stores empty → deleted; app runs entirely on
       Convex with hardcoded seed user
 - [ ] Regression: tests + Storybook + QA checklist (incl. the deferred
@@ -333,6 +351,16 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   local anonymous); loading states are **skeleton placeholders** matching
   card/list layouts (design in Figma with tokens before building; empty
   states designed in the same pass).
+- 2026-07-08 — Skeleton/empty design review rulings (user): (1) skeletons
+  appear only when loading actually takes time — 150ms delayed reveal, no
+  flash on fast loads; (2) loading keeps real chrome, only the data region
+  skeletons; (3) Desk: Screener/Urgent sections hidden when empty, Open
+  work/Starred always shown with their hint paragraphs (already
+  implemented); (4) the purple beginning-banner shows in ANY topic with no
+  conversations (was DM-promoted only — fixed) and in empty DMs without
+  the Invite members button; (5) People list shows ALL people in the
+  organization by default, conversation or not; (6) error states deferred
+  to Phase 5.
 - 2026-07-08 — Phase 1 seam built (5 commits, batch A–D + finalization).
   Deliberate behavior change: DM sent messages now live in the seam store
   and survive navigation (previously hook-local and lost — matches topics

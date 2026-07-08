@@ -80,6 +80,17 @@ export default {
         'md':  'var(--shadow-md)',
         'lg':  'var(--shadow-lg)',
       },
+      keyframes: {
+        'skeleton-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+      },
+      animation: {
+        // Delayed reveal for loading skeletons: invisible for the first 150ms
+        // so fast loads never flash a skeleton (user decision 2026-07-08).
+        'skeleton-in': 'skeleton-in 0.2s ease-out 0.15s both',
+      },
     },
   },
   plugins: [],

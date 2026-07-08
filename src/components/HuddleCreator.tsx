@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { IconX } from '@tabler/icons-react'
 import { Avatar } from './ui/Avatar'
 import { ComposeBox, type SendPayload } from './ui/ComposeBox'
-import { PEOPLE } from '@/api'
+import { usePeople } from '@/api'
 import { cn } from '@/lib/utils'
 
 interface HuddleCreatorProps {
@@ -38,7 +38,8 @@ export function HuddleCreator({ topicTitle, onCancel, onCreate }: HuddleCreatorP
   }
   const removeRecipient = (name: string) => setRecipients((prev) => prev.filter((n) => n !== name))
 
-  const suggestions = PEOPLE.filter(
+  const people = usePeople() ?? []
+  const suggestions = people.filter(
     (p) => !recipients.includes(p.name) && p.name.toLowerCase().includes(query.toLowerCase())
   )
 

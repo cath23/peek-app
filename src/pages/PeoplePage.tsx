@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
@@ -7,13 +7,15 @@ import { Divider } from '@/components/ui/Divider'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StarredSection, type StarredItem } from '@/components/ui/StarredSection'
 import { useDmConversationView } from '@/components/views/useDmConversationView'
-import { DM_DIRECTORY, dmHasUnread, useCreateTopicFromDm, useStarred } from '@/api'
+import { DM_DIRECTORY, dmHasUnread, useCreateTopicFromDm, usePeople, useStarred } from '@/api'
+import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
 import { useToast } from '@/lib/toast'
 import type { StartTopicResult } from '@/components/CreateTopicDialog'
 
-const DMS = DM_DIRECTORY.map((d) => ({ id: d.dmId, name: d.name }))
+/** Mock-era DM ids for the seeded conversations (dies with the dmConversations swap). */
+const DM_ID_BY_NAME = new Map(DM_DIRECTORY.map((d) => [d.name, d.dmId]))
 
 const TEAMS = [
   { id: 10, name: 'Account Management' },
@@ -23,9 +25,6 @@ const TEAMS = [
   { id: 14, name: 'Product Management' },
   { id: 15, name: 'Sales' },
 ]
-
-const ALL_ITEMS = [...DMS, ...TEAMS]
-const DM_IDS = new Set(DMS.map((d) => d.id))
 
 export function PeoplePage() {
   const navigate = useNavigate()
@@ -38,6 +37,17 @@ export function PeoplePage() {
   const { entries: starredEntries } = useStarred()
   const { state: debug } = useDebug()
   const showUnreads = debug.unreads.people
+
+  // Everyone in the workspace appears in the DM list (ruling 2026-07-08) —
+  // people without a seeded conversation get a synthetic id and simply start
+  // with an empty conversation. undefined = Convex still loading.
+  const people = usePeople()
+  const DMS = useMemo(
+    () => people?.map((p, i) => ({ id: DM_ID_BY_NAME.get(p.name) ?? 100 + i, name: p.name })),
+    [people],
+  )
+  const ALL_ITEMS = useMemo(() => [...(DMS ?? []), ...TEAMS], [DMS])
+  const DM_IDS = useMemo(() => new Set((DMS ?? []).map((d) => d.id)), [DMS])
 
   // URL is the source of truth — derive selection from routeId.
   const selectedId = routeId ? Number(routeId) : lastDmId ?? null
@@ -77,8 +87,8 @@ export function PeoplePage() {
   const starredDmIds = new Set(starredDmItems.map((s) => s.id))
   // Sort: unread first when toggle on, otherwise input order. Then drop starred DMs.
   const sortedDms = showUnreads
-    ? [...DMS].sort((a, b) => Number(dmHasUnread(b.id)) - Number(dmHasUnread(a.id)))
-    : DMS
+    ? [...(DMS ?? [])].sort((a, b) => Number(dmHasUnread(b.id)) - Number(dmHasUnread(a.id)))
+    : DMS ?? []
   const visibleDms = sortedDms.filter((dm) => !starredDmIds.has(dm.id))
 
   useEffect(() => {
@@ -89,7 +99,7 @@ export function PeoplePage() {
       // Returning to /people with no id — restore last selection in URL.
       navigate(`/people/${lastDmId}`, { replace: true })
     }
-  }, [routeId, lastDmId, navigate, setLastDmId])
+  }, [routeId, lastDmId, navigate, setLastDmId, DM_IDS])
 
   const selectedItem = selectedId ? ALL_ITEMS.find((i) => i.id === selectedId) : null
   const isDm = selectedId != null && DM_IDS.has(selectedId)
@@ -113,47 +123,53 @@ export function PeoplePage() {
             prop2ndActionTooltip="Sort by"
           />
           <div className="flex-1 overflow-y-auto pt-4 pb-3 px-3 flex flex-col gap-1">
-            <StarredSection
-              items={starredDmItems}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-            />
+            {DMS === undefined ? (
+              <SkeletonSidebarList rows={8} />
+            ) : (
+              <>
+                <StarredSection
+                  items={starredDmItems}
+                  selectedId={selectedId}
+                  onSelect={handleSelect}
+                />
 
-            <Divider className="my-2" />
+                <Divider className="my-2" />
 
-            {visibleDms.map((dm) => (
-              <PersonRow
-                key={dm.id}
-                name={dm.name}
-                type="DM"
-                isUnread={showUnreads && dmHasUnread(dm.id)}
-                isSelected={selectedId === dm.id}
-                onClick={() => handleSelect(dm.id)}
-              />
-            ))}
+                {visibleDms.map((dm) => (
+                  <PersonRow
+                    key={dm.id}
+                    name={dm.name}
+                    type="DM"
+                    isUnread={showUnreads && dmHasUnread(dm.id)}
+                    isSelected={selectedId === dm.id}
+                    onClick={() => handleSelect(dm.id)}
+                  />
+                ))}
 
-            <Divider className="my-2" />
+                <Divider className="my-2" />
 
-            <SectionHeader
-              title="Teams"
-              chevron
-              isExpanded={teamsExpanded}
-              onToggle={() => setTeamsExpanded((v) => !v)}
-            />
+                <SectionHeader
+                  title="Teams"
+                  chevron
+                  isExpanded={teamsExpanded}
+                  onToggle={() => setTeamsExpanded((v) => !v)}
+                />
 
-            {teamsExpanded && TEAMS.map((t) => (
-              <PersonRow
-                key={t.id}
-                name={t.name}
-                type="team"
-                isSelected={selectedId === t.id}
-                onClick={() => handleSelect(t.id)}
-              />
-            ))}
+                {teamsExpanded && TEAMS.map((t) => (
+                  <PersonRow
+                    key={t.id}
+                    name={t.name}
+                    type="team"
+                    isSelected={selectedId === t.id}
+                    onClick={() => handleSelect(t.id)}
+                  />
+                ))}
+              </>
+            )}
           </div>
         </div>
       }
-      rightPanel={dmView.rightPanel}
+      rightPanel={DMS === undefined ? <div className="flex-1 h-full" /> : dmView.rightPanel}
       threadPanel={dmView.threadPanel}
     />
   )

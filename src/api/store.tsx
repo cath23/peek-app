@@ -27,7 +27,10 @@ import type { ConversationData } from './types'
 // during the Phase 2 entity-by-entity swap.
 const CONVEX_URL =
   import.meta.env.MODE === 'test' ? undefined : (import.meta.env.VITE_CONVEX_URL as string | undefined)
-const convexClient = CONVEX_URL ? new ConvexReactClient(CONVEX_URL) : null
+// The client always exists so seam hooks can call useQuery/useMutation
+// unconditionally (rules of hooks); without a deployment every query passes
+// 'skip' (gated on hasConvex), so the placeholder client never connects.
+const convexClient = new ConvexReactClient(CONVEX_URL ?? 'https://peek-no-deployment.convex.cloud')
 
 interface DmRuntimeValue {
   /** Runtime-sent DM messages, keyed by dmId. */
@@ -60,8 +63,8 @@ export function PeekDataProvider({ children }: { children: ReactNode }) {
       </TopicStoreProvider>
     </StarredProvider>
   )
-  return convexClient ? <ConvexProvider client={convexClient}>{tree}</ConvexProvider> : tree
+  return <ConvexProvider client={convexClient}>{tree}</ConvexProvider>
 }
 
 /** Whether a Convex deployment is wired up (drives seam-internal fallbacks). */
-export const hasConvex = convexClient !== null
+export const hasConvex = CONVEX_URL !== undefined

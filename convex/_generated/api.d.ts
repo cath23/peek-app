@@ -10,6 +10,8 @@
 
 import type * as dev_seedDates from "../dev/seedDates.js";
 import type * as dev_seedDemo from "../dev/seedDemo.js";
+import type * as people from "../people.js";
+import type * as topics from "../topics.js";
 
 import type {
   ApiFromModules,
@@ -20,6 +22,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   "dev/seedDates": typeof dev_seedDates;
   "dev/seedDemo": typeof dev_seedDemo;
+  people: typeof people;
+  topics: typeof topics;
 }>;
 
 /**

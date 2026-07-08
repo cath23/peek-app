@@ -89,7 +89,7 @@ export function DeskPage() {
     setDismissedScreenerIds((prev) => new Set([...prev, id]))
 
   const selectTopic = (topicId: string, section: SectionKey) => {
-    const topic = TOPICS.find((t) => t.id === topicId)
+    const topic = TOPICS?.find((t) => t.id === topicId)
     if (!topic) return
     setSelected({ kind: 'topic', topicId, topicTitle: topic.title, topicResolved: isTopicResolved(topicId), section })
   }

@@ -5,6 +5,7 @@ import { ContainerHeader } from '@/components/ContainerHeader'
 import { PersonRow } from '@/components/ui/PersonRow'
 import { useTopicView } from '@/components/views/useTopicView'
 import { CURRENT_USER_NAME, topicHasUnread, useTopics, useIsTopicResolved, useHuddleLookup } from '@/api'
+import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
 
@@ -41,14 +42,14 @@ export function TopicsPage() {
     navigate(`/topics/${topicId}?huddle=${huddleId}`)
   }
 
-  const selectedTopic = TOPICS.find((t) => t.id === selectedId) ?? null
+  const selectedTopic = TOPICS?.find((t) => t.id === selectedId) ?? null
 
   /** Huddles you're a member of, for a given topic. Used to render the V2 sidebar tree. */
   const huddlesForSidebar = (topicId: string) =>
     huddleLookup(topicId).filter((h) => h.members.includes(CURRENT_USER_NAME))
 
   // Always alphabetical by title; unread-first overlay when the toggle is on.
-  const alphaSorted = [...TOPICS].sort((a, b) =>
+  const alphaSorted = [...(TOPICS ?? [])].sort((a, b) =>
     a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
   )
   const orderedTopics = showUnreads
@@ -75,6 +76,7 @@ export function TopicsPage() {
             prop1stActionTooltip="New topic"
           />
           <div className="flex-1 overflow-y-auto pt-4 pb-3 px-3 flex flex-col gap-0.5">
+            {TOPICS === undefined && <SkeletonSidebarList rows={9} />}
             {orderedTopics.map((topic) => {
               const topicHuddles = huddleVariant === 2 ? huddlesForSidebar(topic.id) : []
               const topicSelected = selectedId === topic.id && !selectedHuddleId
@@ -165,7 +167,7 @@ export function TopicsPage() {
           </div>
         </div>
       }
-      rightPanel={view.rightPanel}
+      rightPanel={TOPICS === undefined ? <div className="flex-1 h-full" /> : view.rightPanel}
       threadPanel={view.threadPanel}
     />
   )

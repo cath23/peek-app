@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { IconX } from '@tabler/icons-react'
 import { Avatar } from './Avatar'
-import { PEOPLE, type Person } from '@/api'
+import { usePeople, type Person } from '@/api'
 import { cn } from '@/lib/utils'
 
 interface PersonChipInputProps {
@@ -27,18 +27,19 @@ export function PersonChipInput({
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const people = usePeople() ?? []
 
   const matches = useMemo(() => {
     const selectedIds = new Set(value.map((p) => p.id))
     const excludedIds = new Set(excludeIds)
     const q = query.trim().toLowerCase()
-    return PEOPLE.filter((p) => {
+    return people.filter((p) => {
       if (selectedIds.has(p.id)) return false
       if (excludedIds.has(p.id)) return false
       if (!q) return true
       return p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q)
     })
-  }, [query, value, excludeIds])
+  }, [query, value, excludeIds, people])
 
   useEffect(() => {
     setHighlight(0)

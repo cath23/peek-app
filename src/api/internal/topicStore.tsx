@@ -22,6 +22,9 @@ interface CreateTopicFromDmResult {
 interface TopicStoreValue {
   /** All topics (static + runtime). */
   topics: Topic[]
+  /** Runtime-created topics only — merged over the Convex list during the
+   *  Phase 2 transition (dropped once the create round-trip is authoritative). */
+  extraTopics: Topic[]
   /** Resolve huddles for a topic (static + runtime). */
   getHuddlesForTopic: (topicId: string) => Huddle[]
   /** Look up a topic by id. */
@@ -165,8 +168,8 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo<TopicStoreValue>(
-    () => ({ topics, getHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, createTopicFromDm }),
-    [topics, getHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, createTopicFromDm],
+    () => ({ topics, extraTopics, getHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, createTopicFromDm }),
+    [topics, extraTopics, getHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, createTopicFromDm],
   )
 
   return <TopicStoreContext.Provider value={value}>{children}</TopicStoreContext.Provider>
