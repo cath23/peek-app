@@ -1,0 +1,116 @@
+import { Node } from '@tiptap/core'
+import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
+import type { NodeViewProps } from '@tiptap/react'
+import { HIGHLIGHT_META, type HighlightType } from '@/data/topicData'
+
+/**
+ * HighlightTag - an inline atom node inserted at the start of a message
+ * to mark it as a Highlight. Renders as a colored chip. Clicking it
+ * dispatches a custom event so the ComposeBox can open the type picker.
+ */
+
+function HighlightTagView({ node }: NodeViewProps) {
+  const hlType = node.attrs.highlightType as HighlightType
+  const meta = HIGHLIGHT_META[hlType]
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    // Dispatch custom event with the clicked element so only the owning ComposeBox responds
+    window.dispatchEvent(new CustomEvent('highlight-tag-click', { detail: e.currentTarget }))
+  }
+
+  return (
+    <NodeViewWrapper
+      as="span"
+      className="inline-flex items-center gap-1 rounded-sm px-1 text-sm font-medium select-none cursor-pointer"
+      style={{
+        backgroundColor: `color-mix(in srgb, ${meta.color} 13%, transparent)`,
+        color: meta.color,
+        verticalAlign: 'text-bottom',
+        height: '1.4em',
+      }}
+      onClick={handleClick}
+      contentEditable={false}
+    >
+      <span
+        className="size-[10px] rounded-[2px] shrink-0"
+        style={{ backgroundColor: meta.color }}
+      />
+      <span>{meta.label}</span>
+    </NodeViewWrapper>
+  )
+}
+
+export const HighlightTag = Node.create({
+  name: 'highlightTag',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: true,
+  draggable: false,
+
+  addAttributes() {
+    return {
+      highlightType: { default: 'insight' },
+    }
+  },
+
+  renderHTML({ node }) {
+    return [
+      'span',
+      {
+        'data-highlight-tag': 'true',
+        'data-type': node.attrs.highlightType,
+        class: 'inline-flex items-center gap-1 rounded-sm px-1 text-sm font-medium select-none',
+      },
+      node.attrs.highlightType,
+    ]
+  },
+
+  parseHTML() {
+    return [{ tag: 'span[data-highlight-tag]' }]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(HighlightTagView, { as: 'span' })
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      // Backspace at position 1 (right after the tag) should delete the tag
+      Backspace: ({ editor }) => {
+        const { state } = editor
+        const { $from } = state.selection
+        // Check if cursor is right after a highlightTag node
+        if ($from.parentOffset > 0) {
+          const before = $from.nodeBefore
+          if (before?.type.name === 'highlightTag') {
+            editor.commands.deleteRange({
+              from: $from.pos - before.nodeSize,
+              to: $from.pos,
+            })
+            return true
+          }
+        }
+        return false
+      },
+    }
+  },
+})
+
+/**
+ * Extract highlight type from the editor doc.
+ * Returns the type if a highlightTag node is present, undefined otherwise.
+ */
+export function extractHighlightType(editor: {
+  state: { doc: { descendants: (cb: (node: { type: { name: string }; attrs: Record<string, string> }) => boolean | void) => void } }
+}): HighlightType | undefined {
+  let found: HighlightType | undefined
+  editor.state.doc.descendants((node) => {
+    if (node.type.name === 'highlightTag') {
+      found = node.attrs.highlightType as HighlightType
+      return false // stop traversal
+    }
+  })
+  return found
+}

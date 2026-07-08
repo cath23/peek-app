@@ -1,0 +1,91 @@
+# Shortcuts
+
+## How to trigger contextual action, suggestions / auto completion.
+
+# Context
+
+## Customer message
+
+Writing experience is in heart of Peek. Shortcuts are power tools that help you focus on writing itself and same time manage lots of things by just writing + auto-completion.
+
+## Problem
+
+During writing, often you need or want to manage things that are related to the thing you're writing about. That can be distracting as you might abandon your "flow" and start searching for things. That's why we want to have powerful way how through shortcuts you can manage many things directly from the writing text field.
+
+# Solution
+
+Here are common universal shortcuts with examples how to use them.
+
+| **Symbol** | **Name** | **Function** | **Examples** | **UIs** |
+| -- | -- | -- | -- | -- |
+| `@` | **Mention** | People/Teams |  |  |
+| `!` | **Urgent** | High-priority flag |  |  |
+| `#` | **Tag** | Categorization |  |  |
+| `# ` | **Topic** | Subject Heading |  |  |
+| `[` | **File** | Resource Link |  |  |
+| `/` | **Tool** | AI / Integrations |  |  |
+| `->` | **Resolve** | Close Conversation |  |  |
+| `>` | **Reference**  | Reference message |  |  |
+
+## "@ " for mentioning people, teams
+
+To get suggestions for mentions so you don't need to type the whole name. When person or team is mentioned, the conversation will appear in Screener in Desk screen.
+
+### Examples
+
+"@person" - to mention specific person
+
+"@team" - to mention all people in the team
+
+? "@/bug-analyzer what's the issue here?"
+
+## "!" for urgent
+
+To make the message important for person or team that you're mentioning. The message will then be shown in Urgent section on Desk screen.
+
+### Examples
+
+"!@person-name" - mentioned person will get urgent message
+
+"!@team-abc" - everyone in mentioned team will get urgent message
+
+"@person-a !@person-b" - only person be will get urgent message
+
+## "->" for resolutions
+
+To resolve with message the conversation.
+
+### Examples
+
+"->" or "-> done" or "-> resolve" - conversation will be resolved without specific resolution message
+
+"-> We will postpone this feature." - conversation will be resolved with resolution message
+
+## "#tags" for tagging
+
+To label conversation or topic with tag.
+
+### Examples
+
+"some text #tag-name some text" - conversation now is assigned under tag
+
+## "# topic title" for creating / assigning to topic
+
+One first line to create or assign topic.
+
+In the middle of text as way to reference current topic.
+
+## "\[ " to mention specific file
+
+## "/ " to trigger AI/tools
+
+# Usage scenarios
+
+See solution and examples there.
+
+## Metadata
+- URL: [https://linear.app/peek-app/project/shortcuts-7b3b64f29daf](https://linear.app/peek-app/project/shortcuts-7b3b64f29daf)
+- Status: Shaping
+- Lead: No lead
+- Start date: Not set
+- Target date: Not set
