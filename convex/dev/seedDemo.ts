@@ -1,0 +1,326 @@
+/**
+ * DEV-ONLY demo fixture (domain model §5 + per-table seed notes).
+ *
+ * Production starts EMPTY — never run this against prod. It transforms the
+ * src/data mocks into real records:
+ *   - display names → userIds ('You' → the seed user)
+ *   - date labels + clock strings → real UTC ms that render back to the
+ *     exact mock labels in Europe/London (per-label year resolution)
+ *   - aggregated reactions {emoji, count, owner} → per-user rows
+ *   - numeric DM keys → dmConversations docs
+ *   - unread flags → one readState watermark per container, placed just
+ *     before the earliest flagged item (§2.10; known drift accepted)
+ * Mock narrative content is preserved verbatim. Mock replyCounts double as
+ * checksums — mismatches are returned, not fatal (a few are wrong in the
+ * mocks themselves).
+ *
+ * Run:  npx convex run dev/seedDemo:seed '{"wipe": true}'
+ */
+import { v } from 'convex/values'
+import { internalMutation, type MutationCtx } from '../_generated/server'
+import type { Id, TableNames } from '../_generated/dataModel'
+import { TOPICS, TOPIC_CONVERSATIONS, type ConversationData } from '../../src/data/topicData'
+import { DM_CONVERSATIONS } from '../../src/data/dmData'
+import { REPLIES } from '../../src/data/replyData'
+import { TOPIC_HUDDLES } from '../../src/data/huddleData'
+import { SCREENER_ITEMS } from '../../src/data/screenerData'
+import { STARRED_ENTRIES, OPEN_WORK_ITEMS } from '../../src/data/deskData'
+import { resolveDateLabel, dayTimeToUtc, type SeedDay } from './seedDates'
+
+// People are duplicated here (not imported from peopleData.ts) because that
+// module imports .png avatar assets, which the Convex bundler can't load.
+// Avatars stay client-side (name-keyed avatarFor) until Phase 3 profiles.
+const SEED_PEOPLE = [
+  { seedKey: 'alice',  name: 'Alice Johnson',  role: 'Product Designer' },
+  { seedKey: 'amie',   name: 'Amie Miles',     role: 'Engineering Manager' },
+  { seedKey: 'daniel', name: 'Daniel Stanton', role: 'Backend Engineer' },
+  { seedKey: 'greg',   name: 'Greg Bothman',   role: 'Customer Success Lead' },
+  { seedKey: 'hallie', name: 'Hallie Pratt',   role: 'Product Marketing' },
+  { seedKey: 'jake',   name: 'Jake Walter',    role: 'Software Engineer' },
+  { seedKey: 'juan',   name: 'Juan Foley',     role: 'Frontend Engineer' },
+  { seedKey: 'zack',   name: 'Zack Bright',    role: 'Data Analyst' },
+] as const
+
+// Referenced by static huddle member lists but absent from PEOPLE (§1).
+const SEED_EXTRAS = [
+  { seedKey: 'carlos', name: 'Carlos Rivera' },
+  { seedKey: 'maya',   name: 'Maya Patel' },
+] as const
+
+/** The seed user — "You". Display name is a placeholder until Phase 3. */
+const SEED_YOU = { seedKey: 'you', name: 'Cath' } as const
+
+/** Mock numeric DM id → partner (mirrors src/api/directory.ts). */
+const DM_SEED: Array<{ dmId: number; name: string }> = [
+  { dmId: 1, name: 'Alice Johnson' },
+  { dmId: 2, name: 'Daniel Stanton' },
+  { dmId: 3, name: 'Hallie Pratt' },
+  { dmId: 4, name: 'Greg Bothman' },
+  { dmId: 5, name: 'Juan Foley' },
+  { dmId: 6, name: 'Amie Miles' },
+  { dmId: 7, name: 'Zack Bright' },
+]
+
+const ALL_TABLES: TableNames[] = [
+  'users', 'topics', 'topicMembers', 'dmConversations', 'messages',
+  'replies', 'reactions', 'huddles', 'huddleMembers', 'readState',
+  'stars', 'screenerItems', 'deskOpenWork',
+]
+
+async function wipeAll(ctx: MutationCtx) {
+  for (const table of ALL_TABLES) {
+    const rows = await ctx.db.query(table).collect()
+    for (const row of rows) await ctx.db.delete(row._id)
+  }
+}
+
+export const seed = internalMutation({
+  args: { wipe: v.optional(v.boolean()) },
+  handler: async (ctx, { wipe }) => {
+    if (wipe) await wipeAll(ctx)
+    const existing = await ctx.db.query('users').first()
+    if (existing) return { skipped: 'users table not empty — pass {"wipe": true} to reseed' }
+
+    const anchor = Date.now()
+    const justNow = anchor - 45_000
+    const timeFor = (day: SeedDay, clock: string): number =>
+      clock === 'Just now' ? justNow : dayTimeToUtc(day, clock)
+
+    // ── users ──
+    const byName: Record<string, Id<'users'>> = {}
+    const youId = await ctx.db.insert('users', { ...SEED_YOU })
+    byName[SEED_YOU.name] = youId
+    byName['You'] = youId // mock authorName convention → seed user
+    for (const p of [...SEED_PEOPLE, ...SEED_EXTRAS]) {
+      byName[p.name] = await ctx.db.insert('users', { ...p })
+    }
+    const userIdOf = (name: string): Id<'users'> => {
+      const id = byName[name]
+      if (!id) throw new Error(`Seed: unknown person name "${name}"`)
+      return id
+    }
+
+    // ── shared bookkeeping ──
+    const msgIdByMock: Record<string, Id<'messages'>> = {}
+    const msgMeta: Record<string, { day: SeedDay; containerId: string }> = {}
+    const flagged: Record<string, number[]> = {}
+    const containerIds: string[] = []
+    const flag = (containerId: string, at: number) =>
+      (flagged[containerId] ??= []).push(at)
+    let counts = { messages: 0, replies: 0, reactions: 0 }
+
+    const insertMessage = async (
+      conv: ConversationData,
+      parentKind: 'topic' | 'dm' | 'huddle',
+      parentId: string,
+      day: SeedDay,
+    ) => {
+      const createdAt = timeFor(day, conv.timestamp)
+      const id = await ctx.db.insert('messages', {
+        parentKind,
+        parentId,
+        authorId: userIdOf(conv.authorName),
+        body: conv.body,
+        createdAt,
+        urgent: conv.isUrgent ? true : undefined,
+        highlightType: conv.highlightType,
+        resolved: conv.isResolved ? true : undefined,
+        resolvedById: conv.resolvedBy ? userIdOf(conv.resolvedBy) : undefined,
+        resolutionMessage: conv.resolutionMessage,
+        resolvedAt: conv.isResolved ? createdAt : undefined,
+        attachments: conv.attachments,
+      })
+      counts.messages++
+      msgIdByMock[conv.id] = id
+      msgMeta[conv.id] = { day, containerId: parentId }
+      if (conv.hasNewMessage) flag(parentId, createdAt)
+
+      // Aggregated {emoji, count, owner} → per-user rows (§2.7): 'yours'
+      // includes the seed user; remaining reactors round-robin over the
+      // people excluding the author.
+      for (const r of conv.reactions ?? []) {
+        const others = SEED_PEOPLE.map((p) => p.name).filter((n) => n !== conv.authorName)
+        const reactors = (r.owner === 'yours' ? ['You', ...others] : others).slice(0, r.count)
+        for (let i = 0; i < reactors.length; i++) {
+          await ctx.db.insert('reactions', {
+            messageId: id,
+            userId: userIdOf(reactors[i]),
+            emoji: r.emoji,
+            createdAt: createdAt + (i + 1) * 60_000,
+          })
+          counts.reactions++
+        }
+      }
+      return id
+    }
+
+    // ── topics + their messages ──
+    const topicIdByMock: Record<string, Id<'topics'>> = {}
+    for (const t of TOPICS) {
+      const groups = TOPIC_CONVERSATIONS[t.id] ?? []
+      const firstGroup = groups[0]
+      const firstConv = firstGroup?.convs[0]
+      const firstDay = firstGroup ? resolveDateLabel(firstGroup.dateLabel, anchor) : null
+      const createdAt = firstConv && firstDay ? timeFor(firstDay, firstConv.timestamp) : anchor
+      const topicId = await ctx.db.insert('topics', {
+        title: t.title,
+        creatorId: firstConv ? userIdOf(firstConv.authorName) : youId,
+        createdAt,
+      })
+      topicIdByMock[t.id] = topicId
+      containerIds.push(topicId)
+      // t.isResolved is NOT stored — derived (§4.1); verified consistent
+      // with per-message resolved flags for topics 4 and 5.
+      for (const group of groups) {
+        const day = resolveDateLabel(group.dateLabel, anchor)
+        for (const conv of group.convs) await insertMessage(conv, 'topic', topicId, day)
+      }
+    }
+
+    // ── DM conversations + their messages ──
+    const dmIdByMock: Record<number, Id<'dmConversations'>> = {}
+    for (const { dmId, name } of DM_SEED) {
+      const otherId = userIdOf(name)
+      const [userLowId, userHighId] =
+        (youId as string) < (otherId as string) ? [youId, otherId] : [otherId, youId]
+      const groups = DM_CONVERSATIONS[dmId] ?? []
+      const firstGroup = groups[0]
+      const firstConv = firstGroup?.convs[0]
+      const createdAt = firstConv && firstGroup
+        ? timeFor(resolveDateLabel(firstGroup.dateLabel, anchor), firstConv.timestamp)
+        : anchor
+      const convId = await ctx.db.insert('dmConversations', { userLowId, userHighId, createdAt })
+      dmIdByMock[dmId] = convId
+      containerIds.push(convId)
+      for (const group of groups) {
+        const day = resolveDateLabel(group.dateLabel, anchor)
+        for (const conv of group.convs) await insertMessage(conv, 'dm', convId, day)
+      }
+    }
+
+    // ── huddles + members + their messages ──
+    // Static huddles are never DM-promoted (no originDmId in the mocks);
+    // promotion happens at runtime and never copies messages (§3).
+    let huddleCount = 0
+    for (const [mockTopicId, huddles] of Object.entries(TOPIC_HUDDLES)) {
+      const topicId = topicIdByMock[mockTopicId]
+      if (!topicId) throw new Error(`Seed: huddles reference unknown topic "${mockTopicId}"`)
+      for (const h of huddles) {
+        const day = resolveDateLabel(h.lastActivity, anchor)
+        const createdAt = h.conversation ? timeFor(day, h.conversation.timestamp) : anchor
+        const huddleId = await ctx.db.insert('huddles', {
+          topicId,
+          state: h.state,
+          createdById: userIdOf(h.conversation?.authorName ?? 'You'),
+          createdAt,
+        })
+        huddleCount++
+        containerIds.push(huddleId)
+        for (const member of h.members) {
+          await ctx.db.insert('huddleMembers', { huddleId, userId: userIdOf(member) })
+        }
+        for (const conv of [...(h.conversation ? [h.conversation] : []), ...(h.extraConvs ?? [])]) {
+          await insertMessage(conv, 'huddle', huddleId, day)
+        }
+      }
+    }
+
+    // ── replies (same day as their parent message; 'Just now' → anchor−45s) ──
+    const replyCountByMock: Record<string, number> = {}
+    for (const [mockMsgId, replies] of Object.entries(REPLIES)) {
+      const messageId = msgIdByMock[mockMsgId]
+      const meta = msgMeta[mockMsgId]
+      if (!messageId || !meta) throw new Error(`Seed: replies reference unknown message "${mockMsgId}"`)
+      for (const r of replies) {
+        const createdAt = timeFor(meta.day, r.timestamp)
+        await ctx.db.insert('replies', {
+          messageId,
+          authorId: userIdOf(r.authorName),
+          body: r.body,
+          createdAt,
+          urgent: r.isUrgent ? true : undefined,
+          highlightType: r.highlightType,
+          attachments: r.attachments,
+        })
+        counts.replies++
+        replyCountByMock[mockMsgId] = (replyCountByMock[mockMsgId] ?? 0) + 1
+        if (r.isNew) flag(meta.containerId, createdAt)
+      }
+    }
+
+    // ── readState: one watermark per container (§2.10) ──
+    // Placed 1s before the earliest flagged item; unflagged containers are
+    // fully read as of the anchor.
+    for (const containerId of containerIds) {
+      const times = flagged[containerId]
+      await ctx.db.insert('readState', {
+        userId: youId,
+        containerId,
+        lastReadAt: times?.length ? Math.min(...times) - 1000 : anchor,
+      })
+    }
+
+    // ── stars / screener / open work (per-user, seed user) ──
+    for (let i = 0; i < STARRED_ENTRIES.length; i++) {
+      const e = STARRED_ENTRIES[i]
+      await ctx.db.insert('stars', {
+        userId: youId,
+        kind: e.kind,
+        targetId: e.kind === 'dm' ? dmIdByMock[e.dmId] : topicIdByMock[e.topicId],
+        createdAt: anchor - i,
+      })
+    }
+    for (let i = 0; i < SCREENER_ITEMS.length; i++) {
+      const item = SCREENER_ITEMS[i]
+      // Schema fix (§2.12): the mock DM item has only authorName — map to
+      // that person's DM conversation.
+      const targetId =
+        item.kind === 'topic'
+          ? topicIdByMock[item.topicId]
+          : dmIdByMock[DM_SEED.find((d) => d.name === item.authorName)!.dmId]
+      await ctx.db.insert('screenerItems', {
+        userId: youId,
+        kind: item.kind,
+        targetId,
+        preview: item.preview,
+        createdAt: anchor - i,
+      })
+    }
+    for (let i = 0; i < OPEN_WORK_ITEMS.length; i++) {
+      await ctx.db.insert('deskOpenWork', {
+        userId: youId,
+        kind: 'topic',
+        targetId: topicIdByMock[OPEN_WORK_ITEMS[i].topicId],
+        addedAt: anchor - i,
+      })
+    }
+
+    // ── checksum: mock replyCount vs inserted replies (§5) ──
+    const mismatches: Array<{ id: string; mock: number; inserted: number }> = []
+    const checkConv = (conv: ConversationData) => {
+      if (conv.replyCount == null) return
+      const inserted = replyCountByMock[conv.id] ?? 0
+      if (inserted !== conv.replyCount) {
+        mismatches.push({ id: conv.id, mock: conv.replyCount, inserted })
+      }
+    }
+    for (const groups of Object.values(TOPIC_CONVERSATIONS)) groups.forEach((g) => g.convs.forEach(checkConv))
+    for (const groups of Object.values(DM_CONVERSATIONS)) groups.forEach((g) => g.convs.forEach(checkConv))
+    for (const huddles of Object.values(TOPIC_HUDDLES)) {
+      for (const h of huddles) [...(h.conversation ? [h.conversation] : []), ...(h.extraConvs ?? [])].forEach(checkConv)
+    }
+
+    return {
+      anchor,
+      users: 1 + SEED_PEOPLE.length + SEED_EXTRAS.length,
+      topics: TOPICS.length,
+      dmConversations: DM_SEED.length,
+      huddles: huddleCount,
+      ...counts,
+      readState: containerIds.length,
+      // Non-fatal: some mock replyCounts disagree with the REPLIES data
+      // itself (they were hand-written); the inserted counts are the truth.
+      replyCountMismatches: mismatches,
+    }
+  },
+})

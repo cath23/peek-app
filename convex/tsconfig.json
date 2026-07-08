@@ -1,0 +1,25 @@
+{
+  /* Standard Convex functions tsconfig (checked by `npx convex dev` on push;
+     also checkable manually via `npx tsc -p convex`). */
+  "compilerOptions": {
+    "allowJs": true,
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ESNext",
+    "lib": ["ES2021", "dom"],
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "isolatedModules": true,
+    "noEmit": true,
+    /* The seed fixture imports src/data mocks, whose type-only imports use
+       the app's '@/' alias and (transitively) Vite asset modules. */
+    "baseUrl": ".",
+    "paths": { "@/*": ["../src/*"] },
+    "types": ["vite/client"]
+  },
+  "include": ["./**/*"],
+  "exclude": ["./_generated"]
+}
