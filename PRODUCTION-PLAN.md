@@ -108,10 +108,13 @@ Create `src/api/` hooks + mutation functions; components stop importing
 ## Phase 2 — Convex, Phase A: persistence with hardcoded "You"
 
 - `convex/schema.ts` from the Phase 0 spec; free-plan deployment.
-- **Seed script** (`convex/seed.ts`): transform `src/data/` mocks into real
-  records — names→userIds, display timestamps→real dates that render to the
-  same labels, aggregated reactions→per-user rows, DM numeric keys→conversation
-  docs. Mock narrative content is preserved verbatim (it's the demo dataset).
+- **Production starts empty — no mock data in the real app** (user decision
+  2026-07-08). The mock→records transform survives only as an **optional
+  dev-only fixture** (`convex/dev/seedDemo.ts`, never run against prod):
+  names→userIds, display timestamps→real dates that render to the same
+  labels, aggregated reactions→per-user rows, DM numeric keys→conversation
+  docs. Useful for developing/QA-ing chat UI against a populated DB; the
+  QA-plan charters assume this dataset.
 - Swap seam internals to `useQuery`/`useMutation` **one entity at a time**
   (people → topics → messages → replies → resolutions/highlights → reactions →
   huddles+promotion → stars/screener), deleting the corresponding override
@@ -119,10 +122,11 @@ Create `src/api/` hooks + mutation functions; components stop importing
   removed at the end.
 - All writes stamp the fixed seed `userId` for "You". Optimistic updates on
   composer send so the sent-message render stays instant.
-- New requirement surfaced here: **loading/error states** for every read hook
-  (Convex queries return `undefined` while loading). Needs a small design
-  decision first (skeletons vs. blank-until-ready) — these states don't exist
-  in the prototype, so design them before building (pixel-perfect rule).
+- New requirement surfaced here: **loading, error, and — since production
+  starts empty — first-class empty states for every surface** (topics list,
+  DM list, Desk, Screener, huddles tab, thread panel; Convex queries also
+  return `undefined` while loading). None of these exist in the prototype —
+  design them (Figma, tokens) before building (pixel-perfect rule).
 
 ## Phase 3 — Convex, Phase B: auth, login, profiles
 
@@ -249,8 +253,9 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
 - [ ] Full regression: tests + Storybook pass + QA-plan regression checklist
 
 ### Phase 2 — Convex persistence *(break down when Phase 1 is done)*
-- [ ] Schema + free-plan deployment · seed script · loading-state designs ·
-      entity-by-entity hook swap · TopicMutationsProvider deleted
+- [ ] Schema + free-plan deployment · loading/empty/error-state designs ·
+      entity-by-entity hook swap · optional dev-only demo fixture ·
+      TopicMutationsProvider deleted · prod starts empty
 
 ### Phase 3 — Auth + profiles *(coarse until Phase 2)*
 - [ ] Convex Auth setup · login/profile UI designed in Figma then built ·
@@ -285,3 +290,10 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   Desk Urgent) with Add-to-Open-work / Later (snooze, reappears) / Dismiss;
   Open work is manually curated and kept until closed — stored per-user
   tables, not derived.
+- 2026-07-08 — **No mock data in the real app**: production launches with an
+  empty database; users exist only via sign-up (Phase 3). The seed script is
+  demoted to an optional dev-only fixture for development/QA. Consequences:
+  empty states are first-class UI on every surface (added to Phase 2 design
+  work); the domain-model seed provisions (§1 extra users, §5 date strategy,
+  per-table seed notes) apply to the fixture only — the client-side
+  timestamp/date-label formatting rules in §5 remain production spec.

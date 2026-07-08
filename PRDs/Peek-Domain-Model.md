@@ -8,6 +8,17 @@ This spec is derived from the entities implied by `src/data/*` (10 modules,
 ~1,900 lines), the runtime override layers in `src/lib/topicMutations.tsx` and
 `src/lib/topicStore.tsx`, and the partition logic in `src/lib/threadPartition.ts`.
 
+> **Amendment (2026-07-08, user): no mock data in the real app.** Production
+> launches with an **empty database**; users exist only via sign-up
+> (Phase 3). Everything in this spec labeled *seed* — the extra users in §1,
+> the seed-date strategy in §5, the per-table seed notes, the mock-flag
+> watermark placement in §2.10 — applies only to an **optional dev-only
+> fixture** (`convex/dev/seedDemo.ts`, never run against prod) kept for
+> development and QA against a populated DB. The table shapes, derivation
+> rules, and the client-side timestamp/date-label **formatting rules in §5
+> are production spec** regardless. Consequence: loading/empty/error states
+> are first-class UI on every surface (Phase 2 design work).
+
 ---
 
 ## 1. Identity — the "You" rule
