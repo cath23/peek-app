@@ -29,6 +29,16 @@ export const LongLabel: Story = {
   ),
 }
 
+/** The thread panel uses it to separate the pinned original message from its replies. */
+export const RepliesLabel: Story = {
+  args: { label: 'Replies' },
+  render: args => (
+    <div className="w-96">
+      <DateDivider {...args} />
+    </div>
+  ),
+}
+
 /** As used in message streams: sticky against the scroll with a surface background. Scroll the box. */
 export const StickyInScroll: Story = {
   parameters: { controls: { disable: true } },

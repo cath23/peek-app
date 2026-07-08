@@ -4,7 +4,7 @@ import { IconX, IconLock } from '@tabler/icons-react'
 import { IconButton } from './ui/IconButton'
 import { Button } from './ui/Button'
 import { PersonChipInput } from './ui/PersonChipInput'
-import type { Person } from '@/data/peopleData'
+import type { Person } from '@/api'
 
 export interface StartTopicResult {
   title: string

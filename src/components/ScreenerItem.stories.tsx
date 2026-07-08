@@ -1,0 +1,40 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { TopicMutationsProvider } from '@/lib/topicMutations'
+import { SCREENER_ITEMS } from '@/api/fixtures'
+import { ScreenerItem } from './ScreenerItem'
+
+const noop = () => {}
+
+const meta = {
+  title: 'Components/ScreenerItem',
+  component: ScreenerItem,
+  decorators: [
+    Story => (
+      <TopicMutationsProvider>
+        <div className="w-[300px]">
+          <Story />
+        </div>
+      </TopicMutationsProvider>
+    ),
+  ],
+  args: {
+    item: SCREENER_ITEMS[0],
+    onOpen: noop,
+    onLater: noop,
+    onDismiss: noop,
+  },
+  argTypes: {
+    item: { control: false },
+  },
+} satisfies Meta<typeof ScreenerItem>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+/** A topic item — topic status icon + title, two-line preview, Open / Later / ✕ Dismiss. */
+export const TopicItem: Story = {}
+
+/** A DM item — sender avatar + name. */
+export const PersonItem: Story = {
+  args: { item: SCREENER_ITEMS[1] },
+}

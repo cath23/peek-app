@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { PEOPLE, type Person } from '@/data/peopleData'
+import { PEOPLE, type Person } from '@/api'
 import { PersonChipInput } from './PersonChipInput'
 
 const meta = {

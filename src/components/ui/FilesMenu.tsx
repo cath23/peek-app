@@ -2,8 +2,8 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } fro
 import { TopicState } from './TopicState'
 import { cn } from '@/lib/utils'
 import { useTopicMutations } from '@/lib/topicMutations'
-import { type Topic } from '@/data/topicData'
-import { type AppFile, type DocumentFile, type AppCategory, APP_CATEGORIES } from '@/data/filesData'
+import { type Topic } from '@/api'
+import { type AppFile, type DocumentFile, type AppCategory, APP_CATEGORIES } from '@/api'
 import {
   IconBrandGithub,
   IconFile,

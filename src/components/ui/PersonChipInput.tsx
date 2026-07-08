@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { IconX } from '@tabler/icons-react'
 import { Avatar } from './Avatar'
-import { PEOPLE, type Person } from '@/data/peopleData'
+import { PEOPLE, type Person } from '@/api'
 import { cn } from '@/lib/utils'
 
 interface PersonChipInputProps {

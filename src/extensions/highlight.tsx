@@ -1,7 +1,7 @@
 import { Node } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { HIGHLIGHT_META, type HighlightType } from '@/data/topicData'
+import { HIGHLIGHT_META, type HighlightType } from '@/api'
 
 /**
  * HighlightTag - an inline atom node inserted at the start of a message

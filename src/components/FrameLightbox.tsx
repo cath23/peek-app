@@ -3,7 +3,7 @@ import { IconX } from '@tabler/icons-react'
 import { IconButton } from './ui/IconButton'
 import { Button } from './ui/Button'
 import { FrameArt } from './ui/FrameArt'
-import { frameBreadcrumb, type FigmaFrame } from '@/data/figmaData'
+import { frameBreadcrumb, type FigmaFrame } from '@/api'
 import figmaIcon from '@/assets/figma icon.svg'
 
 interface FrameLightboxProps {

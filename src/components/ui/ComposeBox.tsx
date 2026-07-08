@@ -11,8 +11,8 @@ import { HighlightSwatch } from './HighlightPill'
 import { FrameArt } from './FrameArt'
 import { FrameLightbox } from '../FrameLightbox'
 import { cn } from '@/lib/utils'
-import { HIGHLIGHT_META, type HighlightType } from '@/data/topicData'
-import { frameById, frameBreadcrumb, type FigmaFrame } from '@/data/figmaData'
+import { HIGHLIGHT_META, type HighlightType } from '@/api'
+import { frameById, frameBreadcrumb, type FigmaFrame } from '@/api'
 
 export interface SendPayload {
   text: string

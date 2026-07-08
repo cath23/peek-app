@@ -1,4 +1,4 @@
-import { HIGHLIGHT_META, type HighlightType } from '@/data/topicData'
+import { HIGHLIGHT_META, type HighlightType } from '@/api'
 import { cn } from '@/lib/utils'
 
 interface HighlightPillProps {

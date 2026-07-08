@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { HIGHLIGHT_META, type HighlightType } from '@/data/topicData'
+import { HIGHLIGHT_META, type HighlightType } from '@/api'
 import { HighlightPill, HighlightSwatch } from './HighlightPill'
 
 const HIGHLIGHT_TYPES = Object.keys(HIGHLIGHT_META) as HighlightType[]

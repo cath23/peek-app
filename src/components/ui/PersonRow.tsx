@@ -3,7 +3,7 @@ import { IconDotsVertical, IconAlertSquareRounded, IconX } from '@tabler/icons-r
 import { TopicState, type TopicStateType, type TopicStateStatus } from './TopicState'
 import { IconButton } from './IconButton'
 import { cn } from '@/lib/utils'
-import { avatarFor } from '@/data/peopleData'
+import { avatarFor } from '@/api'
 
 interface PersonRowProps {
   name: string

@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { IconStar, IconStarFilled, IconDotsVertical, IconLockPlus, IconLock } from '@tabler/icons-react'
 import { TopicState } from './ui/TopicState'
 import { Avatar } from './ui/Avatar'
+import { AvatarGroup } from './ui/AvatarGroup'
 import { IconButton } from './ui/IconButton'
 import { cn } from '@/lib/utils'
 
@@ -26,23 +27,6 @@ interface ConversationHeaderProps {
   onStartHuddle?: () => void
   tabs?: ReactNode
   className?: string
-}
-
-/** Up to 3 overlapping 24px avatars with border-bg-surface outline - matches Figma members component */
-function AvatarGroup({ members }: { members: string[] }) {
-  const visible = members.slice(0, 3)
-  return (
-    <div className="flex items-center pr-2">
-      {visible.map((name, i) => (
-        <div
-          key={i}
-          className="-mr-2 relative shrink-0 size-6 rounded-sm overflow-hidden border-2 border-bg-surface"
-        >
-          <Avatar size={24} name={name} alt={name} />
-        </div>
-      ))}
-    </div>
-  )
 }
 
 export function ConversationHeader({

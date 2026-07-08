@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { avatarFor } from '@/data/peopleData'
+import { avatarFor } from '@/api'
 
 interface AvatarProps {
   src?: string

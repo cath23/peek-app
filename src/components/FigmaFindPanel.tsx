@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { Button } from './ui/Button'
 import { FrameArt } from './ui/FrameArt'
 import { FrameLightbox } from './FrameLightbox'
-import { searchFigmaFrames, frameBreadcrumb, type FigmaFrame } from '@/data/figmaData'
+import { searchFigmaFrames, frameBreadcrumb, type FigmaFrame } from '@/api'
 
 const COLS = 3
 

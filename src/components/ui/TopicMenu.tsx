@@ -1,7 +1,7 @@
 import { TopicState } from './TopicState'
 import { cn } from '@/lib/utils'
 import { useTopicMutations } from '@/lib/topicMutations'
-import { type Topic } from '@/data/topicData'
+import { type Topic } from '@/api'
 
 interface TopicMenuProps {
   topics: Topic[]

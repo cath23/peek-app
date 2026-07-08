@@ -1,21 +1,20 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react'
-import { IconPlus, IconX, IconPencilMinus } from '@tabler/icons-react'
+import { IconPlus } from '@tabler/icons-react'
 import { ConversationHeader } from '@/components/ConversationHeader'
+import { NewTopicBanner } from '@/components/NewTopicBanner'
+import { HuddleCreator } from '@/components/HuddleCreator'
 import { ConversationCard } from '@/components/ConversationCard'
 import { ThreadPanel } from '@/components/ThreadPanel'
 import { HuddleCard } from '@/components/HuddleCard'
 import { StartHuddleDialog, type StartHuddleResult } from '@/components/StartHuddleDialog'
 import { DateDivider } from '@/components/ui/DateDivider'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
-import { Avatar } from '@/components/ui/Avatar'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopicTabs, type TopicTab } from '@/components/ui/TopicTabs'
 import { IconButton } from '@/components/ui/IconButton'
-import { Button } from '@/components/ui/Button'
 import { TOPIC_CONVERSATIONS, type ConversationData, type HighlightType, type ReactionData } from '@/data/topicData'
 import { DM_CONVERSATIONS } from '@/data/dmData'
 import { type Huddle } from '@/data/huddleData'
-import { PEOPLE } from '@/data/peopleData'
 import { REPLIES, type ReplyData } from '@/data/replyData'
 import { useStarred } from '@/lib/starred'
 import { useTopicStore } from '@/lib/topicStore'
@@ -95,14 +94,8 @@ export function useTopicView({
 
   // Thread + huddle UI state stays local — it's transient view state, not data.
   const [threadConvId, setThreadConvId] = useState<string | null>(null)
-  const huddleCreateRef = useRef<HTMLDivElement>(null)
-  const huddleToInputRef = useRef<HTMLInputElement>(null)
   const [selectedHuddleId, setSelectedHuddleId] = useState<string | null>(null)
   const [isCreatingHuddle, setIsCreatingHuddle] = useState(false)
-  const [huddleRecipients, setHuddleRecipients] = useState<string[]>([])
-  const [huddleToQuery, setHuddleToQuery] = useState('')
-  const [huddleToFocused, setHuddleToFocused] = useState(false)
-  const [huddleSuggestionIndex, setHuddleSuggestionIndex] = useState(0)
 
   const currentGroups = topicId != null ? (TOPIC_CONVERSATIONS[topicId] ?? []) : []
   const currentSent = topicId != null ? (sentMessages[topicId] ?? []) : []
@@ -304,39 +297,9 @@ export function useTopicView({
     setDeletedIds((prev) => new Set([...prev, id]))
   }
 
-  const cancelHuddleCreation = () => {
-    setIsCreatingHuddle(false)
-    setHuddleRecipients([])
-    setHuddleToQuery('')
-  }
-
-  // Backup refocus: any time the recipient list changes while the creator is open,
-  // ensure the To: input keeps the cursor so the user can keep typing more people
-  // without re-clicking the field. Defers a tick so React commits first.
-  useEffect(() => {
-    if (!isCreatingHuddle) return
-    const t = setTimeout(() => huddleToInputRef.current?.focus(), 0)
-    return () => clearTimeout(t)
-  }, [isCreatingHuddle, huddleRecipients.length])
-
-  // Close inline huddle creation on outside click or Escape. V2 uses a portalled
-  // dialog with its own backdrop, so this effect is skipped there.
-  useEffect(() => {
-    if (!isCreatingHuddle || huddleVariant === 2) return
-    const handleClick = (e: MouseEvent) => {
-      if (huddleCreateRef.current?.contains(e.target as Node)) return
-      cancelHuddleCreation()
-    }
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') cancelHuddleCreation()
-    }
-    document.addEventListener('mousedown', handleClick)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('mousedown', handleClick)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [isCreatingHuddle, huddleVariant])
+  // The huddle creator (HuddleCreator) owns its own recipient/query/focus state and
+  // handles Escape + outside-click internally; here we just flip the open flag.
+  const cancelHuddleCreation = () => setIsCreatingHuddle(false)
 
   /** V2 huddle main-view compose box: writes a top-level message into the selected huddle. */
   const handleHuddleMessageSend = ({ text }: SendPayload) => {
@@ -354,24 +317,24 @@ export function useTopicView({
     }))
   }
 
-  const handleHuddleSend = ({ text }: SendPayload) => {
-    if (!text || huddleRecipients.length === 0 || topicId == null) return
+  const handleCreateHuddle = (recipients: string[], firstMessage: string) => {
+    if (!firstMessage || recipients.length === 0 || topicId == null) return
     const newHuddleId = `h_new_${Date.now()}`
     const newHuddle: Huddle = {
       id: newHuddleId,
       topicId,
-      members: ['You', ...huddleRecipients],
+      members: ['You', ...recipients],
       state: 'active',
       lastActivity: 'Today',
       conversation: {
         id: `hc_new_${Date.now()}`,
         authorName: 'You',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        body: text,
+        body: firstMessage,
       },
     }
     setCreatedHuddles((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newHuddle] }))
-    cancelHuddleCreation()
+    setIsCreatingHuddle(false)
   }
 
   /** V2 dialog flow: members-only creation. The new huddle has no seed message —
@@ -399,20 +362,6 @@ export function useTopicView({
       setThreadConvId(null)
     }
   }
-
-  const addRecipient = (name: string) => {
-    if (!huddleRecipients.includes(name)) setHuddleRecipients((prev) => [...prev, name])
-    setHuddleToQuery('')
-    setHuddleSuggestionIndex(0)
-    // Re-focus the To: input so the user can keep typing more people without re-clicking.
-    // Defer to next tick so React commits the state changes first.
-    setTimeout(() => huddleToInputRef.current?.focus(), 0)
-  }
-  const removeRecipient = (name: string) => setHuddleRecipients((prev) => prev.filter((n) => n !== name))
-
-  const toSuggestions = PEOPLE.filter(
-    (p) => !huddleRecipients.includes(p.name) && p.name.toLowerCase().includes(huddleToQuery.toLowerCase())
-  )
 
   // Reset state when switching topics
   useEffect(() => {
@@ -448,125 +397,6 @@ export function useTopicView({
       threadPanel: undefined,
     }
   }
-
-  /** People-picker + first-message create UI. Identical markup whether mounted in
-   *  V1 (Huddles tab) or V3 (above the topic compose box) — same border treatment
-   *  in both, matching V1's default. */
-  const huddleCreatorBlock = (
-    <div ref={huddleCreateRef} className="shrink-0 px-3 pb-3 flex flex-col gap-0">
-      <div className="relative">
-        <div className="flex items-center gap-2 px-3 py-2 bg-bg-elevated border border-border-default rounded-t-lg">
-          <span className="text-caption text-text-muted shrink-0">To:</span>
-          <div className="flex-1 flex items-center gap-1 flex-wrap min-h-[24px]">
-            {huddleRecipients.map((name) => (
-              <span
-                key={name}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-accent-muted text-text-primary text-sm rounded-sm"
-              >
-                {name}
-                <button
-                  onClick={() => removeRecipient(name)}
-                  className="text-text-muted hover:text-text-primary cursor-pointer"
-                >
-                  <IconX size={12} stroke={1.5} />
-                </button>
-              </span>
-            ))}
-            <input
-              ref={huddleToInputRef}
-              type="text"
-              value={huddleToQuery}
-              onChange={(e) => {
-                setHuddleToQuery(e.target.value)
-                // Reset highlight when the query changes — list contents are now different.
-                setHuddleSuggestionIndex(0)
-              }}
-              onFocus={() => setHuddleToFocused(true)}
-              onBlur={() => setTimeout(() => {
-                // Only mark unfocused if the input genuinely lost focus. Without
-                // this guard, briefly stealing focus on click + immediately refocusing
-                // would still trigger setFocused(false) 150ms later, closing the dropdown.
-                if (document.activeElement !== huddleToInputRef.current) {
-                  setHuddleToFocused(false)
-                }
-              }, 150)}
-              onKeyDown={(e) => {
-                if (toSuggestions.length === 0) return
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault()
-                  setHuddleSuggestionIndex((i) => (i + 1) % toSuggestions.length)
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault()
-                  setHuddleSuggestionIndex((i) => (i - 1 + toSuggestions.length) % toSuggestions.length)
-                } else if (e.key === 'Enter') {
-                  const pick = toSuggestions[huddleSuggestionIndex]
-                  if (pick) {
-                    e.preventDefault()
-                    addRecipient(pick.name)
-                  }
-                }
-              }}
-              placeholder={huddleRecipients.length === 0 ? 'Add people...' : 'Add more...'}
-              autoFocus
-              className="flex-1 min-w-[80px] bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none"
-            />
-          </div>
-          <button
-            onClick={cancelHuddleCreation}
-            className="flex items-center gap-1.5 text-caption text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-          >
-            Cancel
-            <kbd className="inline-flex items-center justify-center bg-bg-inset border border-border-strong rounded-sm px-1 py-[1px] text-caption text-text-secondary shrink-0">
-              ESC
-            </kbd>
-          </button>
-        </div>
-        {huddleToFocused && toSuggestions.length > 0 && (
-          <div className="absolute left-0 right-0 bottom-full mb-1 bg-bg-elevated border border-border-default rounded-lg shadow-md py-1 max-h-[200px] overflow-y-auto z-50">
-            {toSuggestions.map((person, i) => {
-              const isActive = i === huddleSuggestionIndex
-              return (
-                <button
-                  key={person.id}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onMouseEnter={() => setHuddleSuggestionIndex(i)}
-                  onClick={() => addRecipient(person.name)}
-                  className={cn(
-                    'w-full flex items-center gap-2 px-3 py-1.5 transition-colors cursor-pointer',
-                    isActive ? 'bg-bg-hover' : 'hover:bg-bg-hover'
-                  )}
-                >
-                  <Avatar size={24} name={person.name} alt={person.name} />
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm text-text-primary">{person.name}</span>
-                    <span className="text-caption text-text-muted">{person.role}</span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
-      {huddleRecipients.length === 0 ? (
-        // Mirror ComposeBox's outer dimensions (p-3 + min-h-[20px] editor row + gap-4 +
-        // h-6 button row) so the section height is identical before and after the first
-        // recipient is added — guarantees no jump. The hint text uses V1's caption
-        // text-muted styling rather than the editor's body text.
-        <div className="border border-t-0 border-border-default rounded-b-lg overflow-hidden">
-          <div className="bg-bg-inset border border-border-default rounded-lg p-3 flex flex-col gap-4">
-            <div className="min-h-[20px] flex items-center text-caption text-text-muted">
-              Add at least one person to start a Huddle
-            </div>
-            <div className="h-6" />
-          </div>
-        </div>
-      ) : (
-        <div className="border border-t-0 border-border-default rounded-b-lg overflow-hidden">
-          <ComposeBox onSend={handleHuddleSend} placeholder="default" contextLabel={topicTitle ? `New huddle in ${topicTitle}` : undefined} />
-        </div>
-      )}
-    </div>
-  )
 
   const rightPanel = (
     <div className="flex flex-col h-full">
@@ -718,6 +548,7 @@ export function useTopicView({
                         replyCount={(REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (sentReplies[c.id]?.length ?? 0)}
                         hasNewMessage={c.hasNewMessage && (c.isUrgent || showUnreads)}
                         hasNewReply={c.hasNewReply && (c.isUrgent || showUnreads)}
+                        isUrgent={c.isUrgent}
                         isResolved={isConvResolved(c.id, c.isResolved)}
                         resolvedBy={getConvResolvedBy(c.id, c.resolvedBy)}
                         resolutionMessage={getConvResolutionMsg(c.id, c.resolutionMessage)}
@@ -795,6 +626,7 @@ export function useTopicView({
                           replyCount={(REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (sentReplies[c.id]?.length ?? 0)}
                           hasNewMessage={c.hasNewMessage && (c.isUrgent || showUnreads)}
                           hasNewReply={c.hasNewReply && (c.isUrgent || showUnreads)}
+                          isUrgent={c.isUrgent}
                           isResolved={isConvResolved(c.id, c.isResolved)}
                           resolvedBy={getConvResolvedBy(c.id, c.resolvedBy)}
                           resolutionMessage={getConvResolutionMsg(c.id, c.resolutionMessage)}
@@ -847,27 +679,15 @@ export function useTopicView({
           </div>
           {originHuddle && !hasAnyPublicMessages && originHuddle.originDmId != null && (
             <div className="px-3 pt-2">
-              <div className="bg-accent-muted rounded-lg p-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="bg-accent-primary rounded-md size-6 flex items-center justify-center shrink-0">
-                    <IconPencilMinus size={16} stroke={1.5} className="text-accent-muted" />
-                  </div>
-                  <span className="text-[14px] leading-[1.4] text-text-primary truncate">
-                    This is the beginning of your conversations in{' '}
-                    <span className="font-medium">{topicTitle}</span>
-                  </span>
-                </div>
-                <Button variant="muted" size="small" className="shrink-0" onClick={() => {/* TODO: invite-members dialog */}}>
-                  Invite members
-                </Button>
-              </div>
+              {/* TODO: wire onInviteMembers to the invite-members dialog */}
+              <NewTopicBanner topicTitle={topicTitle} />
             </div>
           )}
           {/* V3 only: the topic-header "+ Start huddle" button toggles isCreatingHuddle and
               flips the regular composer into the people-picker + first-message creator.
               V2 uses a portalled dialog (rendered below) and never touches the composer. */}
           {isCreatingHuddle && huddleVariant === 3 ? (
-            huddleCreatorBlock
+            <HuddleCreator topicTitle={topicTitle} onCancel={cancelHuddleCreation} onCreate={handleCreateHuddle} />
           ) : (
             <div className="p-3">
               <ComposeBox onSend={handleSend} contextLabel={topicTitle ? `#${topicTitle}` : undefined} />
@@ -940,7 +760,9 @@ export function useTopicView({
               </div>
             </div>
           )}
-          {isCreatingHuddle && huddleCreatorBlock}
+          {isCreatingHuddle && (
+            <HuddleCreator topicTitle={topicTitle} onCancel={cancelHuddleCreation} onCreate={handleCreateHuddle} />
+          )}
         </>
       )}
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { TOPICS } from '@/data/topicData'
+import { TOPICS } from '@/api'
 import { TopicMutationsProvider } from '@/lib/topicMutations'
 import { TopicMenu } from './TopicMenu'
 

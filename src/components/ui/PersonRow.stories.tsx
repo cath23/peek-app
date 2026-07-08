@@ -36,6 +36,16 @@ export const Group: Story = {
   args: { name: 'Design crit', type: 'group', memberCount: 4 },
 }
 
+/** Team row — users icon (the People page "Teams" section). */
+export const Team: Story = {
+  args: { name: 'Account Management', type: 'team' },
+}
+
+/** Saved-view row. */
+export const View: Story = {
+  args: { name: 'My mentions', type: 'view' },
+}
+
 export const Selected: Story = {
   args: { isSelected: true },
 }
@@ -68,6 +78,8 @@ export const AllStates: Story = {
       <PersonRow name="Remote work policy clarifications" type="topic" topicStatus="resolved" />
       <PersonRow name="Design crit" type="group" memberCount={4} />
       <PersonRow name="Roadmap review" type="huddle" />
+      <PersonRow name="Account Management" type="team" />
+      <PersonRow name="My mentions" type="view" />
     </div>
   ),
 }

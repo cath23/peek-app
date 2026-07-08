@@ -1,7 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { IconMessage2, IconDotsVertical, IconLock } from '@tabler/icons-react'
+import {
+  IconMessage2,
+  IconDotsVertical,
+  IconLock,
+  IconAlertSquareRounded,
+  IconChecks,
+  IconArrowNarrowRight,
+} from '@tabler/icons-react'
 import { Avatar } from './ui/Avatar'
+import { Chip } from './ui/Chip'
 import { Divider } from './ui/Divider'
 import { IconButton } from './ui/IconButton'
 import { cn } from '@/lib/utils'
@@ -15,6 +23,11 @@ interface HuddleCardProps {
   /** 'grid' = legacy 2-col Huddles tab card (130px tall, 2-line preview).
    *  'inStream' = compact V3 inline card (1-line preview, private register, lock icon). */
   variant?: 'grid' | 'inStream'
+  /** New activity in the huddle. Mirrors ConversationCard: pairs with isUrgent for the
+   *  amber vs blue treatment. Notification chrome renders in the inStream variant only. */
+  hasNewMessage?: boolean
+  hasNewReply?: boolean
+  isUrgent?: boolean
   onClick?: () => void
   onReply?: () => void
   onDelete?: () => void
@@ -55,12 +68,16 @@ export function HuddleCard({
   huddle,
   isSelected = false,
   variant = 'grid',
+  hasNewMessage = false,
+  hasNewReply = false,
+  isUrgent = false,
   onClick,
   onReply,
   onDelete,
   className,
 }: HuddleCardProps) {
   const inStream = variant === 'inStream'
+  const isResolved = huddle.state === 'resolved'
   const [isHovered, setIsHovered] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null)
@@ -136,11 +153,15 @@ export function HuddleCard({
           // does the visual differentiation: a labeled inset/recessed strip in
           // light mode, a lighter strip in dark mode.
           inStream
-            ? isSelected
-              ? 'bg-bg-selected border-border-default'
-              : isHovered
-                ? 'bg-bg-hover border-border-default'
-                : 'bg-bg-surface border-border-default'
+            ? cn(
+                isSelected ? 'bg-bg-selected' : isHovered ? 'bg-bg-hover' : 'bg-bg-surface',
+                // Notification border overrides the default (mirrors ConversationCard).
+                (hasNewMessage || hasNewReply)
+                  ? isUrgent
+                    ? 'border-warning-muted'
+                    : 'border-accent-muted'
+                  : 'border-border-default'
+              )
             : isSelected
               ? 'bg-bg-selected border-border-subtle'
               : isHovered
@@ -178,7 +199,8 @@ export function HuddleCard({
         <div className={cn(
           'relative flex flex-col px-2 pt-2',
           inStream ? 'gap-1' : 'flex-1',
-          inStream && replyCount > 0 ? '' : 'pb-2',
+          // A trailing reply footer or resolution banner owns the bottom padding.
+          inStream && (replyCount > 0 || isResolved) ? '' : 'pb-2',
         )}>
         {/* Header. inStream uses a single 24px lock-avatar (purple square with lock icon)
             instead of overlapping member avatars — communicates "this is a huddle" with
@@ -215,6 +237,18 @@ export function HuddleCard({
                 ? `${huddle.lastActivity}, ${huddle.conversation.timestamp}`
                 : huddle.lastActivity}
           </span>
+          {inStream && hasNewMessage && !isUrgent && (
+            <div className="w-6 h-6 flex items-center justify-center shrink-0 ml-auto">
+              <div className="w-1.5 h-1.5 rounded-full bg-accent-primary" />
+            </div>
+          )}
+          {inStream && hasNewMessage && isUrgent && (
+            <div className="w-6 h-6 flex items-center justify-center shrink-0 ml-auto">
+              <div className="flex items-center p-0.5 rounded-full bg-warning-muted">
+                <IconAlertSquareRounded size={12} stroke={2.5} className="text-warning-default" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Body preview — 1 line in inStream, 2 lines in grid. inStream's body is
@@ -261,6 +295,34 @@ export function HuddleCard({
                 {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
               </span>
             </div>
+            {hasNewReply && !isUrgent && (
+              <>
+                <div className="w-0.5 h-0.5 rounded-full bg-text-muted shrink-0" />
+                <Chip type="brand" label="1 new" />
+              </>
+            )}
+            {hasNewReply && isUrgent && (
+              <>
+                <div className="w-0.5 h-0.5 rounded-full bg-text-muted shrink-0" />
+                <Chip type="warning" label="1 new" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Resolution banner — inStream resolved huddles, mirrors ConversationCard's banner. */}
+        {inStream && isResolved && (
+          <div className="flex items-center gap-2 pl-8 pr-2 pb-2 pt-1">
+            <IconChecks size={16} stroke={1.5} className="text-success-default shrink-0" />
+            <span className="text-[12px] leading-[1.1] font-medium text-success-default whitespace-nowrap">
+              {huddle.conversation?.resolvedBy || 'Someone'} resolved
+            </span>
+            {huddle.conversation?.resolutionMessage && (
+              <>
+                <IconArrowNarrowRight size={12} stroke={1.5} className="text-text-primary shrink-0" />
+                <span className="text-[12px] leading-[1.1] font-medium text-text-primary truncate">{huddle.conversation.resolutionMessage}</span>
+              </>
+            )}
           </div>
         )}
 

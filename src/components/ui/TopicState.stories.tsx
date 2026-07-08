@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { avatarFor } from '@/data/peopleData'
+import { avatarFor } from '@/api'
 import { TopicState } from './TopicState'
 
 const meta = {

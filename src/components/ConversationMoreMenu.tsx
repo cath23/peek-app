@@ -11,7 +11,7 @@ import {
 import { Divider } from './ui/Divider'
 import { HighlightSwatch } from './ui/HighlightPill'
 import { cn } from '@/lib/utils'
-import { HIGHLIGHT_META, type HighlightType } from '@/data/topicData'
+import { HIGHLIGHT_META, type HighlightType } from '@/api'
 
 interface ConversationMoreMenuProps {
   isTopic?: boolean

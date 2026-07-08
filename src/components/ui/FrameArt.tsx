@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import type { FigmaFrame } from '@/data/figmaData'
+import type { FigmaFrame } from '@/api'
 
 /**
  * Mock render of a Figma frame's contents. Fixed light "canvas" palette on
