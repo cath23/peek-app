@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MemoryRouter } from 'react-router-dom'
-import { TopicMutationsProvider } from '@/lib/topicMutations'
+import { PeekDataProvider } from '@/api'
 import { ConversationCard } from './ConversationCard'
 
 const meta = {
@@ -10,11 +10,11 @@ const meta = {
   decorators: [
     Story => (
       <MemoryRouter>
-        <TopicMutationsProvider>
+        <PeekDataProvider>
           <div className="w-[560px]">
             <Story />
           </div>
-        </TopicMutationsProvider>
+        </PeekDataProvider>
       </MemoryRouter>
     ),
   ],

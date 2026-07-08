@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react'
 import { TopicState } from './TopicState'
 import { cn } from '@/lib/utils'
-import { useTopicMutations } from '@/lib/topicMutations'
+import { useIsTopicResolved } from '@/api'
 import { type Topic } from '@/api'
 import { type AppFile, type DocumentFile, type AppCategory, APP_CATEGORIES } from '@/api'
 import {
@@ -148,7 +148,7 @@ export const FilesMenu = forwardRef<FilesMenuRef, FilesMenuProps>(
   ({ items, query, onSelect }, ref) => {
     const [highlight, setHighlight] = useState(0)
     const [drilledApp, setDrilledApp] = useState<string | null>(null)
-    const { isTopicResolved } = useTopicMutations()
+    const isTopicResolved = useIsTopicResolved()
 
     const isSearching = query.length > 0
     const isLevel2 = drilledApp !== null && !isSearching

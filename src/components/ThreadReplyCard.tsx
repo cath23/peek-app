@@ -17,18 +17,18 @@ import {
 import figmaIcon from '@/assets/figma icon.svg'
 import { FrameArt } from './ui/FrameArt'
 import { FrameLightbox } from './FrameLightbox'
-import { frameById, frameBreadcrumb, type FigmaFrame } from '@/data/figmaData'
+import { frameById, frameBreadcrumb, type FigmaFrame } from '@/api'
 import { IconButton } from './ui/IconButton'
 import { Avatar } from './ui/Avatar'
 import ReactionPicker from './ReactionPicker'
 import { Reaction as ReactionPill } from './ui/Reaction'
 import { Divider } from './ui/Divider'
-import { PEOPLE } from '@/data/peopleData'
-import { type ReactionData } from '@/data/topicData'
-import { useTopicMutations } from '@/lib/topicMutations'
+import { PEOPLE } from '@/api'
+import { type ReactionData } from '@/api'
+import { useIsTopicResolved } from '@/api'
 import { cn } from '@/lib/utils'
 import { HighlightPill, HighlightSwatch } from './ui/HighlightPill'
-import { HIGHLIGHT_META, type HighlightType } from '@/data/topicData'
+import { HIGHLIGHT_META, type HighlightType } from '@/api'
 import { textToTiptapContent, serializeTiptapToText } from '@/lib/textParsing'
 import { MessageBody } from './ui/MessageBody'
 
@@ -198,7 +198,7 @@ export function ThreadReplyCard({
   const moreMenuRef = useRef<HTMLDivElement>(null)
   const moreButtonRef = useRef<HTMLDivElement>(null)
 
-  const { isTopicResolved } = useTopicMutations()
+  const isTopicResolved = useIsTopicResolved()
 
   const [reactionsState, setReactionsState] = useState<ReactionData[]>(reactions ?? [])
   // Sync local reactions state when the parent passes a new override (e.g. after navigation back).

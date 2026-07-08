@@ -1,6 +1,6 @@
 import { TopicState } from './TopicState'
 import { cn } from '@/lib/utils'
-import { useTopicMutations } from '@/lib/topicMutations'
+import { useIsTopicResolved } from '@/api'
 import { type Topic } from '@/api'
 
 interface TopicMenuProps {
@@ -11,7 +11,7 @@ interface TopicMenuProps {
 }
 
 export function TopicMenu({ topics, highlight, onSelect, onHighlightChange }: TopicMenuProps) {
-  const { isTopicResolved } = useTopicMutations()
+  const isTopicResolved = useIsTopicResolved()
   if (topics.length === 0) return null
 
   return (

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { TOPICS } from '@/api'
 import { APP_FILES, DOCUMENT_FILES } from '@/api'
-import { TopicMutationsProvider } from '@/lib/topicMutations'
+import { PeekDataProvider } from '@/api'
 import { FilesMenu, type FilesMenuItem } from './FilesMenu'
 
 // Build the flat item list exactly as the `[` extension does (mention.tsx).
@@ -16,9 +16,9 @@ const meta = {
   component: FilesMenu,
   decorators: [
     Story => (
-      <TopicMutationsProvider>
+      <PeekDataProvider>
         <Story />
-      </TopicMutationsProvider>
+      </PeekDataProvider>
     ),
   ],
   args: {

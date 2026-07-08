@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { TopicMutationsProvider } from '@/lib/topicMutations'
+import { PeekDataProvider } from '@/api'
 import { SCREENER_ITEMS } from '@/api/fixtures'
 import { ScreenerItem } from './ScreenerItem'
 
@@ -10,11 +10,11 @@ const meta = {
   component: ScreenerItem,
   decorators: [
     Story => (
-      <TopicMutationsProvider>
+      <PeekDataProvider>
         <div className="w-[300px]">
           <Story />
         </div>
-      </TopicMutationsProvider>
+      </PeekDataProvider>
     ),
   ],
   args: {

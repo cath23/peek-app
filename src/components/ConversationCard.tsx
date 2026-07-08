@@ -19,7 +19,7 @@ import {
 import figmaIcon from '@/assets/figma icon.svg'
 import { FrameArt } from './ui/FrameArt'
 import { FrameLightbox } from './FrameLightbox'
-import { frameById, frameBreadcrumb, type FigmaFrame } from '@/data/figmaData'
+import { frameById, frameBreadcrumb, type FigmaFrame } from '@/api'
 import { IconButton } from './ui/IconButton'
 import { Button } from './ui/Button'
 import { Avatar } from './ui/Avatar'
@@ -31,9 +31,9 @@ import { ConversationMoreMenu } from './ConversationMoreMenu'
 import ReactionPicker from './ReactionPicker'
 import { ResolveDialog } from './ResolveDialog'
 import { CreateTopicDialog, type StartTopicResult } from './CreateTopicDialog'
-import { PEOPLE, type Person } from '@/data/peopleData'
-import { type ReactionData, type HighlightType } from '@/data/topicData'
-import { useTopicMutations } from '@/lib/topicMutations'
+import { PEOPLE, type Person } from '@/api'
+import { type ReactionData, type HighlightType } from '@/api'
+import { useIsTopicResolved } from '@/api'
 import { HighlightPill } from './ui/HighlightPill'
 import { MessageBody } from './ui/MessageBody'
 import { cn } from '@/lib/utils'
@@ -305,7 +305,7 @@ export function ConversationCard({
 
   // Resolved-state of any *referenced* topic (for inline [Topic] mentions and the
   // topic-anchor icon). Reads runtime mutations so the icon reflects user changes.
-  const { isTopicResolved } = useTopicMutations()
+  const isTopicResolved = useIsTopicResolved()
 
   const handleMore = (rect: DOMRect) => {
     // Toggle

@@ -7,7 +7,7 @@ import { IconCircleDashed, IconCircleCheck, IconBrandGithub, IconFile, IconFileT
 import { PEOPLE, type Person } from '@/api'
 import { TOPICS } from '@/api'
 import { APP_FILES, DOCUMENT_FILES } from '@/api'
-import { useTopicMutations } from '@/lib/topicMutations'
+import { useIsTopicResolved } from '@/api'
 import { MentionMenu } from '@/components/ui/MentionMenu'
 import { FilesMenu, type FilesMenuItem, type FilesMenuRef } from '@/components/ui/FilesMenu'
 
@@ -312,7 +312,7 @@ function TopicMentionView({ node }: NodeViewProps) {
   // Live runtime resolution overrides the snapshot stored in the node when it was
   // inserted, so an inline [Topic] tag's icon stays in sync with the topic's
   // current resolved state across the app.
-  const { isTopicResolved } = useTopicMutations()
+  const isTopicResolved = useIsTopicResolved()
   const liveResolved = id ? isTopicResolved(String(id)) : isResolved
   return (
     <NodeViewWrapper as="span" className="inline-flex items-center gap-1 rounded-sm px-1 bg-bg-active text-text-primary text-sm font-normal select-none cursor-default" style={{ verticalAlign: 'text-bottom', height: '1.4em' }}>

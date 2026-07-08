@@ -13,9 +13,7 @@ import { Chip } from './ui/Chip'
 import { Divider } from './ui/Divider'
 import { IconButton } from './ui/IconButton'
 import { cn } from '@/lib/utils'
-import { REPLIES } from '@/data/replyData'
-import { useTopicMutations } from '@/lib/topicMutations'
-import type { Huddle } from '@/data/huddleData'
+import { useReplyCount, type Huddle } from '@/api'
 
 interface HuddleCardProps {
   huddle: Huddle
@@ -94,16 +92,13 @@ export function HuddleCard({
   // Empty huddles (no seed conversation) show a placeholder preview.
   const bodyText = huddle.conversation?.body ?? 'No messages yet'
 
-  // Reply count = static REPLIES + runtime sentReplies for the thread id the card
-  // opens (seedMessageId for promoted huddles, conversation.id otherwise — same id
-  // useTopicView uses to open the thread panel). Mirrors how ConversationCard
-  // computes its replyCount in the views, so new replies typed in the thread panel
-  // increment the card's count without needing a manual refresh.
-  const { sentReplies } = useTopicMutations()
+  // Live reply count for the thread id the card opens (seedMessageId for
+  // promoted huddles, conversation.id otherwise — same id useTopicView uses to
+  // open the thread panel), so new replies typed in the thread panel increment
+  // the card's count without needing a manual refresh.
+  const replyCountOf = useReplyCount()
   const threadId = huddle.seedMessageId ?? huddle.conversation?.id
-  const replyCount = threadId
-    ? (REPLIES[threadId]?.length ?? huddle.conversation?.replyCount ?? 0) + (sentReplies[threadId]?.length ?? 0)
-    : (huddle.conversation?.replyCount ?? 0)
+  const replyCount = replyCountOf(threadId, huddle.conversation?.replyCount ?? 0)
 
   const handleMore = (e: React.MouseEvent) => {
     e.stopPropagation()

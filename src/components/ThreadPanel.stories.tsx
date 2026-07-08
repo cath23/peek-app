@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MemoryRouter } from 'react-router-dom'
-import { TopicMutationsProvider } from '@/lib/topicMutations'
-import { REPLIES } from '@/data/replyData'
-import type { ConversationData } from '@/data/topicData'
+import { PeekDataProvider } from '@/api'
+import { REPLIES } from '@/api/fixtures'
+import type { ConversationData } from '@/api'
 import { ThreadPanel } from './ThreadPanel'
 
 const conversation: ConversationData = {
@@ -21,11 +21,11 @@ const meta = {
   decorators: [
     Story => (
       <MemoryRouter>
-        <TopicMutationsProvider>
+        <PeekDataProvider>
           <div className="h-[620px] w-[380px] border border-border-subtle bg-bg-surface">
             <Story />
           </div>
-        </TopicMutationsProvider>
+        </PeekDataProvider>
       </MemoryRouter>
     ),
   ],

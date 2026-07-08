@@ -3,7 +3,7 @@ import { TopicState } from './ui/TopicState'
 import { Avatar } from './ui/Avatar'
 import { Button } from './ui/Button'
 import { IconButton } from './ui/IconButton'
-import { useTopicMutations } from '@/lib/topicMutations'
+import { useIsTopicResolved } from '@/api'
 import type { ScreenerItem as ScreenerItemData } from '@/api'
 
 interface ScreenerItemProps {
@@ -16,7 +16,7 @@ interface ScreenerItemProps {
 /** A single incoming item in the Desk Screener: who/what it is, a two-line preview,
  *  and the Open / Later / ✕ Dismiss triage actions. Rendered by ScreenerSection. */
 export function ScreenerItem({ item, onOpen, onLater, onDismiss }: ScreenerItemProps) {
-  const { isTopicResolved } = useTopicMutations()
+  const isTopicResolved = useIsTopicResolved()
 
   return (
     <div className="flex flex-col p-2 rounded-lg transition-colors hover:bg-bg-hover has-[button:hover]:bg-transparent">

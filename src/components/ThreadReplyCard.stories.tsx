@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { TopicMutationsProvider } from '@/lib/topicMutations'
+import { PeekDataProvider } from '@/api'
 import { ThreadReplyCard } from './ThreadReplyCard'
 
 const meta = {
@@ -8,11 +8,11 @@ const meta = {
   parameters: { layout: 'padded' },
   decorators: [
     Story => (
-      <TopicMutationsProvider>
+      <PeekDataProvider>
         <div className="w-[520px]">
           <Story />
         </div>
-      </TopicMutationsProvider>
+      </PeekDataProvider>
     ),
   ],
   args: {

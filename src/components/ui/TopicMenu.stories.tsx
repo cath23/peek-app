@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { TOPICS } from '@/api'
-import { TopicMutationsProvider } from '@/lib/topicMutations'
+import { PeekDataProvider } from '@/api'
 import { TopicMenu } from './TopicMenu'
 
 const meta = {
@@ -9,9 +9,9 @@ const meta = {
   component: TopicMenu,
   decorators: [
     Story => (
-      <TopicMutationsProvider>
+      <PeekDataProvider>
         <Story />
-      </TopicMutationsProvider>
+      </PeekDataProvider>
     ),
   ],
   args: {
