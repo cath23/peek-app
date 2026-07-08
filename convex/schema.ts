@@ -101,7 +101,11 @@ export default defineSchema({
     urgent: v.optional(v.boolean()),
     highlightType: v.optional(highlightType),
     attachments: v.optional(v.array(v.string())),
-  }).index('by_message', ['messageId']),
+    /** Mock reply id ('r_t1c1_1', …) — transitional bridge (see topics). */
+    seedKey: v.optional(v.string()),
+  })
+    .index('by_message', ['messageId'])
+    .index('by_seedKey', ['seedKey']),
 
   // §2.7 — per-user rows; counts + "yours" aggregate in the query (§4.6)
   reactions: defineTable({

@@ -30,6 +30,34 @@ interface RemoteMessage {
   resolvedBy?: string
   resolutionMessage?: string
   attachments?: string[]
+  /** Derived server-side (list only). */
+  replyCount?: number
+}
+
+/** Row shape returned by convex/replies.ts list. */
+interface RemoteReply {
+  id: string
+  authorName: string
+  createdAt: number
+  body: string
+  isUrgent?: boolean
+  highlightType?: ConversationData['highlightType']
+  attachments?: string[]
+}
+
+/** Remote reply → presentation shape; the mock reply with the same id bridges the seeded isNew flag (readState is Phase 4). */
+function toReplyData(r: RemoteReply, mock: ReplyData | undefined): ReplyData {
+  return {
+    id: r.id,
+    authorName: r.authorName,
+    timestamp: formatTimestamp(r.createdAt),
+    body: r.body,
+    isNew: mock?.isNew,
+    isUrgent: r.isUrgent,
+    highlightType: r.highlightType,
+    attachments: r.attachments,
+    createdAtMs: r.createdAt,
+  }
 }
 
 /**
@@ -53,7 +81,7 @@ function toConversationData(r: RemoteMessage, mock: ConversationData | undefined
     reactions: mock?.reactions,
     hasNewMessage: mock?.hasNewMessage,
     hasNewReply: mock?.hasNewReply,
-    replyCount: mock?.replyCount,
+    replyCount: r.replyCount ?? mock?.replyCount,
   }
 }
 
@@ -101,18 +129,26 @@ export interface TopicMessages {
 
 export interface ThreadData {
   conversation: ConversationData | null
-  /** Static replies, overrides merged. Render above any promotion divider. */
+  /** Persisted replies, overrides merged. Render above any promotion divider. */
   replies: ThreadReply[]
   /** Runtime-sent replies, overrides merged. */
   sentReplies: ThreadReply[]
   /** Resolution bookkeeping for the parent (drives inline resolution editing). */
   resolvedByReplyId: string | undefined
   resolutionMessage: string | undefined
+  /** True while the Convex replies query is in flight. */
+  isLoading: boolean
 }
 
 type Overrides = ReturnType<typeof useTopicMutations>
 
-function mergeConv(c: ConversationData, o: Overrides): ConversationData {
+/**
+ * `recountReplies` distinguishes the two read paths: the mock path derives
+ * the count from the static REPLIES map + session-sent replies; the Convex
+ * path trusts the server count already on the row (the reactive query
+ * catches up within a beat of a reply landing).
+ */
+function mergeConv(c: ConversationData, o: Overrides, recountReplies = true): ConversationData {
   const resolution = o.resolvedOverrides[c.id]
   return {
     ...c,
@@ -122,8 +158,9 @@ function mergeConv(c: ConversationData, o: Overrides): ConversationData {
     isResolved: resolution?.resolved ?? c.isResolved,
     resolvedBy: resolution?.resolvedBy ?? c.resolvedBy,
     resolutionMessage: resolution?.message ?? c.resolutionMessage,
-    replyCount:
-      (REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (o.sentReplies[c.id]?.length ?? 0),
+    replyCount: recountReplies
+      ? (REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (o.sentReplies[c.id]?.length ?? 0)
+      : c.replyCount ?? 0,
   }
 }
 
@@ -159,12 +196,16 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
   const topic = findTopic(topicId)
   const sentLocal = o.sentMessages[topicId] ?? []
   let groups: ConvGroup[]
+  let sent: ConversationData[]
   if (hasConvex) {
     if (remote === undefined) return { ...EMPTY_TOPIC, isLoading: true }
     const mockById = mockMessagesById(TOPIC_CONVERSATIONS[topicId])
-    const sentIds = new Set(sentLocal.map((c) => c.id))
-    const rows = remote.filter((r) => !sentIds.has(r.id) && !o.deletedIds.has(r.id))
-    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id)), o))
+    const rows = remote.filter((r) => !o.deletedIds.has(r.id))
+    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id)), o, false))
+    // The confirmed copy renders from the query; the local copy covers the
+    // optimistic window only.
+    const remoteIds = new Set(remote.map((r) => r.id))
+    sent = sentLocal.filter((c) => !remoteIds.has(c.id)).map((c) => mergeConv(c, o))
   } else {
     groups = (TOPIC_CONVERSATIONS[topicId] ?? [])
       .map((g) => ({
@@ -172,8 +213,8 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
         convs: g.convs.filter((c) => !o.deletedIds.has(c.id)).map((c) => mergeConv(c, o)),
       }))
       .filter((g) => g.convs.length > 0)
+    sent = sentLocal.map((c) => mergeConv(c, o))
   }
-  const sent = sentLocal.map((c) => mergeConv(c, o))
   const all = [...groups.flatMap((g) => g.convs), ...sent]
 
   const openCount = all.filter((c) => !(c.isResolved ?? false)).length
@@ -205,12 +246,14 @@ export function useDmMessages(dmId: number | null): DmMessages {
 
   const sentLocal = sentDmMessages[dmId] ?? []
   let groups: ConvGroup[]
+  let sent: ConversationData[]
   if (hasConvex) {
     if (remote === undefined) return { groups: [], sent: [], isLoading: true }
     const mockById = mockMessagesById(DM_CONVERSATIONS[dmId])
-    const sentIds = new Set(sentLocal.map((c) => c.id))
-    const rows = remote.filter((r) => !sentIds.has(r.id) && !o.deletedIds.has(r.id))
-    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id)), o))
+    const rows = remote.filter((r) => !o.deletedIds.has(r.id))
+    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id)), o, false))
+    const remoteIds = new Set(remote.map((r) => r.id))
+    sent = sentLocal.filter((c) => !remoteIds.has(c.id)).map((c) => mergeConv(c, o))
   } else {
     groups = (DM_CONVERSATIONS[dmId] ?? [])
       .map((g) => ({
@@ -218,8 +261,8 @@ export function useDmMessages(dmId: number | null): DmMessages {
         convs: g.convs.filter((c) => !o.deletedIds.has(c.id)).map((c) => mergeConv(c, o)),
       }))
       .filter((g) => g.convs.length > 0)
+    sent = sentLocal.map((c) => mergeConv(c, o))
   }
-  const sent = sentLocal.map((c) => mergeConv(c, o))
   return { groups, sent, isLoading: false }
 }
 
@@ -253,9 +296,10 @@ export function useThread(messageId: string | null): ThreadData {
   // Convex — the local pools below can't see it (mock data + this session's
   // sent stores only).
   const remoteMsg = useQuery(api.messages.get, hasConvex && messageId ? { key: messageId } : 'skip')
+  const remoteReplies = useQuery(api.replies.list, hasConvex && messageId ? { messageKey: messageId } : 'skip')
 
   if (!messageId) {
-    return { conversation: null, replies: [], sentReplies: [], resolvedByReplyId: undefined, resolutionMessage: undefined }
+    return { conversation: null, replies: [], sentReplies: [], resolvedByReplyId: undefined, resolutionMessage: undefined, isLoading: false }
   }
 
   const find = (): ConversationData | undefined => {
@@ -294,8 +338,26 @@ export function useThread(messageId: string | null): ThreadData {
 
   const raw = find() ?? (remoteMsg ? toConversationData(remoteMsg, undefined) : undefined)
   const conversation = raw ? mergeConv(raw, o) : null
-  const replies = (REPLIES[messageId] ?? []).map((r) => mergeReply(r, o))
-  const sentReplies = (o.sentReplies[messageId] ?? []).map((r) => mergeReply(r, o))
+
+  const sentLocal = o.sentReplies[messageId] ?? []
+  let replies: ThreadReply[]
+  let sentReplies: ThreadReply[]
+  let isLoading = false
+  if (hasConvex) {
+    if (remoteReplies === undefined) {
+      replies = []
+      sentReplies = []
+      isLoading = true
+    } else {
+      const mockById = new Map((REPLIES[messageId] ?? []).map((r) => [r.id, r]))
+      replies = remoteReplies.map((r) => mergeReply(toReplyData(r, mockById.get(r.id)), o))
+      const remoteIds = new Set(remoteReplies.map((r) => r.id))
+      sentReplies = sentLocal.filter((r) => !remoteIds.has(r.id)).map((r) => mergeReply(r, o))
+    }
+  } else {
+    replies = (REPLIES[messageId] ?? []).map((r) => mergeReply(r, o))
+    sentReplies = sentLocal.map((r) => mergeReply(r, o))
+  }
   const resolution = o.resolvedOverrides[messageId]
 
   return {
@@ -304,6 +366,7 @@ export function useThread(messageId: string | null): ThreadData {
     sentReplies,
     resolvedByReplyId: resolution?.resolvedByReplyId,
     resolutionMessage: resolution?.message,
+    isLoading,
   }
 }
 

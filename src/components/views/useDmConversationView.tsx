@@ -255,6 +255,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
       conversation={threadConv}
       replies={threadReplies}
       sentReplies={threadSentReplies}
+      isLoadingReplies={thread.isLoading}
       isResolved={threadConv.isResolved ?? false}
       dmMembers={dmName ? [CURRENT_USER_NAME, dmName] : []}
       initialReactions={threadConv.reactions}

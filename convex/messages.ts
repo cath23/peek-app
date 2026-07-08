@@ -59,7 +59,15 @@ export const list = query({
       .withIndex('by_parent', (q) => q.eq('parentKind', parentKind).eq('parentId', parentId))
       .collect()
     const names = await userNames(ctx)
-    return rows.sort((a, b) => a.createdAt - b.createdAt).map((m) => shape(m, names))
+    const shaped = []
+    for (const m of rows.sort((a, b) => a.createdAt - b.createdAt)) {
+      const replies = await ctx.db
+        .query('replies')
+        .withIndex('by_message', (q) => q.eq('messageId', m._id))
+        .collect()
+      shaped.push({ ...shape(m, names), replyCount: replies.length })
+    }
+    return shaped
   },
 })
 
@@ -146,7 +154,18 @@ export const editBody = mutation({
   args: { key: v.string(), body: v.string() },
   handler: async (ctx, { key, body }) => {
     const m = await findByKey(ctx, key)
-    if (m) await ctx.db.patch(m._id, { body })
+    if (m) {
+      await ctx.db.patch(m._id, { body })
+      return
+    }
+    // The seam's editBody is id-keyed across messages AND replies.
+    const bySeed = await ctx.db
+      .query('replies')
+      .withIndex('by_seedKey', (q) => q.eq('seedKey', key))
+      .unique()
+    const normalized = bySeed ? null : ctx.db.normalizeId('replies', key)
+    const r = bySeed ?? (normalized ? await ctx.db.get(normalized) : null)
+    if (r) await ctx.db.patch(r._id, { body })
   },
 })
 

@@ -33,6 +33,8 @@ export function usePeekActions() {
   const sendRemote = useMutation(api.messages.send)
   const editBodyRemote = useMutation(api.messages.editBody)
   const removeRemote = useMutation(api.messages.remove)
+  const sendReplyRemote = useMutation(api.replies.send)
+  const removeReplyRemote = useMutation(api.replies.remove)
 
   const persistMessage = (
     parentKind: 'topic' | 'dm',
@@ -193,6 +195,15 @@ export function usePeekActions() {
           attachments,
         }
         m.setSentReplies((prev) => ({ ...prev, [messageId]: [...(prev[messageId] ?? []), newReply] }))
+        if (hasConvex) {
+          void sendReplyRemote({
+            messageKey: messageId,
+            seedKey: newReply.id,
+            body: text,
+            highlightType,
+            attachments,
+          })
+        }
       }
       if (resolution) {
         m.setResolvedOverrides((prev) => ({
@@ -209,6 +220,7 @@ export function usePeekActions() {
 
     deleteReply(messageId: string, replyId: string) {
       m.setSentReplies((prev) => ({ ...prev, [messageId]: (prev[messageId] ?? []).filter((r) => r.id !== replyId) }))
+      if (hasConvex) void removeReplyRemote({ key: replyId })
     },
 
     // ── Huddles ──

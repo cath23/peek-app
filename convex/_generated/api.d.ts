@@ -12,6 +12,7 @@ import type * as dev_seedDates from "../dev/seedDates.js";
 import type * as dev_seedDemo from "../dev/seedDemo.js";
 import type * as messages from "../messages.js";
 import type * as people from "../people.js";
+import type * as replies from "../replies.js";
 import type * as topics from "../topics.js";
 
 import type {
@@ -25,6 +26,7 @@ declare const fullApi: ApiFromModules<{
   "dev/seedDemo": typeof dev_seedDemo;
   messages: typeof messages;
   people: typeof people;
+  replies: typeof replies;
   topics: typeof topics;
 }>;
 

@@ -309,8 +309,16 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       their entities swap: replies, reactions, resolutions/highlights
       (their overrides merge on top of Convex rows), unread flags
       (Phase 4 readState), huddle messages.
+- [x] **Entity swap 4 — replies** (2026-07-08): `convex/replies.ts`
+      (list/send/remove); replies get `seedKey` (schema + seed patch +
+      reseed) so seeded isNew flags and reply-keyed overrides keep
+      rendering pixel-identical; `useThread` reads replies from Convex
+      (remote-wins dedupe, `isLoading` → skeleton reply cards in
+      ThreadPanel); cards take the server-derived replyCount in Convex
+      mode; `messages.editBody` covers reply bodies; sendReply/deleteReply
+      double-write
 - [ ] Entity-by-entity hook swap continues, deleting the matching override
-      layer each time: replies → resolutions/highlights →
+      layer each time: resolutions/highlights →
       reactions (becomes `toggleReaction`) → huddles + promotion →
       stars/screener/open-work; optimistic updates on composer send.
       (`extraTopics` in topicStore survives until huddles+promotion swap —
@@ -366,12 +374,13 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   states designed in the same pass).
 - 2026-07-08 — **Product goal reaffirmed (user): the deliverable is the
   real from-scratch app** — log in as the first user, start in empty
-  states, other users join and communicate. Consequences: demo-dataset
-  pixel-fidelity (seed bridges, mock joins) is downgraded to best-effort
-  dev tooling, never a gate; remaining Phase 2 swaps proceed at pace
-  (persistence is required for the goal regardless), then Phase 3 auth is
-  the headline milestone, then Phase 4 multi-user. The §5 formatting rules
-  remain production spec (they format real data).
+  states, other users join and communicate. Remaining Phase 2 swaps
+  proceed at pace (persistence is required for the goal regardless), then
+  Phase 3 auth is the headline milestone, then Phase 4 multi-user.
+  **Pixel-perfect remains a hard rule throughout** (user re-confirmed
+  same day): UI fidelity is never traded for speed, seeded demo data
+  keeps rendering exactly as designed via the seedKey bridges, and the §5
+  formatting rules are production spec (they format real data).
 - 2026-07-08 — Skeleton/empty design review rulings (user): (1) skeletons
   appear only when loading actually takes time — 150ms delayed reveal, no
   flash on fast loads; (2) loading keeps real chrome, only the data region

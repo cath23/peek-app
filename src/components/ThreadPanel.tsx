@@ -8,6 +8,7 @@ import { ComposeBox, type SendPayload } from './ui/ComposeBox'
 import { DateDivider } from './ui/DateDivider'
 import type { ConversationData, HighlightType, ReactionData, ThreadReply } from '@/api'
 import { PinnedMessage } from './ui/PinnedMessage'
+import { SkeletonConversationList } from './ui/Skeleton'
 import { partitionRepliesAroundPromotion } from '@/lib/threadPartition'
 
 // ── Thread Panel ──
@@ -17,6 +18,8 @@ interface ThreadPanelProps {
   /** Merged replies (body/highlight/reactions already applied by the seam). */
   replies: ThreadReply[]
   sentReplies: ThreadReply[]
+  /** True while the replies query is loading — renders skeleton reply cards. */
+  isLoadingReplies?: boolean
   isResolved?: boolean
   /** When set, shows member avatars in the header (for Huddle threads) */
   huddleMemberCount?: number
@@ -64,6 +67,7 @@ export function ThreadPanel({
   conversation,
   replies,
   sentReplies,
+  isLoadingReplies = false,
   isResolved = false,
   huddleMemberCount,
   huddleMembers = [],
@@ -191,6 +195,7 @@ export function ThreadPanel({
             topic, a system-event divider is inserted between the pre-promotion replies (static)
             and the post-promotion replies (sentReplies). */}
         <div className="flex flex-col px-4 pb-4 gap-2">
+          {isLoadingReplies && <SkeletonConversationList />}
           {aboveReplies.map((reply) => (
             <div key={reply.id} data-reply-id={reply.id}>
             <ThreadReplyCard

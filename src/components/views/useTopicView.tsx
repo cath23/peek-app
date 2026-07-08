@@ -615,6 +615,7 @@ export function useTopicView({
       conversation={threadConv}
       replies={threadReplies}
       sentReplies={threadSentReplies}
+      isLoadingReplies={thread.isLoading}
       isResolved={threadConv.isResolved ?? false}
       huddleMembers={
         // V2 huddle view already shows lock + members in the rightPanel header,

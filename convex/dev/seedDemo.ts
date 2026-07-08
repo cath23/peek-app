@@ -259,6 +259,7 @@ export const seed = internalMutation({
           urgent: r.isUrgent ? true : undefined,
           highlightType: r.highlightType,
           attachments: r.attachments,
+          seedKey: r.id,
         })
         counts.replies++
         replyCountByMock[mockMsgId] = (replyCountByMock[mockMsgId] ?? 0) + 1
