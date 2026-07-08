@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { ConversationHeader } from '@/components/ConversationHeader'
+import { NewTopicBanner } from '@/components/NewTopicBanner'
 import { ConversationCard } from '@/components/ConversationCard'
 import { ThreadPanel } from '@/components/ThreadPanel'
 import { DateDivider } from '@/components/ui/DateDivider'
@@ -232,6 +233,11 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
           )}
         </div>
       </div>
+      {dmGroups.length === 0 && currentSent.length === 0 && (
+        <div className="px-3 pt-2">
+          <NewTopicBanner kind="dm" title={dmName} />
+        </div>
+      )}
       <div className="p-3">
         <ComposeBox onSend={handleSend} contextLabel={dmName ? `DM · ${dmName}` : undefined} />
       </div>

@@ -508,10 +508,10 @@ export function useTopicView({
               )}
             </div>
           </div>
-          {originHuddle && !hasAnyPublicMessages && originHuddle.originDmId != null && (
+          {!hasAnyPublicMessages && (
             <div className="px-3 pt-2">
               {/* TODO: wire onInviteMembers to the invite-members dialog */}
-              <NewTopicBanner topicTitle={topicTitle} />
+              <NewTopicBanner title={topicTitle} />
             </div>
           )}
           {/* V3 only: the topic-header "+ Start huddle" button toggles isCreatingHuddle and
