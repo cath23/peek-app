@@ -21,7 +21,7 @@ const APP_ICON: Record<string, string | undefined> = {
  * Inline clickable reference in read-only message bodies. Same pill treatment
  * as mention tags so it reads as "a reference to something else", plus a
  * pointer cursor + hover underline so it's obviously clickable. References
- * from connected apps carry the app's avatar (same icon as its agent).
+ * from connected apps carry the app's avatar.
  * Links are inert in the prototype (preventDefault) - the affordance is the design.
  */
 export function ReferenceChip({ label }: ReferenceChipProps) {

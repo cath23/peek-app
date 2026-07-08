@@ -10,7 +10,7 @@ interface DebugMenuProps {
 
 export function DebugMenu({ anchorEl, onClose }: DebugMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const { state, setDesk, setUnreads, setHuddles, setIntelligence } = useDebug()
+  const { state, setDesk, setUnreads, setHuddles } = useDebug()
 
   useEffect(() => {
     const click = (e: MouseEvent) => {
@@ -131,18 +131,6 @@ export function DebugMenu({ anchorEl, onClose }: DebugMenuProps) {
           ]}
           value={state.huddles.variant}
           onChange={(v) => setHuddles('variant', v)}
-        />
-      </DebugSection>
-
-      <DebugSection title="Intelligence">
-        <DebugRow
-          label="AI features"
-          options={[
-            { label: 'Off', value: false },
-            { label: 'On', value: true },
-          ]}
-          value={state.intelligence.enabled}
-          onChange={(v) => setIntelligence('enabled', v)}
         />
       </DebugSection>
     </div>,

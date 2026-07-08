@@ -6,7 +6,6 @@ import { DateDivider } from '@/components/ui/DateDivider'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { DM_CONVERSATIONS } from '@/data/dmData'
-import { AGENT_DM_CONVERSATIONS } from '@/data/agentData'
 import { REPLIES, type ReplyData } from '@/data/replyData'
 import { type ConversationData } from '@/data/topicData'
 import { PEOPLE } from '@/data/peopleData'
@@ -25,10 +24,6 @@ interface UseDmConversationViewArgs {
   showUnreads?: boolean
   /** Promote the current DM into the first huddle of a new topic. */
   onStartTopicFromDm?: (dmId: number, dmName: string, seedMessageId: string, data: StartTopicResult) => void
-  /** Rendered after the name in the header (e.g. the "Agent" chip on agent DMs). */
-  headerBadge?: ReactNode
-  /** Group conversations: member count shown as the header badge icon instead of an avatar. */
-  headerGroupCount?: number
 }
 
 interface ViewSlots {
@@ -36,7 +31,7 @@ interface ViewSlots {
   threadPanel: ReactNode | undefined
 }
 
-export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnreads = false, onStartTopicFromDm, headerBadge, headerGroupCount }: UseDmConversationViewArgs): ViewSlots {
+export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnreads = false, onStartTopicFromDm }: UseDmConversationViewArgs): ViewSlots {
   const [sentMessages, setSentMessages] = useState<Record<number, ConversationData[]>>({})
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
   const [resolvedOverrides, setResolvedOverrides] = useState<Record<string, { resolved: boolean; resolvedBy?: string; message?: string; resolvedByReplyId?: string }>>({})
@@ -60,7 +55,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
     isTopicResolved,
   } = useTopicMutations()
 
-  const dmGroups = dmId != null ? (DM_CONVERSATIONS[dmId] ?? AGENT_DM_CONVERSATIONS[dmId] ?? []) : []
+  const dmGroups = dmId != null ? (DM_CONVERSATIONS[dmId] ?? []) : []
   const currentSent = dmId != null ? (sentMessages[dmId] ?? []) : []
 
   const dmPartner = dmName ? PEOPLE.find((p) => p.name === dmName) : undefined
@@ -234,8 +229,6 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
     <div className="flex flex-col h-full">
       <ConversationHeader
         name={dmName}
-        badge={headerBadge}
-        groupCount={headerGroupCount}
         isStarred={dmId != null && isDmStarred(dmId)}
         onToggleStarred={
           onToggleStarred ??

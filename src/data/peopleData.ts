@@ -7,9 +7,6 @@ import jakeWalter from '@/assets/avatars/jake-walter.png'
 import juanFoley from '@/assets/avatars/juan-foley.png'
 import zackBright from '@/assets/avatars/zack-bright.png'
 import userAvatar from '@/assets/avatar.png'
-import figmaIcon from '@/assets/figma icon.svg'
-import linearIcon from '@/assets/linear icon.svg'
-import githubIcon from '@/assets/github icon.svg'
 
 export interface Person {
   id: string
@@ -37,12 +34,6 @@ const AVATAR_BY_NAME: Record<string, string> = PEOPLE.reduce<Record<string, stri
 // "You" resolves to the user's own avatar (the one shown in the app top bar),
 // so messages authored by the current user are visually self-attributed.
 AVATAR_BY_NAME['You'] = userAvatar
-
-// Agents resolve to their app icon - a logo, never a face - so agent-authored
-// messages and rows are visually non-human everywhere an Avatar renders.
-AVATAR_BY_NAME['Linear'] = linearIcon
-AVATAR_BY_NAME['Figma'] = figmaIcon
-AVATAR_BY_NAME['GitHub'] = githubIcon
 
 /** Look up the avatar URL for a given author name. Returns undefined for unknown names. */
 export function avatarFor(name: string | undefined): string | undefined {

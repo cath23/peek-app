@@ -12,7 +12,6 @@ const meta = {
   },
   argTypes: {
     value: { control: false },
-    people: { control: false },
   },
   render: function Render(args) {
     const [value, setValue] = useState<Person[]>(args.value)

@@ -1,6 +1,6 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { IconX, IconExternalLink, IconCircleDashed, IconCircleCheck, IconLock, IconTimeline, IconArrowBackUp } from '@tabler/icons-react'
+import { IconX, IconExternalLink, IconCircleDashed, IconCircleCheck, IconLock } from '@tabler/icons-react'
 import { Avatar } from './ui/Avatar'
 import { IconButton } from './ui/IconButton'
 import { ThreadReplyCard } from './ThreadReplyCard'
@@ -10,9 +10,6 @@ import type { ConversationData, HighlightType, ReactionData } from '@/data/topic
 import type { ReplyData } from '@/data/replyData'
 import { HighlightPill } from './ui/HighlightPill'
 import { partitionRepliesAroundPromotion } from '@/lib/threadPartition'
-import { useDebug } from '@/lib/debug'
-import { registerCatchUp } from '@/lib/intelligenceBridge'
-import { THREAD_CHECKPOINTS, type ThreadCheckpoint } from '@/data/timelineData'
 
 // ── Pinned Initial Message (compact) ──
 
@@ -134,39 +131,6 @@ export function ThreadPanel({
 
   const allReplies = [...replies, ...sentReplies]
 
-  // ── Catch me up (Intelligence prototype) ──
-  // Threads with precomputed checkpoints can swap the reply list for a
-  // checkpoints-only view and back. The launcher can trigger it too (bridge).
-  const { state: debug } = useDebug()
-  const checkpoints: ThreadCheckpoint[] | undefined = debug.intelligence.enabled
-    ? THREAD_CHECKPOINTS[conversation.id]
-    : undefined
-  const newCount = allReplies.filter((r) => r.isNew).length
-  const [threadView, setThreadView] = useState<'replies' | 'checkpoints'>('replies')
-
-  useEffect(() => {
-    setThreadView('replies')
-  }, [conversation.id])
-
-  useEffect(() => {
-    if (!checkpoints) return
-    registerCatchUp({
-      convId: conversation.id,
-      newCount,
-      activate: () => setThreadView('checkpoints'),
-    })
-    return () => registerCatchUp(null)
-  }, [checkpoints, conversation.id, newCount])
-
-  const jumpToReply = (cp: ThreadCheckpoint) => {
-    setThreadView('replies')
-    requestAnimationFrame(() => {
-      scrollRef.current
-        ?.querySelector(`[data-reply-id="${cp.anchorReplyId}"]`)
-        ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-    })
-  }
-
   // When a promotion divider is rendered, replies are split chronologically
   // around the promotion event (see lib/threadPartition for the rule).
   const { above: aboveReplies, below: postDividerSent } = promotionDivider
@@ -262,32 +226,6 @@ export function ThreadPanel({
           )}
         </div>
 
-        {/* Checkpoints-only view (Catch me up) - replaces the reply list. */}
-        {threadView === 'checkpoints' && checkpoints && (
-          <>
-            <DateDivider label="Catch me up" className="px-4 py-2" />
-            <div className="flex flex-col px-4 pb-4 gap-1">
-              {checkpoints.map((cp) => (
-                <div
-                  key={cp.id}
-                  className="flex gap-3 px-2 py-2 rounded-lg cursor-pointer hover:bg-bg-hover transition-colors"
-                  onClick={() => jumpToReply(cp)}
-                >
-                  <div className="flex flex-col items-center pt-[7px] w-3 shrink-0">
-                    <div className="size-1.5 rounded-full bg-border-strong" />
-                  </div>
-                  <div className="flex flex-col gap-1 flex-1 min-w-0">
-                    <span className="text-caption text-text-muted">{cp.time}</span>
-                    <p className="text-sm text-text-secondary leading-[1.45]">{cp.sentence}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {threadView === 'replies' && (
-        <>
         {/* Replies divider */}
         <DateDivider label="Replies" className="px-4 py-2" />
 
@@ -377,34 +315,7 @@ export function ThreadPanel({
             />
           ))}
         </div>
-        </>
-        )}
       </div>
-
-      {/* Catch me up toggle - floats above the reply composer. */}
-      {checkpoints && (
-        <div className="relative h-0 z-10">
-          <div className="absolute -top-2 inset-x-0 flex justify-center -translate-y-full pointer-events-none">
-            <button
-              type="button"
-              className="pointer-events-auto flex items-center gap-1.5 h-7 px-3 rounded-full bg-bg-elevated border border-border-default shadow-sm text-caption text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors cursor-pointer"
-              onClick={() => setThreadView((v) => (v === 'replies' ? 'checkpoints' : 'replies'))}
-            >
-              {threadView === 'replies' ? (
-                <>
-                  <IconTimeline size={13} stroke={1.5} />
-                  <span>{newCount > 0 ? `${newCount} new · Catch me up` : 'Catch me up'}</span>
-                </>
-              ) : (
-                <>
-                  <IconArrowBackUp size={13} stroke={1.5} />
-                  <span>Show all replies</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Compose box */}
       <div className="p-3">

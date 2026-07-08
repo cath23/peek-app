@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { IconSearch, IconSparkles, IconChevronRight, IconX, IconBlockquote, IconPencil } from '@tabler/icons-react'
+import { IconSearch, IconChevronRight, IconX, IconPencil } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { FigmaFindPanel, type FigmaFindPanelHandle } from './FigmaFindPanel'
 import { attachFramesToActiveComposer } from '@/lib/composerRegistry'
@@ -15,7 +15,7 @@ type LauncherApp = 'figma' | 'linear' | 'github' | 'zendesk'
 
 /** What an action needs from the invocation context to be able to succeed.
  *  Actions whose requirement isn't met are NOT shown - never a dead click. */
-type ActionRequirement = 'selection' | 'draft-or-selection' | 'conversation'
+type ActionRequirement = 'conversation'
 
 interface AppPreset {
   id: string
@@ -89,13 +89,6 @@ const APPS: AppMeta[] = [
   },
 ]
 
-const PEEK_ACTIONS: AppPreset[] = [
-  { id: 'explain', title: 'Explain this', requires: 'selection' },
-  { id: 'improve', title: 'Improve writing', requires: 'draft-or-selection' },
-  { id: 'spelling', title: 'Check spelling', requires: 'draft-or-selection' },
-  { id: 'summarize', title: 'Summarize this conversation', requires: 'conversation' },
-]
-
 /** One selectable row: what it renders and what selecting it does. */
 interface Row {
   key: string
@@ -106,31 +99,29 @@ interface Row {
 interface CommandLauncherProps {
   /** Captured at the invoking keystroke/click - see lib/launcherContext. */
   context: LauncherContext
-  /** Pre-typed intent (e.g. from a selection-toolbar button). */
-  initialQuery?: string
   onClose: () => void
 }
 
 /**
  * The global command launcher (Cmd/Ctrl+K anywhere, or click the top-bar
  * search field). Three levels, one input:
- *  - global: search-default row + Intelligence actions + drillable app rows
- *  - app scope: a chip in the input; the app's presets + a live "Ask <app>" row
+ *  - global: search-default row + drillable app rows
+ *  - app scope: a chip in the input; the app's presets
  *  - figma find mode: frame candidates with thumbnails -> insert into the
  *    last-touched compose box as a file chip
  * Backspace on an empty input pops one level. Esc always closes. Not a chat:
  * one input, one result set, no history.
  *
  * Actions are FILTERED by the invocation context, never just reordered: an
- * action appears only where it can succeed (selection -> Explain; a draft ->
- * Improve writing; an open conversation -> Summarize). The context chip in
- * the input shows what the launcher is acting on; clearing it widens the
- * list back to the globally-capable set.
+ * action appears only where it can succeed (an open conversation ->
+ * Create issue from this thread). The context chip in the input shows what
+ * the launcher is acting on; clearing it widens the list back to the
+ * globally-capable set.
  */
-export function CommandLauncher({ context, initialQuery, onClose }: CommandLauncherProps) {
+export function CommandLauncher({ context, onClose }: CommandLauncherProps) {
   const [scope, setScope] = useState<AppMeta | null>(null)
   const [mode, setMode] = useState<'figma-find' | null>(null)
-  const [query, setQuery] = useState(initialQuery ?? '')
+  const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
   const [contextCleared, setContextCleared] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -145,21 +136,7 @@ export function CommandLauncher({ context, initialQuery, onClose }: CommandLaunc
 
   const meets = (req?: ActionRequirement): boolean => {
     if (!req) return true
-    switch (req) {
-      case 'selection':
-        return !!ctx.selection
-      case 'draft-or-selection':
-        return !!ctx.selection || !!ctx.composer?.hasDraft
-      case 'conversation':
-        return !!ctx.composer
-    }
-  }
-
-  /** Among capable actions, context still adapts the wording. */
-  const intelligenceSubtitle = (p: AppPreset): string => {
-    if (p.requires === 'selection') return 'On your selection'
-    if (p.requires === 'draft-or-selection') return ctx.selection ? 'On your selection' : 'On your draft'
-    return 'Peek Intelligence'
+    return !!ctx.composer
   }
 
   const enterScope = (app: AppMeta) => {
@@ -246,23 +223,6 @@ export function CommandLauncher({ context, initialQuery, onClose }: CommandLaunc
           )
         )
       }
-      // The permanent free-intent fallback: dead-ends become invitations.
-      if (q) {
-        rows.push(
-          simpleRow(
-            'ask',
-            <IconSparkles size={16} stroke={1.5} className="text-text-secondary" />,
-            <>
-              Ask {scope.label}: "<span className="font-medium">{query.trim()}</span>"
-            </>,
-            undefined,
-            () => {
-              if (scope.app === 'figma') enterFigmaFind(query.trim())
-              else onClose() // inert v1
-            }
-          )
-        )
-      }
       return { rows, headers }
     }
 
@@ -276,21 +236,6 @@ export function CommandLauncher({ context, initialQuery, onClose }: CommandLaunc
             Search Peek for "<span className="font-medium">{query.trim()}</span>"
           </>,
           undefined,
-          () => onClose() // inert v1
-        )
-      )
-    }
-
-    const capableActions = PEEK_ACTIONS.filter((p) => meets(p.requires))
-    const peekActions = q ? capableActions.filter((p) => p.title.toLowerCase().includes(q)) : capableActions
-    if (peekActions.length > 0) headers.set(rows.length, sectionHeader('Intelligence'))
-    for (const p of peekActions) {
-      rows.push(
-        simpleRow(
-          p.id,
-          <IconSparkles size={16} stroke={1.5} className="text-text-secondary" />,
-          p.title,
-          intelligenceSubtitle(p),
           () => onClose() // inert v1
         )
       )
@@ -316,20 +261,11 @@ export function CommandLauncher({ context, initialQuery, onClose }: CommandLaunc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, query, scope, mode, contextCleared])
 
-  // Reset the highlight on every level/query change - except the very first
-  // render with a pre-typed intent, where the intended Intelligence action
-  // (not the search-default row) should be the one Enter runs.
+  // Reset the highlight on every level/query change.
   const didInitHighlight = useRef(false)
   useEffect(() => {
     if (!didInitHighlight.current) {
       didInitHighlight.current = true
-      if (initialQuery) {
-        const idx = rows.findIndex((r) => PEEK_ACTIONS.some((p) => p.id === r.key))
-        if (idx > 0) {
-          setHighlight(idx)
-          return
-        }
-      }
       return
     }
     setHighlight(0)
@@ -429,20 +365,15 @@ export function CommandLauncher({ context, initialQuery, onClose }: CommandLaunc
               </div>
             )}
 
-            {/* Context chip - what the launcher is acting on (selection >
-                composer target). X widens back to the globally-capable set.
-                Hidden in find mode where the footer names the target. */}
-            {mode !== 'figma-find' && !contextCleared && (ctx.selection || ctx.composer) && (
+            {/* Context chip - what the launcher is acting on (the composer
+                target an insert/attach would land in). X widens back to the
+                globally-capable set. Hidden in find mode where the footer
+                names the target. */}
+            {mode !== 'figma-find' && !contextCleared && ctx.composer && (
               <div className="inline-flex items-center gap-1.5 bg-bg-inset border border-border-default rounded-full pl-1.5 pr-1 py-0.5 max-h-[24px] max-w-[220px] shrink-0">
-                {ctx.selection ? (
-                  <IconBlockquote size={12} stroke={1.5} className="text-text-secondary shrink-0" />
-                ) : (
-                  <IconPencil size={12} stroke={1.5} className="text-text-secondary shrink-0" />
-                )}
+                <IconPencil size={12} stroke={1.5} className="text-text-secondary shrink-0" />
                 <span className="text-[12px] leading-[1.2] font-medium text-text-primary truncate">
-                  {ctx.selection
-                    ? `"${ctx.selection.text.length > 24 ? ctx.selection.text.slice(0, 24).trimEnd() + '...' : ctx.selection.text}"`
-                    : ctx.composer?.label ?? 'Compose box'}
+                  {ctx.composer?.label ?? 'Compose box'}
                 </span>
                 <button
                   type="button"

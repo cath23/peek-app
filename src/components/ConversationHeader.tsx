@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { IconStar, IconStarFilled, IconDotsVertical, IconLockPlus, IconLock, IconTimeline } from '@tabler/icons-react'
+import { IconStar, IconStarFilled, IconDotsVertical, IconLockPlus, IconLock } from '@tabler/icons-react'
 import { TopicState } from './ui/TopicState'
 import { Avatar } from './ui/Avatar'
 import { IconButton } from './ui/IconButton'
@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 interface ConversationHeaderProps {
   avatarSrc?: string
   name?: string
-  /** When true, shows topic-mode layout: TopicState icon, status counts, members, timeline button */
+  /** When true, shows topic-mode layout: TopicState icon, status counts, members */
   topicMode?: boolean
   /** V2 huddle main-view header: lock icon on the left, no open/resolved counts. Members pill still
    *  shows when `members` is provided. Pairs with `name` carrying the comma-joined member names. */
@@ -24,15 +24,6 @@ interface ConversationHeaderProps {
   onToggleStarred?: () => void
   /** When provided, renders a "Start a huddle" icon button next to the members pill. */
   onStartHuddle?: () => void
-  /** Intelligence prototype: renders a Timeline icon button that switches the
-   *  topic body between conversations and the topic timeline. */
-  onToggleTimeline?: () => void
-  timelineActive?: boolean
-  /** Small element rendered right after the name (e.g. an "Agent" chip). */
-  badge?: ReactNode
-  /** Group conversations: renders the member-count badge instead of an avatar,
-   *  matching the group rows in the People list. */
-  groupCount?: number
   tabs?: ReactNode
   className?: string
 }
@@ -67,10 +58,6 @@ export function ConversationHeader({
   isStarred = false,
   onToggleStarred,
   onStartHuddle,
-  onToggleTimeline,
-  timelineActive = false,
-  badge,
-  groupCount,
   tabs,
   className,
 }: ConversationHeaderProps) {
@@ -88,15 +75,12 @@ export function ConversationHeader({
               status={isResolved ? 'resolved' : 'unresolved'}
               iconClassName="text-text-secondary"
             />
-          ) : groupCount != null ? (
-            <TopicState type="group" memberCount={groupCount} />
           ) : (
             <Avatar size={16} src={avatarSrc} alt={name} />
           )}
           {name && (
             <span className="text-body-2-strong text-text-primary truncate">{name}</span>
           )}
-          {badge}
         </div>
 
         {/* Right */}
@@ -122,18 +106,6 @@ export function ConversationHeader({
               <AvatarGroup members={members} />
               <span className="text-caption text-text-secondary">{members.length}</span>
             </div>
-          )}
-
-          {/* Timeline toggle (Intelligence prototype) - next to the huddle button. */}
-          {onToggleTimeline && !huddleMode && (
-            <IconButton
-              tooltip={timelineActive ? 'Back to conversations' : 'Timeline'}
-              aria-label="Toggle timeline"
-              onClick={onToggleTimeline}
-              className={timelineActive ? 'text-accent-primary hover:text-accent-primary bg-bg-active' : undefined}
-            >
-              <IconTimeline size={16} stroke={1.5} />
-            </IconButton>
           )}
 
           {/* Start huddle (V2 / V3 only — driven by onStartHuddle prop). Hidden inside a huddle. */}

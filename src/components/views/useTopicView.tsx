@@ -12,8 +12,6 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { TopicTabs, type TopicTab } from '@/components/ui/TopicTabs'
 import { IconButton } from '@/components/ui/IconButton'
 import { Button } from '@/components/ui/Button'
-import { TimelineView } from '@/components/TimelineView'
-import { TOPIC_TIMELINES } from '@/data/timelineData'
 import { TOPIC_CONVERSATIONS, type ConversationData, type HighlightType, type ReactionData } from '@/data/topicData'
 import { DM_CONVERSATIONS } from '@/data/dmData'
 import { type Huddle } from '@/data/huddleData'
@@ -97,9 +95,6 @@ export function useTopicView({
 
   // Thread + huddle UI state stays local — it's transient view state, not data.
   const [threadConvId, setThreadConvId] = useState<string | null>(null)
-  // Intelligence prototype: the topic timeline replaces the conversation body
-  // (V2/V3 header button; V1 uses its Timeline tab instead).
-  const [showTimeline, setShowTimeline] = useState(false)
   const huddleCreateRef = useRef<HTMLDivElement>(null)
   const huddleToInputRef = useRef<HTMLInputElement>(null)
   const [selectedHuddleId, setSelectedHuddleId] = useState<string | null>(null)
@@ -207,16 +202,10 @@ export function useTopicView({
     setSelectedHuddleId(null)
   }
 
-  // Leave the timeline when switching topics or huddle variants.
-  useEffect(() => {
-    setShowTimeline(false)
-  }, [topicId, huddleVariant])
-
-  // One-shot deep link (launcher search results, fact-check "view source"):
+  // One-shot deep link (launcher search results):
   // open the requested thread once this topic is showing, then clear.
   useEffect(() => {
     if (pendingTopicThread && topicId != null && pendingTopicThread.topicId === topicId) {
-      setShowTimeline(false)
       setActiveTab('conversations')
       setSelectedHuddleId(null)
       setThreadConvId(pendingTopicThread.convId)
@@ -604,15 +593,6 @@ export function useTopicView({
         onStartHuddle={
           huddleVariant === 1 || isV2HuddleView ? undefined : () => setIsCreatingHuddle(true)
         }
-        onToggleTimeline={
-          debug.intelligence.enabled && huddleVariant !== 1 && !isV2HuddleView && topicId != null && TOPIC_TIMELINES[topicId]
-            ? () => {
-                setThreadConvId(null)
-                setShowTimeline((v) => !v)
-              }
-            : undefined
-        }
-        timelineActive={showTimeline}
         tabs={
           huddleVariant === 1 ? (
             <TopicTabs
@@ -685,18 +665,7 @@ export function useTopicView({
       })()}
 
       {/* Conversations tab — also the only body in V2/V3 (no tabs). Suppressed when a V2 huddle is open. */}
-      {/* Topic timeline (Intelligence prototype, V2/V3) - replaces the conversation body. */}
-      {showTimeline && !isV2HuddleView && huddleVariant !== 1 && topicId != null && (
-        <TimelineView
-          topicId={topicId}
-          onEntryClick={(entry) => {
-            setShowTimeline(false)
-            openThread(entry.anchorConvId)
-          }}
-        />
-      )}
-
-      {!showTimeline && !isV2HuddleView && (huddleVariant !== 1 || activeTab === 'conversations') && (() => {
+      {!isV2HuddleView && (huddleVariant !== 1 || activeTab === 'conversations') && (() => {
         // V3 unified stream: build date-keyed groups containing both convs and huddles
         // (only "your" huddles, only ones with a conversation seed). Existing V1/V2
         // rendering preserved unchanged below.
@@ -908,22 +877,11 @@ export function useTopicView({
         )
       })()}
 
-      {/* Timeline tab (V1 only). With Intelligence on, it shows the real topic
-          timeline; otherwise the original placeholder. */}
+      {/* Timeline tab (V1 only) */}
       {huddleVariant === 1 && activeTab === 'timeline' && (
-        debug.intelligence.enabled && topicId != null && TOPIC_TIMELINES[topicId] ? (
-          <TimelineView
-            topicId={topicId}
-            onEntryClick={(entry) => {
-              setActiveTab('conversations')
-              openThread(entry.anchorConvId)
-            }}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <EmptyState message="A selective view of how this topic evolved - highlights, resolutions, and key events." />
-          </div>
-        )
+        <div className="flex-1 flex items-center justify-center">
+          <EmptyState message="A selective view of how this topic evolved - highlights, resolutions, and key events." />
+        </div>
       )}
 
       {/* Huddles tab (V1 only) */}

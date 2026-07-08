@@ -110,7 +110,7 @@ export const REPLIES: Record<string, ReplyData[]> = {
     { id: 'r_t3c4_2', authorName: 'Jake Walter', timestamp: '2:10 PM', body: "Option A for sure. The animation in B might actually add confusion for users who are already struggling." },
     { id: 'r_t3c4_3', authorName: 'Alice Johnson', timestamp: '2:20 PM', body: "Going with A then. I'll finalize the assets today." },
     { id: 'r_t3c4_4', authorName: 'You', timestamp: '2:45 PM', body: "Looks great. Simple and clear - exactly what we need here." },
-    // The unread tail that powers the Catch me up demo (checkpoints in timelineData.ts).
+    // The unread tail.
     { id: 'r_t3c4_5', authorName: 'Daniel Stanton', timestamp: '2:50 PM', body: "Late to this - did we consider a hybrid? Static frames that advance on tap. Keeps it lightweight but still shows motion.", isNew: true },
     { id: 'r_t3c4_6', authorName: 'Alice Johnson', timestamp: '2:58 PM', body: "Considered it, but tap-to-advance adds an interaction step exactly where users are already failing. I want zero extra input on this screen.", isNew: true },
     { id: 'r_t3c4_7', authorName: 'Greg Bothman', timestamp: '3:05 PM', body: "Data point: 68% of the drop-off sessions are on devices older than 3 years. Whatever we pick has to render instantly.", isNew: true },
@@ -386,15 +386,5 @@ export const REPLIES: Record<string, ReplyData[]> = {
     { id: 'r_h9_1_1', authorName: 'Jake Walter', timestamp: '11:45 AM', body: "Definitely the first option. Users want to feel like they've arrived somewhere, not that there's more onboarding ahead." },
     { id: 'r_h9_1_2', authorName: 'Alice Johnson', timestamp: '11:52 AM', body: "Agreed. The contextual overlay feels like we're not confident the product is self-explanatory. 'Go to dashboard' is a clean exit." },
     { id: 'r_h9_1_3', authorName: 'Jake Walter', timestamp: '12:00 PM', body: "The 'Take a tour' secondary is smart though. Catches users who do want more guidance without forcing everyone through it." },
-  ],
-
-  // ── Agent DMs (agentData.ts) - conversations are started by You, agent answers live here ──
-  agent20_c1: [
-    { id: 'r_ag20c1_1', authorName: 'Linear', timestamp: '8:55 AM', body: "Cycle 14 ends Friday. 3 issues assigned to you are still in progress:\n- PEEK-231 Export endpoint pagination\n- PEEK-234 Onboarding error copy\n- PEEK-238 Retry shortcut on error screen\n\nPEEK-238 has had no activity for 6 days. Want me to move it to Cycle 15?" },
-    { id: 'r_ag20c1_2', authorName: 'You', timestamp: '9:12 AM', body: 'Move PEEK-238 to Cycle 15 and add a note that it depends on the SDK 3.4.2 upgrade.' },
-    { id: 'r_ag20c1_3', authorName: 'Linear', timestamp: '9:12 AM', body: 'Done. PEEK-238 moved to Cycle 15 with a dependency note linking the SDK 3.4.2 upgrade issue.' },
-  ],
-  agent22_c1: [
-    { id: 'r_ag22c1_1', authorName: 'GitHub', timestamp: '7:45 AM', body: "PR #482 'Fix identity-service retry loop' was merged into main overnight. CI is green on the release branch.\n\nTwo PRs are waiting on your review: #485 (export job queue) and #486 (error screen copy)." },
   ],
 }

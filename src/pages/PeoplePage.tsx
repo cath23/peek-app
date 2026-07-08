@@ -7,15 +7,12 @@ import { Divider } from '@/components/ui/Divider'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StarredSection, type StarredItem } from '@/components/ui/StarredSection'
 import { useDmConversationView } from '@/components/views/useDmConversationView'
-import { NewAgentDmDialog } from '@/components/NewAgentDmDialog'
-import { Chip } from '@/components/ui/Chip'
 import { useStarred } from '@/lib/starred'
 import { useDebug } from '@/lib/debug'
 import { useTopicStore } from '@/lib/topicStore'
 import { useLastSelection } from '@/lib/lastSelection'
 import { useToast } from '@/lib/toast'
 import { dmHasUnread } from '@/data/dmData'
-import { AGENTS, AGENT_GROUPS, AGENT_DM_IDS, agentByDmId, agentGroupByDmId, createAgentGroup } from '@/data/agentData'
 import type { StartTopicResult } from '@/components/CreateTopicDialog'
 
 const DMS = [
@@ -48,8 +45,6 @@ export function PeoplePage() {
   const { dmId: lastDmId, setLastDmId } = useLastSelection()
   const { id: routeId } = useParams<{ id: string }>()
   const [teamsExpanded, setTeamsExpanded] = useState(true)
-  const [agentsExpanded, setAgentsExpanded] = useState(true)
-  const [showAgentDialog, setShowAgentDialog] = useState(false)
   const { entries: starredEntries } = useStarred()
   const { state: debug } = useDebug()
   const showUnreads = debug.unreads.people
@@ -98,7 +93,7 @@ export function PeoplePage() {
 
   useEffect(() => {
     const numericId = Number(routeId)
-    if (routeId && (DM_IDS.has(numericId) || AGENT_DM_IDS.has(numericId) || agentGroupByDmId(numericId))) {
+    if (routeId && DM_IDS.has(numericId)) {
       setLastDmId(numericId)
     } else if (!routeId && lastDmId != null) {
       // Returning to /people with no id — restore last selection in URL.
@@ -107,35 +102,16 @@ export function PeoplePage() {
   }, [routeId, lastDmId, navigate, setLastDmId])
 
   const selectedItem = selectedId ? ALL_ITEMS.find((i) => i.id === selectedId) : null
-  const selectedAgent = selectedId != null ? agentByDmId(selectedId) : undefined
-  const selectedAgentGroup = selectedId != null ? agentGroupByDmId(selectedId) : undefined
-  const isHumanDm = selectedId != null && DM_IDS.has(selectedId)
-  const isAgentDm = selectedAgent != null || selectedAgentGroup != null
-  const isDm = isHumanDm || isAgentDm
-
-  const handleStartAgentDm = (agents: typeof AGENTS) => {
-    setShowAgentDialog(false)
-    if (agents.length === 1) {
-      navigate(`/people/${agents[0].dmId}`)
-    } else if (agents.length > 1) {
-      const group = createAgentGroup(agents)
-      navigate(`/people/${group.dmId}`)
-    }
-  }
+  const isDm = selectedId != null && DM_IDS.has(selectedId)
 
   const dmView = useDmConversationView({
     dmId: isDm ? selectedId : null,
-    dmName: isDm
-      ? (selectedAgent?.name ?? selectedAgentGroup?.name ?? selectedItem?.name)
-      : undefined,
+    dmName: isDm ? selectedItem?.name : undefined,
     showUnreads,
     onStartTopicFromDm: handleStartTopicFromDm,
-    headerBadge: isAgentDm ? <Chip type="neutral" label={selectedAgentGroup ? 'Agents' : 'Agent'} /> : undefined,
-    headerGroupCount: selectedAgentGroup ? selectedAgentGroup.memberNames.length : undefined,
   })
 
   return (
-    <>
     <AppShell
       leftPanel={
         <div className="flex flex-col h-full">
@@ -184,54 +160,11 @@ export function PeoplePage() {
                 onClick={() => handleSelect(t.id)}
               />
             ))}
-
-            <Divider className="my-2" />
-
-            {/* Agents sit last on purpose - the panel reads human-first, AI-last:
-                starred people, people, teams, then agents. */}
-            <SectionHeader
-              title="Agents"
-              chevron
-              isExpanded={agentsExpanded}
-              onToggle={() => setAgentsExpanded((v) => !v)}
-              prop1stAction
-              prop1stActionTooltip="New agent conversation"
-              onFirstAction={() => setShowAgentDialog(true)}
-            />
-
-            {agentsExpanded && AGENTS.map((a) => (
-              <PersonRow
-                key={a.dmId}
-                name={a.name}
-                type="DM"
-                avatarSrc={a.avatarSrc}
-                isSelected={selectedId === a.dmId}
-                onClick={() => handleSelect(a.dmId)}
-              />
-            ))}
-
-            {agentsExpanded && AGENT_GROUPS.map((g) => (
-              <PersonRow
-                key={g.dmId}
-                name={g.name}
-                type="group"
-                memberCount={g.memberNames.length}
-                isSelected={selectedId === g.dmId}
-                onClick={() => handleSelect(g.dmId)}
-              />
-            ))}
           </div>
         </div>
       }
       rightPanel={dmView.rightPanel}
       threadPanel={dmView.threadPanel}
     />
-    {showAgentDialog && (
-      <NewAgentDmDialog
-        onConfirm={({ agents }) => handleStartAgentDm(agents)}
-        onCancel={() => setShowAgentDialog(false)}
-      />
-    )}
-    </>
   )
 }

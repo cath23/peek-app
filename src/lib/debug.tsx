@@ -20,18 +20,10 @@ interface HuddlesDebug {
   variant: HuddleVariant
 }
 
-/** Master switch for the experimental AI features (selection toolbar,
- *  launcher Intelligence actions, @App queries, timeline, catch-me-up).
- *  Off = the app behaves exactly as it did before the Intelligence work. */
-interface IntelligenceDebug {
-  enabled: boolean
-}
-
 export interface DebugState {
   desk: DeskDebug
   unreads: UnreadsDebug
   huddles: HuddlesDebug
-  intelligence: IntelligenceDebug
 }
 
 const DEFAULT_DEBUG: DebugState = {
@@ -50,9 +42,6 @@ const DEFAULT_DEBUG: DebugState = {
   huddles: {
     variant: 3,
   },
-  intelligence: {
-    enabled: true,
-  },
 }
 
 interface DebugContextValue {
@@ -60,7 +49,6 @@ interface DebugContextValue {
   setDesk: <K extends keyof DeskDebug>(key: K, value: DeskDebug[K]) => void
   setUnreads: <K extends keyof UnreadsDebug>(key: K, value: UnreadsDebug[K]) => void
   setHuddles: <K extends keyof HuddlesDebug>(key: K, value: HuddlesDebug[K]) => void
-  setIntelligence: <K extends keyof IntelligenceDebug>(key: K, value: IntelligenceDebug[K]) => void
 }
 
 const DebugContext = createContext<DebugContextValue | null>(null)
@@ -80,12 +68,8 @@ export function DebugProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, huddles: { ...prev.huddles, [key]: value } }))
   }
 
-  const setIntelligence = <K extends keyof IntelligenceDebug>(key: K, value: IntelligenceDebug[K]) => {
-    setState((prev) => ({ ...prev, intelligence: { ...prev.intelligence, [key]: value } }))
-  }
-
   return (
-    <DebugContext.Provider value={{ state, setDesk, setUnreads, setHuddles, setIntelligence }}>
+    <DebugContext.Provider value={{ state, setDesk, setUnreads, setHuddles }}>
       {children}
     </DebugContext.Provider>
   )

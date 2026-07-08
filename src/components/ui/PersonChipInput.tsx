@@ -12,8 +12,6 @@ interface PersonChipInputProps {
   autoFocus?: boolean
   /** Person ids excluded from the suggestion list (e.g., the current user). */
   excludeIds?: string[]
-  /** Suggestion pool. Defaults to PEOPLE; pass AGENTS for agent pickers. */
-  people?: Person[]
 }
 
 export function PersonChipInput({
@@ -22,7 +20,6 @@ export function PersonChipInput({
   placeholder = 'Search people...',
   autoFocus,
   excludeIds = [],
-  people = PEOPLE,
 }: PersonChipInputProps) {
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
@@ -35,13 +32,13 @@ export function PersonChipInput({
     const selectedIds = new Set(value.map((p) => p.id))
     const excludedIds = new Set(excludeIds)
     const q = query.trim().toLowerCase()
-    return people.filter((p) => {
+    return PEOPLE.filter((p) => {
       if (selectedIds.has(p.id)) return false
       if (excludedIds.has(p.id)) return false
       if (!q) return true
       return p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q)
     })
-  }, [query, value, excludeIds, people])
+  }, [query, value, excludeIds])
 
   useEffect(() => {
     setHighlight(0)

@@ -14,10 +14,10 @@ export function AppShell({ leftPanel, rightPanel, threadPanel }: AppShellProps) 
   const [collapsed, setCollapsed] = useState(false)
   // The launcher's context is captured ONCE at the invoking keystroke/click
   // (selection > composer > nothing) and frozen for the launcher's lifetime.
-  const [launcher, setLauncher] = useState<{ context: LauncherContext; initialQuery?: string } | null>(null)
+  const [launcher, setLauncher] = useState<{ context: LauncherContext } | null>(null)
 
-  const openLauncher = useCallback((initialQuery?: string) => {
-    setLauncher({ context: captureLauncherContext(), initialQuery })
+  const openLauncher = useCallback(() => {
+    setLauncher({ context: captureLauncherContext() })
   }, [])
 
   // Cmd/Ctrl+K opens the launcher from anywhere - browsing or typing in a
@@ -78,7 +78,6 @@ export function AppShell({ leftPanel, rightPanel, threadPanel }: AppShellProps) 
       {launcher && (
         <CommandLauncher
           context={launcher.context}
-          initialQuery={launcher.initialQuery}
           onClose={() => setLauncher(null)}
         />
       )}

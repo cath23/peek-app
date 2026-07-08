@@ -23,13 +23,6 @@ export interface ComposerTarget {
 
 let activeComposer: ComposerHandle | null = null
 
-/** The live handle (editor included) - used by composer assists that need to
- *  read the selection and replace ranges. */
-export function getActiveComposer(): ComposerHandle | null {
-  if (!activeComposer || activeComposer.editor.isDestroyed) return null
-  return activeComposer
-}
-
 export function getComposerTarget(): ComposerTarget | null {
   if (!activeComposer || activeComposer.editor.isDestroyed) return null
   return {

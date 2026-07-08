@@ -1,5 +1,4 @@
 import { getComposerTarget, type ComposerTarget } from './composerRegistry'
-import { getCatchUp } from './intelligenceBridge'
 
 /**
  * What the user was doing at the moment they invoked the command launcher.
@@ -15,16 +14,12 @@ export interface LauncherContext {
   /** The composer a launcher insert/attach would land in (last touched).
    *  Present iff a conversation surface is open. */
   composer?: ComposerTarget
-  /** Snapshot of the open thread's catch-me-up availability. */
-  catchUp?: { convId: string; newCount: number }
 }
 
 export function captureLauncherContext(): LauncherContext {
-  const catchUp = getCatchUp()
   return {
     selection: captureComposerSelection(),
     composer: getComposerTarget() ?? undefined,
-    catchUp: catchUp ? { convId: catchUp.convId, newCount: catchUp.newCount } : undefined,
   }
 }
 
