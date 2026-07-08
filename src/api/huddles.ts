@@ -4,8 +4,8 @@
  * mutations layer), deletions filtered, seed-conversation body override
  * applied for the card preview.
  */
-import { useTopicMutations } from '@/lib/topicMutations'
-import { useTopicStore } from '@/lib/topicStore'
+import { useTopicMutations } from '@/api/internal/topicMutations'
+import { useTopicStore } from '@/api/internal/topicStore'
 import type { Huddle } from './types'
 
 /** Merged huddles for a topic. Function form so lists can call it per row. */

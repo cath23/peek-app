@@ -1,8 +1,8 @@
 /**
  * Topic reads + topic-level actions.
  */
-import { useTopicMutations } from '@/lib/topicMutations'
-import { useTopicStore } from '@/lib/topicStore'
+import { useTopicMutations } from '@/api/internal/topicMutations'
+import { useTopicStore } from '@/api/internal/topicStore'
 import type { Topic } from './types'
 import type { Person } from './types'
 

@@ -1,0 +1,54 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Docs/Introduction" />
+
+# Peek — Component Library
+
+This is the living component reference for **Peek**, the team-communication app
+(DMs, Topics, Huddles, Screener, Desk). Every component is documented here with
+its variants and states. Use the **Theme** toolbar (☾) to check light and dark —
+Peek is token-driven and **pixel-perfect**, so both must always look right.
+
+New here? Start with **[Design Tokens](?path=/docs/docs-design-tokens--docs)** —
+the colors, type, radius, and shadows every component is built from.
+
+## How the sidebar is organized
+
+Components are grouped by the **role they play**, not by their folder:
+
+| Section | What lives here |
+|---|---|
+| **Docs** | This intro + the Design Tokens reference. |
+| **Primitives** | The smallest building blocks — Button, Avatar, Chip, IconButton, Tooltip, and the molecule rows built from them (PersonRow, SearchInput…). |
+| **Cards** | Message surfaces — ConversationCard, ThreadReplyCard, HuddleCard, PinnedMessage, MessageBody. |
+| **Menus** | Popovers and context menus — Files, More, Quick, Debug, Mention, Topic, ReactionPicker. |
+| **Dialogs** | Modal flows — ResolveDialog, CreateTopicDialog. |
+| **Composer** | Message input — ComposeBox, HuddleCreator. |
+| **Chrome** | App frame — TopBar, NavRail/NavItem, AppShell, ConversationHeader, ThreadPanel. |
+| **Sections** | Sidebar/page sections — Screener, Starred, Container header, NewTopicBanner. |
+
+## Conventions
+
+- **CSF3, colocated.** Stories live next to their component as `X.stories.tsx`.
+  One story per meaningful variant axis, plus an `AllVariants` matrix where the
+  axes are enumerable. Exemplar: **Primitives/Button**.
+- **Tokens only.** Reuse existing primitives (Avatar / Chip / ListRow…); never
+  re-hand-roll markup or use raw hex. See **Design Tokens**.
+- **Both themes.** Check every story in light *and* dark via the toolbar.
+- **Autodocs.** Each component has a **Docs** tab generated from its JSDoc and
+  `argTypes`.
+
+## Scope
+
+- **Huddles: V3 (inline) only** — `HuddleCard variant="inStream"`, the inline
+  huddle creator, the header start-huddle button, ThreadPanel huddle mode. V1/V2
+  grid/dialog/timeline surfaces are intentionally not storied.
+- **AI / launcher features are parked** until reimplemented — CommandLauncher,
+  FigmaFindPanel, SelectionToolbar, agent rows, Figma attachments.
+
+## Data & providers
+
+Story data comes from the **`@/api`** data-access seam and purpose-built
+fixtures. Provider combinations (`MemoryRouter`, `TopicMutationsProvider`,
+`ThemeProvider`, `DebugProvider`, `LastSelectionProvider`) are applied through
+shared decorators, not inlined per story.

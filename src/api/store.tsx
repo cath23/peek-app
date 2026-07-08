@@ -14,9 +14,9 @@
  * Nothing outside src/api may import the underlying providers directly.
  */
 import { createContext, useContext, useState, useMemo, type ReactNode, type Dispatch, type SetStateAction } from 'react'
-import { StarredProvider } from '@/lib/starred'
-import { TopicStoreProvider } from '@/lib/topicStore'
-import { TopicMutationsProvider } from '@/lib/topicMutations'
+import { StarredProvider } from '@/api/internal/starred'
+import { TopicStoreProvider } from '@/api/internal/topicStore'
+import { TopicMutationsProvider } from '@/api/internal/topicMutations'
 import type { ConversationData } from './types'
 
 interface DmRuntimeValue {

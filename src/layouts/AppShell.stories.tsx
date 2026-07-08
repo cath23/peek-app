@@ -1,0 +1,53 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { MemoryRouter } from 'react-router-dom'
+import { ThemeProvider } from '@/lib/theme'
+import { DebugProvider } from '@/lib/debug'
+import { LastSelectionProvider } from '@/lib/lastSelection'
+import { AppShell } from './AppShell'
+
+function Placeholder({ label }: { label: string }) {
+  return (
+    <div className="flex-1 flex items-center justify-center p-4">
+      <span className="text-caption text-text-muted">{label}</span>
+    </div>
+  )
+}
+
+const meta = {
+  title: 'Layouts/AppShell',
+  component: AppShell,
+  parameters: { layout: 'fullscreen' },
+  decorators: [
+    Story => (
+      <MemoryRouter initialEntries={['/people']}>
+        <ThemeProvider>
+          <DebugProvider>
+            <LastSelectionProvider>
+              <Story />
+            </LastSelectionProvider>
+          </DebugProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    ),
+  ],
+  args: {
+    leftPanel: <Placeholder label="Left panel (list)" />,
+    rightPanel: <Placeholder label="Conversation area" />,
+  },
+} satisfies Meta<typeof AppShell>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+/**
+ * The app frame: nav rail + left panel + conversation area inside the rounded app card,
+ * with the top bar overlaid. Click the top-left menu button to collapse the rail + left panel.
+ */
+export const Default: Story = {}
+
+/** With the right-hand thread panel slot filled. */
+export const WithThreadPanel: Story = {
+  args: {
+    threadPanel: <Placeholder label="Thread panel" />,
+  },
+}

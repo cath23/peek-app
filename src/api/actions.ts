@@ -6,7 +6,7 @@
  * instead of a scattered 'You' literal. Phase 2 swaps each function to a
  * Convex mutation (domain model §2, §7 "runtime state" table).
  */
-import { useTopicMutations } from '@/lib/topicMutations'
+import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useDmRuntime } from './store'
 import { CURRENT_USER_NAME } from './currentUser'
 import type { ConversationData, HighlightType, Huddle, ReactionData, ReplyData } from './types'
