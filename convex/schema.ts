@@ -39,6 +39,10 @@ export default defineSchema({
     title: v.string(),
     creatorId: v.id('users'),
     createdAt: v.number(),
+    /** Mock id ('1'..'9') — transitional bridge for the entity-by-entity
+     *  swap, so partially-swapped entities can join mock-keyed data.
+     *  Fixture-only; absent on real records; dropped when Phase 2 ends. */
+    seedKey: v.optional(v.string()),
   }),
 
   // §2.3 — invitees; membership drives the members pill, not participation
@@ -56,6 +60,8 @@ export default defineSchema({
     userLowId: v.id('users'),
     userHighId: v.id('users'),
     createdAt: v.number(),
+    /** Mock numeric DM id as a string — transitional bridge (see topics). */
+    seedKey: v.optional(v.string()),
   })
     .index('by_pair', ['userLowId', 'userHighId'])
     .index('by_low', ['userLowId'])
@@ -80,6 +86,8 @@ export default defineSchema({
     resolvedAt: v.optional(v.number()),
     /** Figma frame ids (static integration mocks, §6). Real uploads: Phase 5. */
     attachments: v.optional(v.array(v.string())),
+    /** Mock message id ('t1_c1', 'dm1_c3', …) — transitional bridge. */
+    seedKey: v.optional(v.string()),
   }).index('by_parent', ['parentKind', 'parentId']),
 
   // §2.6 — replyCount is DERIVED (§4.2); isNew is DERIVED via readState (§4.3)
@@ -113,6 +121,8 @@ export default defineSchema({
     originDmId: v.optional(v.id('dmConversations')),
     promotedAt: v.optional(v.number()),
     seedMessageId: v.optional(v.id('messages')),
+    /** Mock huddle id ('h1_1', …) — transitional bridge. */
+    seedKey: v.optional(v.string()),
   })
     .index('by_topic', ['topicId'])
     .index('by_originDm', ['originDmId']),

@@ -129,6 +129,7 @@ export const seed = internalMutation({
         resolutionMessage: conv.resolutionMessage,
         resolvedAt: conv.isResolved ? createdAt : undefined,
         attachments: conv.attachments,
+        seedKey: conv.id,
       })
       counts.messages++
       msgIdByMock[conv.id] = id
@@ -166,6 +167,7 @@ export const seed = internalMutation({
         title: t.title,
         creatorId: firstConv ? userIdOf(firstConv.authorName) : youId,
         createdAt,
+        seedKey: t.id,
       })
       topicIdByMock[t.id] = topicId
       containerIds.push(topicId)
@@ -189,7 +191,12 @@ export const seed = internalMutation({
       const createdAt = firstConv && firstGroup
         ? timeFor(resolveDateLabel(firstGroup.dateLabel, anchor), firstConv.timestamp)
         : anchor
-      const convId = await ctx.db.insert('dmConversations', { userLowId, userHighId, createdAt })
+      const convId = await ctx.db.insert('dmConversations', {
+        userLowId,
+        userHighId,
+        createdAt,
+        seedKey: String(dmId),
+      })
       dmIdByMock[dmId] = convId
       containerIds.push(convId)
       for (const group of groups) {
@@ -213,6 +220,7 @@ export const seed = internalMutation({
           state: h.state,
           createdById: userIdOf(h.conversation?.authorName ?? 'You'),
           createdAt,
+          seedKey: h.id,
         })
         huddleCount++
         containerIds.push(huddleId)

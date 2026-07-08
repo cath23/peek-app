@@ -14,10 +14,20 @@
  * Nothing outside src/api may import the underlying providers directly.
  */
 import { createContext, useContext, useState, useMemo, type ReactNode, type Dispatch, type SetStateAction } from 'react'
+import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import { StarredProvider } from '@/api/internal/starred'
 import { TopicStoreProvider } from '@/api/internal/topicStore'
 import { TopicMutationsProvider } from '@/api/internal/topicMutations'
 import type { ConversationData } from './types'
+
+// Convex client — present only when a deployment is configured
+// (`npx convex dev` writes VITE_CONVEX_URL to .env.local). Absent in unit
+// tests and in checkouts without a deployment, where the mock-backed
+// internals below serve everything, so the app keeps working either way
+// during the Phase 2 entity-by-entity swap.
+const CONVEX_URL =
+  import.meta.env.MODE === 'test' ? undefined : (import.meta.env.VITE_CONVEX_URL as string | undefined)
+const convexClient = CONVEX_URL ? new ConvexReactClient(CONVEX_URL) : null
 
 interface DmRuntimeValue {
   /** Runtime-sent DM messages, keyed by dmId. */
@@ -41,7 +51,7 @@ export function useDmRuntime(): DmRuntimeValue {
 }
 
 export function PeekDataProvider({ children }: { children: ReactNode }) {
-  return (
+  const tree = (
     <StarredProvider>
       <TopicStoreProvider>
         <TopicMutationsProvider>
@@ -50,4 +60,8 @@ export function PeekDataProvider({ children }: { children: ReactNode }) {
       </TopicStoreProvider>
     </StarredProvider>
   )
+  return convexClient ? <ConvexProvider client={convexClient}>{tree}</ConvexProvider> : tree
 }
+
+/** Whether a Convex deployment is wired up (drives seam-internal fallbacks). */
+export const hasConvex = convexClient !== null
