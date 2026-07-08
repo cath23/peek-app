@@ -1,8 +1,8 @@
 /**
  * Reply reads + writes (domain model §2.6).
  *
- * Phase 2 transitional shape mirrors convex/messages.ts: ids are seedKeys
- * where present, author names resolved server-side with the 'You'
+ * Shape mirrors convex/messages.ts: ids are stable seedKeys where present
+ * (see convex/schema.ts), author names resolved server-side with the 'You'
  * convention (hardcoded seed identity until Phase 3 auth).
  */
 import { v } from 'convex/values'

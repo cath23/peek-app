@@ -359,17 +359,31 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       DeskPage wires remote dismiss/snooze/remove ("Later" now actually
       snoozes 24h — it was unwired), sidebar skeletons on Desk/People
       while lists load
-- [ ] Phase 2 close-out: delete the override providers + mock bridges
-      (all layers now cover only the optimistic window), drop `seedKey`
-      usage notes, regression sweep (tests + Storybook + QA checklist
-      incl. the deferred Phase 1 pass)
-- [ ] `src/api/internal/` stores empty → deleted; app runs entirely on
-      Convex with hardcoded seed user
-- [ ] Regression: tests + Storybook + QA checklist (incl. the deferred
-      Phase 1 pass)
+- [x] **Phase 2 close-out** (2026-07-08): the override providers are NOT
+      deleted — they are permanent dual-role infrastructure (see decision
+      log): mock-mode source of truth (tests/Storybook/demo instance) +
+      Convex-mode optimistic window. Deleted/fixed instead: the dead
+      MOCK_TOPICS invitees bridge (seeded mock topics define no invitees),
+      the dead `attachments`/`replyCount` mock fallbacks in
+      `toConversationData` (the server always provides both);
+      `useThread` now prefers the persisted row over the mock copy
+      (fixes stale thread-panel body/highlight after a prior-session
+      edit — runtime-verified via server-side divergence);
+      `useReplyCount` returns the server-derived count in Convex mode
+      (consistent with the cards); `seedKey` re-documented as the
+      permanent stable-client-key convention (schema + all convex
+      modules); stale "Phase 2 swaps…" seam headers rewritten.
+      Sweep: `tsc -b` + `tsc -p convex` + 93 tests + Storybook build +
+      headless-Chrome runtime pass against the live deployment (recipe
+      persisted at `.claude/skills/verify/SKILL.md`) — all green.
+      App runs entirely on Convex with the hardcoded seed user.
+- [ ] QA checklist regression pass (manual visual — user; incl. the
+      deferred Phase 1 pass)
 
 ### Phase 3 — Auth + profiles *(coarse until Phase 2)*
-- [ ] Convex Auth setup · login/profile UI designed in Figma then built ·
+- [ ] Convex Auth setup (email + password only at first — user ruling
+      2026-07-08; Google OAuth later) · login/profile UI built directly
+      in code (no Figma design pass — user ruling 2026-07-08) ·
       auth gate · "You" identity sweep
 
 ### Phase 4 — Multi-user *(coarse)*
@@ -437,6 +451,22 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   the Invite members button; (5) People list shows ALL people in the
   organization by default, conversation or not; (6) error states deferred
   to Phase 5.
+- 2026-07-08 — **Phase 2 close-out ruling**: the override providers and the
+  mock read path are NOT deleted — the "demo dataset kept permanently"
+  decision makes the dual-mode seam permanent. Without a deployment the
+  providers + `src/data` mocks are the full source of truth (unit tests,
+  Storybook fixtures, future demo instance); with one they cover only the
+  optimistic window. `seedKey` is likewise permanent: the stable client key
+  shared by demo-seed ids and client-generated optimistic ids. Close-out
+  therefore = delete dead transitional bridges + make the persisted row
+  authoritative in every Convex read (incl. the thread panel) + doc truth.
+  Still bridged from mocks by design: seeded unread flags (`hasNewMessage`/
+  `hasNewReply`/`isNew` — Phase 4 readState) and reply reactions
+  (session-local; reactions table is message-keyed).
+- 2026-07-08 — **Phase 3 auth rulings (user)**: no Figma design pass for
+  the auth flows — login/profile UI is built directly in code. Email +
+  password only as the first step; **no Google OAuth initially** (may be
+  added later).
 - 2026-07-08 — Phase 1 seam built (5 commits, batch A–D + finalization).
   Deliberate behavior change: DM sent messages now live in the seam store
   and survive navigation (previously hook-local and lost — matches topics

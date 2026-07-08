@@ -39,9 +39,11 @@ export default defineSchema({
     title: v.string(),
     creatorId: v.id('users'),
     createdAt: v.number(),
-    /** Mock id ('1'..'9') — transitional bridge for the entity-by-entity
-     *  swap, so partially-swapped entities can join mock-keyed data.
-     *  Fixture-only; absent on real records; dropped when Phase 2 ends. */
+    /** Stable client key, returned as `id` where present (Phase 2 close-out
+     *  ruling): the demo fixture writes mock ids ('1'..'9') so seeded data
+     *  renders pixel-identically, and client mutations write their generated
+     *  optimistic id so the local copy and the record are the same object.
+     *  Absent on records created server-side only. */
     seedKey: v.optional(v.string()),
   }),
 
@@ -60,7 +62,7 @@ export default defineSchema({
     userLowId: v.id('users'),
     userHighId: v.id('users'),
     createdAt: v.number(),
-    /** Mock numeric DM id as a string — transitional bridge (see topics). */
+    /** Stable client key — mock numeric DM id as a string (see topics). */
     seedKey: v.optional(v.string()),
   })
     .index('by_pair', ['userLowId', 'userHighId'])
@@ -86,7 +88,7 @@ export default defineSchema({
     resolvedAt: v.optional(v.number()),
     /** Figma frame ids (static integration mocks, §6). Real uploads: Phase 5. */
     attachments: v.optional(v.array(v.string())),
-    /** Mock message id ('t1_c1', 'dm1_c3', …) — transitional bridge. */
+    /** Stable client key — mock or client-generated message id (see topics). */
     seedKey: v.optional(v.string()),
   })
     .index('by_parent', ['parentKind', 'parentId'])
@@ -101,7 +103,7 @@ export default defineSchema({
     urgent: v.optional(v.boolean()),
     highlightType: v.optional(highlightType),
     attachments: v.optional(v.array(v.string())),
-    /** Mock reply id ('r_t1c1_1', …) — transitional bridge (see topics). */
+    /** Stable client key — mock or client-generated reply id (see topics). */
     seedKey: v.optional(v.string()),
   })
     .index('by_message', ['messageId'])
@@ -127,7 +129,7 @@ export default defineSchema({
     originDmId: v.optional(v.id('dmConversations')),
     promotedAt: v.optional(v.number()),
     seedMessageId: v.optional(v.id('messages')),
-    /** Mock huddle id ('h1_1', …) — transitional bridge. */
+    /** Stable client key — mock or client-generated huddle id (see topics). */
     seedKey: v.optional(v.string()),
   })
     .index('by_topic', ['topicId'])

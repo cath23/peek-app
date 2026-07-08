@@ -1,13 +1,10 @@
 /**
  * Topic reads + creation (domain model §2.2–2.3).
  *
- * Phase 2 transitional shape: `id` is the seedKey where present so the
- * client can keep joining mock-keyed messages/huddles during the
- * entity-by-entity swap. `memberNames` renders the seed user as 'You'
- * (the CURRENT_USER_NAME convention) until Phase 3 auth.
- * isResolved is DERIVED (§4.1) and never returned here — the client's
- * resolution source of truth stays on the messages side until that entity
- * swaps.
+ * `id` is the stable seedKey where present (see convex/schema.ts).
+ * `memberNames` renders the seed user as 'You' (the CURRENT_USER_NAME
+ * convention) until Phase 3 auth. isResolved is DERIVED (§4.1), never
+ * stored — computed in `list` from the topic's messages.
  */
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
@@ -49,8 +46,8 @@ export const list = query({
 export const create = mutation({
   args: {
     title: v.string(),
-    /** Client-generated id (t_<ts>_<seq>) — the transition bridge so the
-     *  optimistic local topic and this record are the same topic. */
+    /** Client-generated id (t_<ts>_<seq>) so the optimistic local topic
+     *  and this record are the same topic. */
     seedKey: v.string(),
     inviteeNames: v.array(v.string()),
   },

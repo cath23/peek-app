@@ -3,7 +3,7 @@
  * §2.11–2.13). All scoped to the hardcoded seed user until Phase 3 auth.
  *
  * Rows store real target _ids (as the seed writes them); responses resolve
- * back to the transitional mock keys (seedKeys) the client still joins on.
+ * back to the stable client keys (seedKeys) the client joins on.
  */
 import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'
@@ -12,7 +12,7 @@ import type { Doc, Id } from './_generated/dataModel'
 
 const kindArg = v.union(v.literal('topic'), v.literal('dm'))
 
-/** Resolve a stored targetId (usually an _id, possibly a transitional seedKey) to its doc. */
+/** Resolve a stored targetId (usually an _id, possibly a seedKey) to its doc. */
 async function resolveTarget(
   ctx: QueryCtx | MutationCtx,
   kind: 'topic' | 'dm',

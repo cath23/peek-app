@@ -1,10 +1,11 @@
 /**
- * Peek data-access seam (Phase 1 — see PRODUCTION-PLAN.md).
+ * Peek data-access seam (see PRODUCTION-PLAN.md).
  *
  * The ONLY module tree components and pages may read app data through.
- * Phase 1 internals merge the static mocks in src/data with the runtime
- * override providers; Phase 2 swaps those internals to Convex
- * queries/mutations entity by entity without touching consumers.
+ * Convex queries/mutations serve every entity when a deployment is
+ * configured (override providers cover the optimistic window); without one
+ * the static mocks in src/data merged with the override providers serve
+ * everything (tests, Storybook, demo instance).
  */
 export * from './types'
 export * from './reference'

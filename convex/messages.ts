@@ -1,10 +1,10 @@
 /**
  * Message reads + writes (domain model §2.5, §3 — one polymorphic table).
  *
- * Phase 2 transitional shape: ids are seedKeys where present so the client
- * keeps joining mock-keyed replies/reactions until those entities swap;
- * author names are resolved server-side with the 'You' convention
- * (hardcoded seed identity until Phase 3 auth).
+ * Ids returned to the client are stable seedKeys where present (demo-seed
+ * ids + client-generated optimistic ids — see convex/schema.ts); author
+ * names are resolved server-side with the 'You' convention (hardcoded seed
+ * identity until Phase 3 auth).
  */
 import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'

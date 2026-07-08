@@ -1,10 +1,10 @@
 /**
  * Write functions — the seam's mutation surface.
  *
- * Phase 1 internals: the exact setter logic previously inlined in
- * useTopicView / useDmConversationView, now stamped with CURRENT_USER_NAME
- * instead of a scattered 'You' literal. Phase 2 swaps each function to a
- * Convex mutation (domain model §2, §7 "runtime state" table).
+ * Every function writes the local override layer (instant render — the
+ * optimistic window; the full source of truth in mock mode) and, when a
+ * deployment is configured, the corresponding Convex mutation. All writes
+ * stamp CURRENT_USER_NAME (the Phase 3 identity switch point).
  */
 import { useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -139,9 +139,8 @@ export function usePeekActions() {
       if (hasConvex) void removeRemote({ key: messageId })
     },
 
-    /** Body edit — id-keyed, applies to messages and replies alike.
-     *  (The Convex write only lands for messages; reply ids miss until the
-     *  replies entity swaps.) */
+    /** Body edit — id-keyed, applies to messages and replies alike
+     *  (the Convex mutation resolves the key against both tables). */
     editBody(id: string, body: string) {
       m.setBodyOverrides((prev) => ({ ...prev, [id]: body }))
       if (hasConvex) void editBodyRemote({ key: id, body })

@@ -1,8 +1,7 @@
 /**
  * People reads — the workspace directory (domain model §2.1).
  *
- * Phase 2 transitional shape: `id` is the seedKey where present (mock id
- * bridge, so partially-swapped entities keep joining on mock ids) and the
+ * `id` is the stable seedKey where present (see convex/schema.ts) and the
  * current user is excluded by the 'you' seedKey convention. Phase 3 replaces
  * the convention with ctx.auth identity.
  */

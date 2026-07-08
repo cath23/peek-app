@@ -1,10 +1,10 @@
 /**
  * Merged message/reply reads.
  *
- * Phase 1 internals: exactly what the view hooks did inline — static mocks
- * merged with the runtime override layers, deletions filtered, replyCount
- * computed. Components receive final values and never see override maps.
- * Phase 2 swaps each hook's internals to a Convex query.
+ * Dual-mode: Convex-backed when a deployment is configured (the override
+ * layers then cover only the optimistic window); static mocks merged with
+ * the override layers otherwise (tests, Storybook, checkouts without a
+ * deployment). Components receive final values and never see override maps.
  */
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -65,9 +65,7 @@ function toReplyData(r: RemoteReply, mock: ReplyData | undefined): ReplyData {
 
 /**
  * Remote row → presentation shape. The mock record with the same id (when
- * one exists) bridges the fields whose entities haven't swapped yet:
- * reactions (per-user rows come later) and the seeded unread flags
- * (readState is Phase 4).
+ * one exists) bridges only the seeded unread flags — readState is Phase 4.
  */
 export function toConversationData(r: RemoteMessage, mock: ConversationData | undefined): ConversationData {
   return {
@@ -80,11 +78,11 @@ export function toConversationData(r: RemoteMessage, mock: ConversationData | un
     isResolved: r.isResolved,
     resolvedBy: r.resolvedBy,
     resolutionMessage: r.resolutionMessage,
-    attachments: r.attachments ?? mock?.attachments,
+    attachments: r.attachments,
     reactions: r.reactions,
     hasNewMessage: mock?.hasNewMessage,
     hasNewReply: mock?.hasNewReply,
-    replyCount: r.replyCount ?? mock?.replyCount,
+    replyCount: r.replyCount,
   }
 }
 
@@ -346,7 +344,13 @@ export function useThread(messageId: string | null): ThreadData {
     return undefined
   }
 
-  const raw = find() ?? (remoteMsg ? toConversationData(remoteMsg, undefined) : undefined)
+  // Remote wins for persisted messages — a body/highlight edited in an
+  // earlier session exists only on the server, and the main views already
+  // render the remote copy. The local hit covers mock mode, the optimistic
+  // window, and the beat while the get query is in flight; it also bridges
+  // the seeded unread flags (readState is Phase 4).
+  const local = find()
+  const raw = hasConvex && remoteMsg ? toConversationData(remoteMsg, local) : local
   const conversation = raw ? mergeConv(raw, o) : null
 
   const sentLocal = o.sentReplies[messageId] ?? []
@@ -383,13 +387,16 @@ export function useThread(messageId: string | null): ThreadData {
 }
 
 /**
- * Live reply count for a message (static + runtime-sent), with the static
- * mock's hardcoded replyCount as fallback. Same formula the cards use.
+ * Live reply count for a message. Convex mode trusts the caller's
+ * server-derived count (the reactive query keeps it current — same source
+ * the conversation cards render). Mock mode keeps the static + runtime-sent
+ * formula.
  */
 export function useReplyCount(): (messageId: string | undefined, fallback?: number) => number {
   const o = useTopicMutations()
   return (messageId, fallback = 0) => {
     if (!messageId) return fallback
+    if (hasConvex) return fallback
     return (REPLIES[messageId]?.length ?? fallback) + (o.sentReplies[messageId]?.length ?? 0)
   }
 }

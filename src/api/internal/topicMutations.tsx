@@ -17,6 +17,12 @@ interface ResolvedOverride {
  * Holds runtime mutation state for topics. Lives at the app level so a topic's
  * sent messages, replies, resolutions, and other overrides survive when the
  * user navigates away (e.g. back to a DM via the huddle anchor) and returns.
+ *
+ * Permanent dual-role (Phase 2 close-out ruling): in mock mode (no Convex
+ * deployment — tests, Storybook, demo instance) these layers are the full
+ * mutation source of truth over the static mocks; in Convex mode every write
+ * double-writes and the layers cover only the optimistic window until the
+ * reactive queries catch up.
  */
 interface TopicMutationsValue {
   sentMessages: Record<string, ConversationData[]>

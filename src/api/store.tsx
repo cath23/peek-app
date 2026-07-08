@@ -2,8 +2,11 @@
  * Seam-internal runtime stores.
  *
  * `PeekDataProvider` is the single provider the app (and story decorators)
- * mount; it composes the runtime override stores that Phase 2 deletes
- * entity-by-entity as Convex takes over:
+ * mount; it composes the runtime override stores. These are permanent
+ * dual-role infrastructure (Phase 2 close-out ruling): without a Convex
+ * deployment they are the full source of truth over the static mocks
+ * (tests, Storybook, demo instance); with one they cover only the
+ * optimistic window until the reactive queries catch up.
  *   - StarredProvider        (stars)
  *   - TopicStoreProvider     (runtime topics + DM-promoted huddles)
  *   - TopicMutationsProvider (the message/reply/huddle override layers)
@@ -23,8 +26,7 @@ import type { ConversationData } from './types'
 // Convex client — present only when a deployment is configured
 // (`npx convex dev` writes VITE_CONVEX_URL to .env.local). Absent in unit
 // tests and in checkouts without a deployment, where the mock-backed
-// internals below serve everything, so the app keeps working either way
-// during the Phase 2 entity-by-entity swap.
+// internals below serve everything, so the app works in both modes.
 const CONVEX_URL =
   import.meta.env.MODE === 'test' ? undefined : (import.meta.env.VITE_CONVEX_URL as string | undefined)
 // The client always exists so seam hooks can call useQuery/useMutation

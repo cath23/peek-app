@@ -4,8 +4,8 @@
  * One `list` query returns every huddle fully shaped (members, preview
  * conversation, extra messages, promotion metadata) — the client builds its
  * per-topic and per-origin-DM lookups from it (the dataset is small and the
- * sidebar needs all topics' huddles anyway). Transitional id bridges as in
- * the other modules: seedKeys where present, 'You' convention for names.
+ * sidebar needs all topics' huddles anyway). Id conventions as in the other
+ * modules: stable seedKeys where present, 'You' convention for names.
  */
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'

@@ -22,15 +22,15 @@ interface CreateTopicFromDmResult {
 interface TopicStoreValue {
   /** All topics (static + runtime). */
   topics: Topic[]
-  /** Runtime-created topics only — merged over the Convex list during the
-   *  Phase 2 transition (dropped once the create round-trip is authoritative). */
+  /** Runtime-created topics only — merged over the Convex list to cover the
+   *  optimistic window until the create round-trip lands. */
   extraTopics: Topic[]
   /** Resolve huddles for a topic (static + runtime). */
   getHuddlesForTopic: (topicId: string) => Huddle[]
   /** Runtime-created huddles only (DM promotions) — merged over the Convex
-   *  list during the Phase 2 transition. */
+   *  list to cover the optimistic window. */
   getExtraHuddlesForTopic: (topicId: string) => Huddle[]
-  /** Runtime-only variant of findAllHuddlesByOriginDm (Convex transition). */
+  /** Runtime-only variant of findAllHuddlesByOriginDm (optimistic window). */
   findExtraHuddlesByOriginDm: (dmId: number) => Huddle[]
   /** Look up a topic by id. */
   findTopic: (topicId: string) => Topic | undefined
