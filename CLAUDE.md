@@ -10,7 +10,12 @@ feature spec.
 
 React 19 + Vite + TypeScript + Tailwind (custom design tokens in
 `tailwind.config.js`) + Tiptap composer. Tests: Vitest (`npm run test:run`).
-Storybook: `npm run storybook`. Planned backend: Convex (not wired yet).
+Storybook: `npm run storybook`. Backend: Convex (cloud dev deployment
+`hallowed-stork-966`, config in `.env.local`; schema in `convex/schema.ts`,
+spec in `PRDs/Peek-Domain-Model.md`). Demo data:
+`npx convex run dev/seedDemo:seed '{"wipe": true}'` — dev-only fixture;
+**production launches with an empty database, no mock data**
+(decision 2026-07-08).
 
 ## Working rules
 
@@ -28,9 +33,19 @@ Storybook: `npm run storybook`. Planned backend: Convex (not wired yet).
   where it works; the enabling surface advertises the capability.
 - **No AI features** in this app for now (product decision 2026-07-08); the
   prototype keeps them for reference.
+- **Data access only through the seam.** Components/pages/extensions import
+  app data exclusively from `@/api` (stories: `@/api/fixtures`) — never from
+  `@/data/*` or `@/api/internal/*`. All writes go through `usePeekActions()`
+  and stamp `CURRENT_USER_NAME` (the Phase 3 identity switch point). Extend
+  the seam rather than bypassing it.
 
-## Direction (see MIGRATION.md "Next steps")
+## Direction — PRODUCTION-PLAN.md is the single source of truth for progress
 
-Domain model spec → data-access seam over `src/data/` mocks → Convex backend
-(Phase A: persistence, hardcoded "You"; Phase B: auth). Put a `userId` on
-every new record from day one.
+Phase 0 (domain spec) ✅ and Phase 1 (data-access seam) ✅ are done
+(2026-07-08). Phase 2 (Convex persistence, hardcoded "You") is in progress:
+schema deployed + demo data seeded + `ConvexProvider` wired; next is the
+entity-by-entity hook swap (people → topics → messages → …), deleting one
+`src/api/internal/` override layer per swap, with a skeleton/empty-state
+Figma pass before the first visible swap. Then Phase 3 auth. Put a `userId`
+on every new record from day one. Check off worklog items in the same commit
+as the work; log decisions in the Decision log.
