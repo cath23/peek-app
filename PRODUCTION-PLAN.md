@@ -74,8 +74,11 @@ Key normalization decisions (each currently violated by the mocks):
 2. **Real `Date`s**; `'9:14 AM'` / `dateLabel` grouping become client-side
    formatting of `createdAt`. Seed dates are chosen so the **rendered labels
    match the mock strings exactly** (pixel-perfect applies to seed data too).
-3. **Derived, never stored**: replyCount, unread, topic-resolved, screener/desk
-   contents.
+3. **Derived, never stored**: replyCount, unread, topic-resolved, and the
+   Desk Urgent section. *(Amended 2026-07-08: Screener rows and Desk Open
+   work are stored by design — Screener is the incoming-message inbox with a
+   triage lifecycle, Open work is manually curated until closed. See domain
+   model §2.12–2.13.)*
 4. Files/Figma/Linear reference data (`filesData`, `figmaData`, `linearData`)
    **stay static** — they mock third-party integrations, which are a separate,
    much later project. They move behind the seam like everything else so they
@@ -142,8 +145,10 @@ Create `src/api/` hooks + mutation functions; components stop importing
 
 - Single shared workspace to start (everyone who signs up joins it — fine for
   a demo/beta; workspace invites are a later decision).
-- `readState` goes live: unread dots, `hasNewReply`, Screener (items you
-  haven't triaged) and Desk (your open work) become fully derived per user.
+- `readState` goes live: unread dots and `hasNewReply` become fully derived
+  per user (one watermark per container). Screener auto-creation goes live
+  (incoming non-urgent messages create items; urgent → Desk Urgent); Open
+  work stays manually curated.
 - Realtime message delivery is already free via Convex reactive queries;
   verify multi-client behavior (two browsers) against the QA plan.
 - Optional polish: presence / typing indicators (Convex presence component).
@@ -273,3 +278,10 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   per-user `deskOpenWork` table until Phase 4; screener previews are stored
   (bespoke text). Two extra avatar-less users (Carlos Rivera, Maya Patel)
   must be seeded — static huddle members reference them.
+- 2026-07-08 — Two user rulings folded into the spec: (1) unread = the tail
+  of a topic/DM since last visit — one readState watermark per container, no
+  per-thread read state (a few contradictory mock flags render as unread;
+  accepted). (2) Screener is the inbox for all incoming messages (urgent →
+  Desk Urgent) with Add-to-Open-work / Later (snooze, reappears) / Dismiss;
+  Open work is manually curated and kept until closed — stored per-user
+  tables, not derived.

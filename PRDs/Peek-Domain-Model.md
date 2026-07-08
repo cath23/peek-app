@@ -203,18 +203,25 @@ Indexes: `by_huddle(huddleId)`, `by_user(userId)`.
 
 Replaces the baked flags `hasNewMessage`, `hasNewReply`, `isNew`, `isUnread`.
 Live per-user derivation lands in Phase 4, **but the table exists from
-Phase 2** and the seed writes rows for the seed user such that the derived
-flags reproduce the mock flags exactly (see §4.3 for why two granularities
-are required).
+Phase 2** and the seed writes rows for the seed user.
+
+**Decision (2026-07-08, user):** standard chat semantics — unread is simply
+the tail of a container (topic or DM) after your last visit. One watermark
+per container; **no per-thread read state.** A handful of mock flags
+contradict any single watermark (topic 6's replies under `t6_c8`, topic 3's
+`t3_c5`/`t3_c6` after the unread replies of `t3_c4`); under standard
+semantics those render as unread too — accepted drift, semantics win over
+mock-flag fidelity. The seed places each watermark just before the earliest
+mock-flagged unread item in that container, which reproduces every other
+mock flag exactly (verified per container against seeded `createdAt`s).
 
 | Field | Type | Notes |
 |---|---|---|
 | `userId` | `Id<'users'>` | |
-| `targetKind` | `'container' \| 'thread'` | container = a topic, DM conversation, or huddle; thread = one message's reply thread |
-| `targetId` | `string` | container `_id` or message `_id` |
+| `containerId` | `string` | topic, dmConversation, or huddle `_id` |
 | `lastReadAt` | `number` | |
 
-Indexes: `by_user_target(userId, targetKind, targetId)`.
+Indexes: `by_user_container(userId, containerId)`.
 
 ### 2.11 `stars`
 
@@ -233,36 +240,52 @@ derived at query time from the target.
 
 ### 2.12 `screenerItems`
 
-Replaces `SCREENER_ITEMS`. This is a real per-user triage queue: rows are
-created when something needs screening and deleted on triage — the *contents*
-aren't derivable.
+Replaces `SCREENER_ITEMS`. **Decision (2026-07-08, user):** the Screener is
+the inbox for **all incoming messages** — except urgent ones, which surface
+in the Desk *Urgent* section instead. This settles provenance: when live
+(Phase 4), an incoming non-urgent message in a container creates (or
+refreshes) a screener item for each recipient; until then, rows come from
+seed.
+
+Triage lifecycle (matches `ScreenerSection`'s `onOpen`/`onLater`/`onDismiss`):
+- **Add to Open work** → creates a `deskOpenWork` row (§2.13), deletes the
+  screener item.
+- **Later** → sets `snoozedUntil`; the item is hidden while
+  `snoozedUntil > now` and reappears in the Screener after that.
+- **Dismiss** → deletes the row; the underlying topic/DM stays reachable as
+  usual via the Topics/People pages.
 
 | Field | Type | Notes |
 |---|---|---|
 | `userId` | `Id<'users'>` | |
 | `kind` | `'topic' \| 'dm'` | |
 | `targetId` | `string` | topic or dmConversation `_id`. **Schema fix:** the mock DM item (`sc_2`) has only `authorName` and no DM reference; the seed maps Amie Miles → her DM conversation. |
-| `preview` | `string` | stored. The mock previews are bespoke narrative summaries, not any message's body — they cannot be derived (and no AI). Whatever creates a screener row supplies the preview. |
+| `preview` | `string` | stored. Once auto-creation lands, the preview is the triggering message's snippet; the seeded rows keep the bespoke mock text (it matches no message body and cannot be derived). |
+| `snoozedUntil` | `number?` | set by *Later*; absent = live in the Screener |
 | `createdAt` | `number` | |
 
 Indexes: `by_user(userId)`.
+Open parameter: the *Later* snooze duration (fixed vs. user-choosable) is a
+product decision for when triage goes live.
 
-### 2.13 `deskOpenWork` — transitional
+### 2.13 `deskOpenWork`
 
-The mock `OPEN_WORK_ITEMS` (topics 2 and 3) is **not derivable** from the
-data: You have posted in unresolved topics 1, 6, 8 (and starred topic 1),
-none of which appear in Open work. It is a curated list. Until Phase 4
-defines a real derivation (candidate rule: unresolved topics where the viewer
-is a member or has posted, minus explicit dismissals), Open work is stored:
+**Decision (2026-07-08, user):** Open work is **manually curated** — the
+user puts items there (e.g. from a Screener item's *Add to Open work*), and
+they stay until the user closes them. It is *not* derived and *not*
+transitional; closing deletes the row. This explains why the mock list
+(topics 2 and 3) never matched any derivable rule — You have posted in
+unresolved topics 1, 6, 8 too, but never added them.
 
-| Field | Type |
-|---|---|
-| `userId` | `Id<'users'>` |
-| `topicId` | `Id<'topics'>` |
-| `order` | `number` |
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | `Id<'users'>` | |
+| `kind` | `'topic' \| 'dm'` | mock items are topic-only, but anything screenable can be added |
+| `targetId` | `string` | |
+| `addedAt` | `number` | list order |
 
-Indexes: `by_user(userId)`. Flagged for deletion in Phase 4.
-`title`, `topicStatus`, `isUnread` are derived from the topic. The Desk
+Indexes: `by_user(userId)`.
+`title`, `topicStatus`, `isUnread` are derived from the target. The Desk
 **Urgent** section, by contrast, is fully derived (§4.4) and gets no table.
 
 ## 3. Decision — message unification: **one `messages` table**
@@ -323,35 +346,34 @@ unresolved message, so the derived value reproduces every static flag.
 ### 4.3 Unread (message `hasNewMessage`, reply `isNew`, container dot,
 `hasNewReply`)
 
-Two watermark granularities are required — one per-container watermark cannot
-reproduce the mocks (e.g. topic 2: the 'Just now' reply under `t2_c5` is
-unread while the *later* Aug 30 messages `t2_c6`/`t2_c7` are read; topic 6:
-`t6_c8` is unread while its own replies, sent later, are read).
+One watermark per container — standard "unread = the tail since your last
+visit" semantics (user decision, §2.10).
 
-- A **message** is new for user *u* iff
-  `authorId ≠ u` and `createdAt > lastReadAt` of *u*'s `container` row for
-  its parent (missing row = everything read is *not* assumed — missing row
-  means never opened; seed always writes container rows).
-- A **reply** is new for *u* iff `authorId ≠ u` and `createdAt > lastReadAt`
-  of *u*'s `thread` row for its message, **falling back** to the container
-  row when no thread row exists.
+- A **message or reply** is new for user *u* iff `authorId ≠ u` and
+  `createdAt > lastReadAt` of *u*'s row for the container it lives in
+  (replies use their parent message's container). A missing row means the
+  container was never opened, i.e. everything in it is new; the seed writes
+  a row for every container so the demo starts mostly-read.
 - `hasNewReply(message)` = any of its replies is new.
 - **Container unread dot** (`topicHasUnread` / `dmHasUnread`, verbatim
   incl. the urgency carve-out): unread iff any **non-urgent** message is new
   or has a new reply. Urgent unreads surface via the Urgent section /
   warning pill instead, never the accent dot.
-- Marking read = upserting `lastReadAt = now` on the appropriate row(s).
+- Marking read = upserting `lastReadAt = now` on the container row when the
+  user views it.
 
-Phase 2 seeds watermarks for the seed user that reproduce every mock flag;
-Phase 4 makes the writes live for everyone.
+Phase 2 seeds the watermarks (placement rule + two accepted drifts in
+§2.10); Phase 4 makes the writes live for everyone.
 
 ### 4.4 Desk
 
 - **Urgent section** (`URGENT_ITEMS` — dropped entirely): derived — DMs and
   topics containing at least one urgent message or urgent reply that is
-  unread for the viewer (per §4.3). Reproduces the mock: DM 2 (`dm2_c5`
+  unread for the viewer (per §4.3). Urgent incoming messages land here
+  *instead of* the Screener (§2.12). Reproduces the mock: DM 2 (`dm2_c5`
   urgent+new) and DM 3 (`r_dm3c1_1` urgent+new).
-- **Open work**: stored per-user until Phase 4 (§2.13).
+- **Open work**: stored per-user, manually curated, kept until closed
+  (§2.13).
 - Titles, avatars, `topicStatus`, unread dots on all desk/starred rows:
   derived from the target at query time.
 
@@ -476,7 +498,7 @@ query or client formatting · **static** = stays mock behind the seam ·
 | `ReplyData.authorName` | table — `replies.authorId` |
 | `ReplyData.timestamp` | **dropped** — derived from `createdAt` |
 | `ReplyData.body` | table |
-| `ReplyData.isNew` | **dropped** — derived §4.3 thread rule |
+| `ReplyData.isNew` | **dropped** — derived §4.3 (container watermark) |
 | `ReplyData.isUrgent` | table — `replies.urgent` |
 | `ReplyData.highlightType` | table |
 | `ReplyData.attachments` | table |
@@ -509,7 +531,7 @@ query or client formatting · **static** = stays mock behind the seam ·
 ### deskData.ts
 | Export / field | Fate |
 |---|---|
-| `OpenWorkItem.topicId` | table — `deskOpenWork` (transitional §2.13) |
+| `OpenWorkItem.topicId` | table — `deskOpenWork` (user-curated §2.13) |
 | `OpenWorkItem.title`, `.topicStatus`, `.isUnread` | **dropped** — derived from the topic |
 | `UrgentItem` (whole type) | **dropped** — fully derived §4.4 |
 | `StarredEntry.kind`, target ids | table — `stars` §2.11 |
@@ -550,8 +572,10 @@ All exports (`APP_CATEGORIES`, `APP_FILES`, `DOCUMENT_FILES`, `FIGMA_FRAMES`,
 
 1. **Seed user display name** — "Cath" default (§1); becomes editable with
    Phase 3 profiles.
-2. **Open-work derivation rule** — Phase 4 decision; transitional table until
-   then (§2.13).
-3. **Screener row provenance** — what creates screener rows for real
-   multi-user traffic (mention? first message in an unjoined topic?) is a
-   Phase 4 product decision; the table shape above doesn't depend on it.
+2. **Screener *Later* snooze duration** — fixed vs. user-choosable, and the
+   default interval; product decision for when triage goes live (§2.12).
+
+Resolved 2026-07-08 (user): unread = container tail, one watermark, no
+per-thread read state (§2.10); Open work is manually curated and kept until
+closed (§2.13); Screener receives all incoming non-urgent messages, urgent
+goes to Desk Urgent (§2.12).
