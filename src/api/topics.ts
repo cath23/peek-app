@@ -30,7 +30,7 @@ export function useTopics(): Topic[] | undefined {
   const mapped: Topic[] = remote.map((t) => ({
     id: t.id,
     title: t.title,
-    isResolved: false, // display resolution is derived via useIsTopicResolved
+    isResolved: t.isResolved, // server-derived (§4.1); surfaced via useIsTopicResolved
     invitees: t.memberNames.length
       ? t.memberNames
       : MOCK_TOPICS.find((m) => m.id === t.id)?.invitees,
@@ -48,9 +48,20 @@ export function useTopicLookup(): (topicId: string) => Topic | undefined {
  * Derived topic resolution — THE source of truth for the dashed-circle vs
  * checkmark icon everywhere (topic list, header, Desk, huddle anchor,
  * promotion divider). Function form so lists can call it per row.
+ * Convex mode reads the server-derived value from topics.list (resolution
+ * writes double-write, so the reactive query keeps it current); mock mode
+ * keeps the override-layer computation.
  */
 export function useIsTopicResolved(): (topicId: string) => boolean {
-  return useTopicMutations().isTopicResolved
+  const localIsResolved = useTopicMutations().isTopicResolved
+  const topics = useTopics()
+  return useCallback(
+    (topicId: string) => {
+      if (!hasConvex) return localIsResolved(topicId)
+      return topics?.find((t) => t.id === topicId)?.isResolved ?? false
+    },
+    [localIsResolved, topics],
+  )
 }
 
 export interface CreateTopicFromDmInput {

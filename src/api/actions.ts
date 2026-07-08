@@ -35,6 +35,8 @@ export function usePeekActions() {
   const removeRemote = useMutation(api.messages.remove)
   const sendReplyRemote = useMutation(api.replies.send)
   const removeReplyRemote = useMutation(api.replies.remove)
+  const setResolutionRemote = useMutation(api.messages.setResolution)
+  const setHighlightRemote = useMutation(api.messages.setHighlight)
 
   const persistMessage = (
     parentKind: 'topic' | 'dm',
@@ -145,6 +147,7 @@ export function usePeekActions() {
 
     setHighlight(id: string, highlightType: HighlightType | undefined) {
       m.setHighlightOverrides((prev) => ({ ...prev, [id]: highlightType }))
+      if (hasConvex) void setHighlightRemote({ key: id, highlightType })
     },
 
     setReactions(id: string, reactions: ReactionData[]) {
@@ -159,6 +162,7 @@ export function usePeekActions() {
      *  matching the previous card behavior. */
     setResolution(id: string, resolved: boolean, resolvedBy?: string, message?: string) {
       m.setResolvedOverrides((prev) => ({ ...prev, [id]: { resolved, resolvedBy, message } }))
+      if (hasConvex) void setResolutionRemote({ key: id, resolved, resolutionMessage: message, dropReplyPointer: true })
     },
 
     /** Thread-panel resolution edit: resolving keeps the reply pointer so the
@@ -174,6 +178,7 @@ export function usePeekActions() {
         }
         return { ...prev, [id]: { resolved: false } }
       })
+      if (hasConvex) void setResolutionRemote({ key: id, resolved, resolutionMessage: resolved ? message : undefined })
     },
 
     // ── Replies ──
@@ -215,6 +220,14 @@ export function usePeekActions() {
             resolvedByReplyId: newReplyId,
           },
         }))
+        if (hasConvex) {
+          void setResolutionRemote({
+            key: messageId,
+            resolved: true,
+            resolutionMessage: resolution.message,
+            resolvedByReplyKey: newReplyId,
+          })
+        }
       }
     },
 

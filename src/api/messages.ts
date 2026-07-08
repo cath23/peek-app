@@ -29,6 +29,7 @@ interface RemoteMessage {
   isResolved?: boolean
   resolvedBy?: string
   resolutionMessage?: string
+  resolvedByReplyId?: string
   attachments?: string[]
   /** Derived server-side (list only). */
   replyCount?: number
@@ -364,8 +365,10 @@ export function useThread(messageId: string | null): ThreadData {
     conversation,
     replies,
     sentReplies,
-    resolvedByReplyId: resolution?.resolvedByReplyId,
-    resolutionMessage: resolution?.message,
+    // A session override wins outright (even a reopen, which clears the
+    // pointer); otherwise the persisted resolution from Convex applies.
+    resolvedByReplyId: resolution ? resolution.resolvedByReplyId : remoteMsg?.resolvedByReplyId,
+    resolutionMessage: resolution ? resolution.message : remoteMsg?.resolutionMessage,
     isLoading,
   }
 }

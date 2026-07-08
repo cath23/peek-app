@@ -33,7 +33,8 @@ async function userNames(ctx: QueryCtx | MutationCtx): Promise<Map<Id<'users'>, 
   return new Map(users.map((u) => [u._id, u.seedKey === 'you' ? 'You' : u.name]))
 }
 
-function shape(m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
+async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
+  const resolvedByReply = m.resolvedByReplyId ? await ctx.db.get(m.resolvedByReplyId) : null
   return {
     id: m.seedKey ?? (m._id as string),
     authorName: names.get(m.authorId) ?? 'Unknown',
@@ -44,6 +45,7 @@ function shape(m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
     isResolved: m.resolved,
     resolvedBy: m.resolvedById ? names.get(m.resolvedById) : undefined,
     resolutionMessage: m.resolutionMessage,
+    resolvedByReplyId: resolvedByReply ? resolvedByReply.seedKey ?? (resolvedByReply._id as string) : undefined,
     attachments: m.attachments,
   }
 }
@@ -65,7 +67,7 @@ export const list = query({
         .query('replies')
         .withIndex('by_message', (q) => q.eq('messageId', m._id))
         .collect()
-      shaped.push({ ...shape(m, names), replyCount: replies.length })
+      shaped.push({ ...(await shape(ctx, m, names)), replyCount: replies.length })
     }
     return shaped
   },
@@ -84,7 +86,7 @@ export const get = query({
       m = normalized ? await ctx.db.get(normalized) : null
     }
     if (!m) return null
-    return shape(m, await userNames(ctx))
+    return shape(ctx, m, await userNames(ctx))
   },
 })
 
@@ -166,6 +168,72 @@ export const editBody = mutation({
     const normalized = bySeed ? null : ctx.db.normalizeId('replies', key)
     const r = bySeed ?? (normalized ? await ctx.db.get(normalized) : null)
     if (r) await ctx.db.patch(r._id, { body })
+  },
+})
+
+export const setResolution = mutation({
+  args: {
+    key: v.string(),
+    resolved: v.boolean(),
+    resolutionMessage: v.optional(v.string()),
+    /** Reply (seedKey/_id) whose `→ msg` resolution resolved the parent. */
+    resolvedByReplyKey: v.optional(v.string()),
+    /** Card-level resolve drops an earlier reply pointer; thread-level keeps it. */
+    dropReplyPointer: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { key, resolved, resolutionMessage, resolvedByReplyKey, dropReplyPointer }) => {
+    const m = await findByKey(ctx, key)
+    if (!m) return
+    if (!resolved) {
+      await ctx.db.patch(m._id, {
+        resolved: undefined,
+        resolvedById: undefined,
+        resolutionMessage: undefined,
+        resolvedByReplyId: undefined,
+        resolvedAt: undefined,
+      })
+      return
+    }
+    const you = await ctx.db
+      .query('users')
+      .withIndex('by_seedKey', (q) => q.eq('seedKey', 'you'))
+      .unique()
+    let resolvedByReplyId: Id<'replies'> | undefined
+    if (resolvedByReplyKey) {
+      const bySeed = await ctx.db
+        .query('replies')
+        .withIndex('by_seedKey', (q) => q.eq('seedKey', resolvedByReplyKey))
+        .unique()
+      resolvedByReplyId = bySeed?._id ?? ctx.db.normalizeId('replies', resolvedByReplyKey) ?? undefined
+    } else if (!dropReplyPointer) {
+      resolvedByReplyId = m.resolvedByReplyId
+    }
+    await ctx.db.patch(m._id, {
+      resolved: true,
+      resolvedById: you?._id,
+      resolutionMessage,
+      resolvedByReplyId,
+      resolvedAt: Date.now(),
+    })
+  },
+})
+
+export const setHighlight = mutation({
+  args: { key: v.string(), highlightType: v.optional(highlightType) },
+  handler: async (ctx, { key, highlightType: hl }) => {
+    const m = await findByKey(ctx, key)
+    if (m) {
+      await ctx.db.patch(m._id, { highlightType: hl })
+      return
+    }
+    // Highlights are id-keyed across messages AND replies (like editBody).
+    const bySeed = await ctx.db
+      .query('replies')
+      .withIndex('by_seedKey', (q) => q.eq('seedKey', key))
+      .unique()
+    const normalized = bySeed ? null : ctx.db.normalizeId('replies', key)
+    const r = bySeed ?? (normalized ? await ctx.db.get(normalized) : null)
+    if (r) await ctx.db.patch(r._id, { highlightType: hl })
   },
 })
 

@@ -27,11 +27,19 @@ export const list = query({
         const u = await ctx.db.get(m.userId)
         if (u) memberNames.push(u.seedKey === 'you' ? 'You' : u.name)
       }
+      // §4.1 — a topic is resolved when it has ≥1 message and every one is
+      // resolved. Derived here, never stored.
+      const msgs = await ctx.db
+        .query('messages')
+        .withIndex('by_parent', (q) => q.eq('parentKind', 'topic').eq('parentId', t._id as string))
+        .collect()
+      const isResolved = msgs.length > 0 && msgs.every((m) => m.resolved === true)
       out.push({
         id: t.seedKey ?? (t._id as string),
         title: t.title,
         createdAt: t.createdAt,
         memberNames,
+        isResolved,
       })
     }
     return out.sort((a, b) => a.createdAt - b.createdAt)

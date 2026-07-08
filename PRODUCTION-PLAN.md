@@ -317,12 +317,21 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       ThreadPanel); cards take the server-derived replyCount in Convex
       mode; `messages.editBody` covers reply bodies; sendReply/deleteReply
       double-write
+- [x] **Entity swap 5 — resolutions + highlights** (2026-07-08):
+      `messages.setResolution` (reply-pointer semantics: card-level resolve
+      drops it, thread-level keeps it, `→ msg` replies stamp it) +
+      `messages.setHighlight` (covers replies too); actions double-write;
+      `useThread` falls back to the persisted resolution after refresh;
+      topic resolution (§4.1) now derived server-side in `topics.list` and
+      `useIsTopicResolved` reads it in Convex mode (verified: seeded topics
+      4+5 resolved, matching mocks)
 - [ ] Entity-by-entity hook swap continues, deleting the matching override
-      layer each time: resolutions/highlights →
-      reactions (becomes `toggleReaction`) → huddles + promotion →
-      stars/screener/open-work; optimistic updates on composer send.
-      (`extraTopics` in topicStore survives until huddles+promotion swap —
-      createTopicFromDm still creates the local seed huddle)
+      layer each time: reactions (becomes `toggleReaction`) →
+      huddles + promotion → stars/screener/open-work; optimistic updates
+      on composer send. (`extraTopics` in topicStore survives until the
+      huddles+promotion swap — createTopicFromDm still creates the local
+      seed huddle. Once all layers are gone, delete the override
+      providers + the mock bridges.)
 - [ ] `src/api/internal/` stores empty → deleted; app runs entirely on
       Convex with hardcoded seed user
 - [ ] Regression: tests + Storybook + QA checklist (incl. the deferred
