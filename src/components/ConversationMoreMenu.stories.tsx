@@ -4,7 +4,7 @@ import { ConversationMoreMenu } from './ConversationMoreMenu'
 const noop = () => {}
 
 const meta = {
-  title: 'Components/ConversationMoreMenu',
+  title: 'Messages/Menus/ConversationMoreMenu',
   component: ConversationMoreMenu,
   args: {
     isTopic: false,

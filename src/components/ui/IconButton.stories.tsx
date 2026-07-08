@@ -3,7 +3,7 @@ import { IconSettings } from '@tabler/icons-react'
 import { IconButton } from './IconButton'
 
 const meta = {
-  title: 'UI/IconButton',
+  title: 'Primitives/IconButton',
   component: IconButton,
   args: {
     variant: 'muted',

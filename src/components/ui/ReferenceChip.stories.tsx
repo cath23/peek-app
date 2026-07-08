@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ReferenceChip } from './ReferenceChip'
 
 const meta = {
-  title: 'UI/ReferenceChip',
+  title: 'Messages/ReferenceChip',
   component: ReferenceChip,
   args: {
     label: 'PEEK-238',

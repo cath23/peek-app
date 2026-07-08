@@ -12,7 +12,7 @@ const ITEMS: FilesMenuItem[] = [
 ]
 
 const meta = {
-  title: 'UI/FilesMenu',
+  title: 'Messages/Composer/FilesMenu',
   component: FilesMenu,
   decorators: [
     Story => (

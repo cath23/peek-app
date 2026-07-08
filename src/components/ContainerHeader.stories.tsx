@@ -3,7 +3,7 @@ import { Button } from './ui/Button'
 import { ContainerHeader } from './ContainerHeader'
 
 const meta = {
-  title: 'Components/ContainerHeader',
+  title: 'Navigation/ContainerHeader',
   component: ContainerHeader,
   args: {
     title: 'People',

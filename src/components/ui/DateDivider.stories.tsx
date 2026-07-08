@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { DateDivider } from './DateDivider'
 
 const meta = {
-  title: 'UI/DateDivider',
+  title: 'Primitives/DateDivider',
   component: DateDivider,
   args: {
     label: 'Today',

@@ -14,18 +14,20 @@ the colors, type, radius, and shadows every component is built from.
 
 ## How the sidebar is organized
 
-Components are grouped by the **role they play**, not by their folder:
+Generic building blocks sit at the top; everything else is grouped by the
+**product area** it belongs to (not by its source folder):
 
 | Section | What lives here |
 |---|---|
 | **Docs** | This intro + the Design Tokens reference. |
-| **Primitives** | The smallest building blocks — Button, Avatar, Chip, IconButton, Tooltip, and the molecule rows built from them (PersonRow, SearchInput…). |
-| **Cards** | Message surfaces — ConversationCard, ThreadReplyCard, HuddleCard, PinnedMessage, MessageBody. |
-| **Menus** | Popovers and context menus — Files, More, Quick, Debug, Mention, Topic, ReactionPicker. |
-| **Dialogs** | Modal flows — ResolveDialog, CreateTopicDialog. |
-| **Composer** | Message input — ComposeBox, HuddleCreator. |
-| **Chrome** | App frame — TopBar, NavRail/NavItem, AppShell, ConversationHeader, ThreadPanel. |
-| **Sections** | Sidebar/page sections — Screener, Starred, Container header, NewTopicBanner. |
+| **Primitives** | Generic, reusable atoms — Button, IconButton, Avatar, Chip, Tooltip, Divider, DateDivider. |
+| **Feedback** | System/status surfaces — EmptyState, Toast. |
+| **Inputs** | Form controls — SearchInput, PersonChipInput. |
+| **Messages** | The conversation surface — ConversationCard, ThreadReplyCard, MessageBody, PinnedMessage, Reaction, ReferenceChip, ConversationHeader, ThreadPanel, plus **Composer** (ComposeBox, Mention/Files menus) and **Menus** (More/Quick/ReactionPicker). |
+| **Topics** | Topic domain — TopicState, HighlightPill, TopicMenu, CreateTopicDialog, ResolveDialog, NewTopicBanner. |
+| **Huddles** | HuddleCard, HuddleCreator (V3/inline only). |
+| **Screener & Desk** | Triage surfaces — ScreenerSection, ScreenerItem, StarredSection. |
+| **Navigation** | App frame + sidebar — AppShell, TopBar, NavRail/NavItem, PersonRow, SectionHeader, ContainerHeader, DebugMenu. |
 
 ## Conventions
 

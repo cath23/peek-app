@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { SectionHeader } from './SectionHeader'
 
 const meta = {
-  title: 'UI/SectionHeader',
+  title: 'Navigation/SectionHeader',
   component: SectionHeader,
   args: {
     title: 'Teams',

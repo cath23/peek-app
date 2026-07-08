@@ -26,8 +26,13 @@ function DebugMenuHarness() {
 }
 
 const meta = {
-  title: 'Components/DebugMenu',
+  title: 'Navigation/DebugMenu',
   component: DebugMenu,
+  parameters: {
+    // Harness renders the menu open, portaled to document.body — iframe it in
+    // Docs so it doesn't float over the docs content.
+    docs: { story: { inline: false, height: '520px' } },
+  },
   decorators: [
     Story => (
       <DebugProvider>

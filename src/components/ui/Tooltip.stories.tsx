@@ -4,7 +4,7 @@ import { Tooltip } from './Tooltip'
 import { WithTooltip } from './WithTooltip'
 
 const meta = {
-  title: 'UI/Tooltip',
+  title: 'Primitives/Tooltip',
   component: Tooltip,
   args: {
     label: 'Add to starred',

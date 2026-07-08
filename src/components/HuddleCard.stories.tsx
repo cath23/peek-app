@@ -9,7 +9,7 @@ const emptyHuddle = TOPIC_HUDDLES['9'][1] // members only, no seed message
 const resolvedHuddle = TOPIC_HUDDLES['1'][0] // state: 'resolved', carries a resolution message
 
 const meta = {
-  title: 'Components/HuddleCard',
+  title: 'Huddles/HuddleCard',
   component: HuddleCard,
   parameters: { layout: 'padded' },
   decorators: [

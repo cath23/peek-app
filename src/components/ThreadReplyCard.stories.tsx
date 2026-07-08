@@ -3,7 +3,7 @@ import { PeekDataProvider } from '@/api'
 import { ThreadReplyCard } from './ThreadReplyCard'
 
 const meta = {
-  title: 'Components/ThreadReplyCard',
+  title: 'Messages/ThreadReplyCard',
   component: ThreadReplyCard,
   parameters: { layout: 'padded' },
   decorators: [

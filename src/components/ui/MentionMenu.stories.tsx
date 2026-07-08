@@ -4,7 +4,7 @@ import { PEOPLE } from '@/api'
 import { MentionMenu } from './MentionMenu'
 
 const meta = {
-  title: 'UI/MentionMenu',
+  title: 'Messages/Composer/MentionMenu',
   component: MentionMenu,
   args: {
     people: PEOPLE.slice(0, 5),

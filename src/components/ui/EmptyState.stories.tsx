@@ -3,7 +3,7 @@ import { IconLock } from '@tabler/icons-react'
 import { EmptyState } from './EmptyState'
 
 const meta = {
-  title: 'UI/EmptyState',
+  title: 'Feedback/EmptyState',
   component: EmptyState,
   argTypes: {
     icon: { control: false },

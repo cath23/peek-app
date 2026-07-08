@@ -3,7 +3,7 @@ import { IconArrowUp, IconMessage2 } from '@tabler/icons-react'
 import { Chip } from './Chip'
 
 const meta = {
-  title: 'UI/Chip',
+  title: 'Primitives/Chip',
   component: Chip,
   args: {
     type: 'neutral',

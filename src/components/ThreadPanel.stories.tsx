@@ -15,7 +15,7 @@ const conversation: ConversationData = {
 const replies = REPLIES['t1_c1']
 
 const meta = {
-  title: 'Components/ThreadPanel',
+  title: 'Messages/ThreadPanel',
   component: ThreadPanel,
   parameters: { layout: 'fullscreen' },
   decorators: [

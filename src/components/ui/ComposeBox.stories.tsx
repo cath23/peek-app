@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ComposeBox } from './ComposeBox'
 
 const meta = {
-  title: 'UI/ComposeBox',
+  title: 'Messages/Composer/ComposeBox',
   component: ComposeBox,
   parameters: { layout: 'padded' },
   decorators: [

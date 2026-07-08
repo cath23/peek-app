@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { SearchInput } from './SearchInput'
 
 const meta = {
-  title: 'UI/SearchInput',
+  title: 'Inputs/SearchInput',
   component: SearchInput,
   render: args => (
     <div className="w-72">

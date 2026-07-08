@@ -4,7 +4,7 @@ import { IconNote, IconMessage2, IconUsers } from '@tabler/icons-react'
 import { NavItem } from './NavItem'
 
 const meta = {
-  title: 'Components/NavItem',
+  title: 'Navigation/NavItem',
   component: NavItem,
   decorators: [
     Story => (

@@ -21,6 +21,10 @@ try {
   /* channel not ready at import — the decorator still covers story pages */
 }
 
+// Apply the default (dark) immediately so standalone MDX pages — Introduction,
+// Design Tokens — render dark on first load, before any GLOBALS_UPDATED fires.
+applyTheme('dark')
+
 const withTheme: Decorator = (Story, context) => {
   const theme = context.globals.theme ?? 'dark'
   useEffect(() => {
@@ -56,6 +60,8 @@ const preview: Preview = {
         order: [
           'Docs',
           ['Introduction', 'Design Tokens'],
+          'Flows',
+          'Layouts',
           'Primitives',
           'Feedback',
           'Inputs',

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ConversationQuickMenu } from './ConversationQuickMenu'
 
 const meta = {
-  title: 'Components/ConversationQuickMenu',
+  title: 'Messages/Menus/ConversationQuickMenu',
   component: ConversationQuickMenu,
   args: {
     isResolved: false,

@@ -1,11 +1,20 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { PEOPLE, type Person } from '@/api'
+import { PEOPLE, PeekDataProvider, type Person } from '@/api'
 import { PersonChipInput } from './PersonChipInput'
 
 const meta = {
-  title: 'UI/PersonChipInput',
+  title: 'Inputs/PersonChipInput',
   component: PersonChipInput,
+  // PersonChipInput reads the directory via usePeople() (a Convex query in
+  // the seam), so it needs the provider that supplies ConvexProvider.
+  decorators: [
+    Story => (
+      <PeekDataProvider>
+        <Story />
+      </PeekDataProvider>
+    ),
+  ],
   args: {
     value: [],
     onChange: () => {},

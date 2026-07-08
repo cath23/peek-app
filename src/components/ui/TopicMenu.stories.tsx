@@ -5,7 +5,7 @@ import { PeekDataProvider } from '@/api'
 import { TopicMenu } from './TopicMenu'
 
 const meta = {
-  title: 'UI/TopicMenu',
+  title: 'Topics/TopicMenu',
   component: TopicMenu,
   decorators: [
     Story => (

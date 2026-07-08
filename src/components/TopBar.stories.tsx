@@ -4,7 +4,7 @@ import { DebugProvider } from '@/lib/debug'
 import { TopBar } from './TopBar'
 
 const meta = {
-  title: 'Components/TopBar',
+  title: 'Navigation/TopBar',
   component: TopBar,
   parameters: { layout: 'fullscreen' },
   decorators: [

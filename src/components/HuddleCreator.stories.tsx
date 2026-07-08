@@ -1,15 +1,22 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { PeekDataProvider } from '@/api'
 import { HuddleCreator } from './HuddleCreator'
 
 const meta = {
-  title: 'Components/HuddleCreator',
+  title: 'Huddles/HuddleCreator',
   component: HuddleCreator,
   parameters: { layout: 'padded' },
   decorators: [
+    // The To: field autofocuses on mount and its suggestion dropdown opens
+    // UPWARD (bottom-full) — as it does in the app, where the creator sits at
+    // the bottom above the composer. Give it a tall canvas and anchor the
+    // component to the bottom so the ~200px dropdown has headroom above it.
     Story => (
-      <div className="w-[520px]">
-        <Story />
-      </div>
+      <PeekDataProvider>
+        <div className="w-[520px] min-h-[380px] flex flex-col justify-end">
+          <Story />
+        </div>
+      </PeekDataProvider>
     ),
   ],
   args: {

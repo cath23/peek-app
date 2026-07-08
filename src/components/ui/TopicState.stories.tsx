@@ -3,7 +3,7 @@ import { avatarFor } from '@/api'
 import { TopicState } from './TopicState'
 
 const meta = {
-  title: 'UI/TopicState',
+  title: 'Topics/TopicState',
   component: TopicState,
   args: {
     type: 'topic',

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Reaction } from './Reaction'
 
 const meta = {
-  title: 'UI/Reaction',
+  title: 'Messages/Reaction',
   component: Reaction,
   args: {
     emoji: '👍',

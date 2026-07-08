@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MessageBody } from './MessageBody'
 
 const meta = {
-  title: 'UI/MessageBody',
+  title: 'Messages/MessageBody',
   component: MessageBody,
   args: {
     // MessageBody takes the resolved-lookup from its caller (useTopicMutations);

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { PinnedMessage } from './PinnedMessage'
 
 const meta = {
-  title: 'UI/PinnedMessage',
+  title: 'Messages/PinnedMessage',
   component: PinnedMessage,
   decorators: [
     Story => (

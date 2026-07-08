@@ -2,9 +2,13 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ResolveDialog } from './ResolveDialog'
 
 const meta = {
-  title: 'Components/ResolveDialog',
+  title: 'Topics/ResolveDialog',
   component: ResolveDialog,
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    // Portals a fixed overlay to document.body — iframe it in Docs.
+    docs: { story: { inline: false, height: '440px' } },
+  },
   args: {
     onResolve: () => {},
     onCancel: () => {},

@@ -3,9 +3,13 @@ import { PEOPLE } from '@/api'
 import { CreateTopicDialog } from './CreateTopicDialog'
 
 const meta = {
-  title: 'Components/CreateTopicDialog',
+  title: 'Topics/CreateTopicDialog',
   component: CreateTopicDialog,
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    // Portals a fixed overlay to document.body — iframe it in Docs.
+    docs: { story: { inline: false, height: '500px' } },
+  },
   args: {
     onConfirm: () => {},
     onCancel: () => {},

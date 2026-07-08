@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import ReactionPicker from './ReactionPicker'
 
 const meta = {
-  title: 'Components/ReactionPicker',
+  title: 'Messages/Menus/ReactionPicker',
   component: ReactionPicker,
   args: {
     onSelect: () => {},

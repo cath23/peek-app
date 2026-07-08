@@ -6,7 +6,7 @@ import { ScreenerSection } from './ScreenerSection'
 const noop = () => {}
 
 const meta = {
-  title: 'Components/ScreenerSection',
+  title: 'Screener & Desk/ScreenerSection',
   component: ScreenerSection,
   decorators: [
     Story => (

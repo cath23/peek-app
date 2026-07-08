@@ -4,7 +4,7 @@ import { PeekDataProvider } from '@/api'
 import { ConversationCard } from './ConversationCard'
 
 const meta = {
-  title: 'Components/ConversationCard',
+  title: 'Messages/ConversationCard',
   component: ConversationCard,
   parameters: { layout: 'padded' },
   decorators: [

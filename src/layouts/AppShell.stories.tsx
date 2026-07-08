@@ -14,7 +14,7 @@ function Placeholder({ label }: { label: string }) {
 }
 
 const meta = {
-  title: 'Layouts/AppShell',
+  title: 'Navigation/AppShell',
   component: AppShell,
   parameters: { layout: 'fullscreen' },
   decorators: [

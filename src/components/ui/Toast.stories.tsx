@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Toast } from './Toast'
 
 const meta = {
-  title: 'UI/Toast',
+  title: 'Feedback/Toast',
   component: Toast,
   args: {
     label: 'Topic created',

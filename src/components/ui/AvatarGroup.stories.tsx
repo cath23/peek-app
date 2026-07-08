@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { AvatarGroup } from './AvatarGroup'
 
 const meta = {
-  title: 'UI/AvatarGroup',
+  title: 'Primitives/AvatarGroup',
   component: AvatarGroup,
   args: {
     members: ['Alice Johnson', 'Amie Miles', 'Daniel Stanton'],
