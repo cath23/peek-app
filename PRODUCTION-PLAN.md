@@ -233,24 +233,34 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       is mapped, derived, or explicitly dropped (list the drops) → spec §7,
       incl. the 11 topicMutations layers + topicStore
 
-### Phase 1 — Data-access seam
-- [ ] Scaffold `src/api/`: read hooks (`useTopics`, `useTopicMessages`,
-      `useDmConversation`, `useThread`, `useHuddles`, `usePeople`,
-      `useScreenerItems`, `useDeskItems`, `useFiles`)
-- [ ] Write functions replacing the raw setters (`sendMessage`, `sendReply`,
-      `editMessage`, `deleteMessage`, `resolveMessage`/`reopen`,
-      `setHighlight`, `toggleReaction`, `createTopic`, `createHuddle`,
-      `promoteDmToTopic`, `deleteHuddle`)
-- [ ] Migrate pages (`DeskPage`, `PeoplePage`, `TopicsPage`)
-- [ ] Migrate view hooks (`useTopicView`, `useDmConversationView`)
-- [ ] Migrate remaining components (ThreadPanel, cards, menus, launcher,
+### Phase 1 — Data-access seam *(code done 2026-07-08 — QA pass pending)*
+- [x] Scaffold `src/api/`: read hooks (`useTopics`, `useTopicMessages`,
+      `useDmMessages`, `useThread`, `useHuddleLookup`, `useHuddleMessages`,
+      `useScreenerItems`, `useDeskItems`, `useReplyCount`, static reference
+      module, `DM_DIRECTORY`) — merged reads: overrides applied, deletions
+      filtered, replyCount computed; components never see override maps
+- [x] Write functions (`usePeekActions()`): sendTopic/Dm/HuddleMessage,
+      sendReply, delete*, editBody, editHuddleSeedBody, setHighlight,
+      setReactions, setResolution/setThreadResolution, createHuddle,
+      createEmptyHuddle, deleteHuddle; `useCreateTopicFromDm` — all stamped
+      with `CURRENT_USER_NAME` (Phase 3 switch point). *(setReactions keeps
+      the aggregate-array shape for now; becomes toggleReaction in Phase 2.)*
+- [x] Migrate pages (`DeskPage`, `PeoplePage`, `TopicsPage`) — hardcoded DM
+      name lists replaced by seam `DM_DIRECTORY`
+- [x] Migrate view hooks (`useTopicView`, `useDmConversationView`) —
+      ThreadPanel's override-map props removed (replies arrive merged)
+- [x] Migrate remaining components (ThreadPanel, cards, menus, launcher,
       extensions) batch-by-batch
-- [ ] Make `TopicMutationsProvider` private to the seam; exit criterion:
-      `grep "from '@/data/" src/{pages,components}` → seam + type-only
-- [ ] Swap story decorators (`PeekProviders` et al.) to the seam's provider —
-      existing stories must still compile and render; no new stories required
-      for the seam (verification is the running app + tests + QA checklist)
-- [ ] Full regression: tests + Storybook pass + QA-plan regression checklist
+- [x] Make providers private to the seam: moved to `src/api/internal/`
+      (topicMutations, topicStore, starred); app mounts one
+      `PeekDataProvider`. Exit criterion exceeded:
+      `grep "@/data/" src/{pages,components,extensions}` → zero hits
+      (stories use `@/api/fixtures`)
+- [x] Swap story decorators to `PeekDataProvider`; Storybook build green
+- [x] New `src/app.smoke.test.tsx`: mounts the real provider stack, drives
+      Desk/Topics/People through the seam (66 tests green; `tsc -b`, vite
+      build, storybook build all green)
+- [ ] QA-plan regression checklist (manual visual pass — user)
 
 ### Phase 2 — Convex persistence *(break down when Phase 1 is done)*
 - [ ] Schema + free-plan deployment · loading/empty/error-state designs ·
@@ -297,3 +307,10 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   work); the domain-model seed provisions (§1 extra users, §5 date strategy,
   per-table seed notes) apply to the fixture only — the client-side
   timestamp/date-label formatting rules in §5 remain production spec.
+- 2026-07-08 — Phase 1 seam built (5 commits, batch A–D + finalization).
+  Deliberate behavior change: DM sent messages now live in the seam store
+  and survive navigation (previously hook-local and lost — matches topics
+  and the future backend). Deliberately preserved: DM composer still drops
+  highlightType on send/reply (pre-seam behavior; revisit in Phase 2).
+  Edge case: a date group whose messages are all deleted no longer renders
+  a dangling date divider (seam filters empty groups).
