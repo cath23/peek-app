@@ -1,17 +1,37 @@
 import type { Decorator, Preview } from '@storybook/react-vite'
 import { useEffect } from 'react'
+import { addons } from 'storybook/preview-api'
+import { GLOBALS_UPDATED } from 'storybook/internal/core-events'
+import { themes } from 'storybook/theming'
 import '../src/index.css'
+import './preview.css'
+
+const applyTheme = (theme?: string) => {
+  document.documentElement.classList.toggle('dark', theme === 'dark')
+  document.body.classList.add('bg-bg-base', 'text-text-primary', 'font-sans')
+}
+
+// Drive the theme class from the toolbar for EVERY page — including standalone
+// MDX docs (Introduction, Design Tokens), which don't run story decorators.
+try {
+  addons.getChannel().on(GLOBALS_UPDATED, ({ globals }: { globals: { theme?: string } }) => {
+    applyTheme(globals?.theme)
+  })
+} catch {
+  /* channel not ready at import — the decorator still covers story pages */
+}
 
 const withTheme: Decorator = (Story, context) => {
-  const theme = context.globals.theme ?? 'light'
+  const theme = context.globals.theme ?? 'dark'
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-    document.body.classList.add('bg-bg-base', 'text-text-primary', 'font-sans')
+    applyTheme(theme)
   }, [theme])
   return <Story />
 }
 
 const preview: Preview = {
+  // Every component gets a Docs tab from its JSDoc + argTypes (D4: global autodocs).
+  tags: ['autodocs'],
   globalTypes: {
     theme: {
       description: 'Color theme',
@@ -23,10 +43,31 @@ const preview: Preview = {
       },
     },
   },
-  initialGlobals: { theme: 'light' },
+  initialGlobals: { theme: 'dark' },
   parameters: {
     layout: 'centered',
     controls: { expanded: true },
+    // Docs pages render in the dark chrome; the example blocks take the
+    // app's dark canvas via .dark .docs-story in preview.css.
+    docs: { theme: themes.dark },
+    options: {
+      // Docs first, then the domain-primary taxonomy (W6).
+      storySort: {
+        order: [
+          'Docs',
+          ['Introduction', 'Design Tokens'],
+          'Primitives',
+          'Feedback',
+          'Inputs',
+          'Messages',
+          ['*', 'Composer', 'Menus'],
+          'Topics',
+          'Huddles',
+          'Screener & Desk',
+          'Navigation',
+        ],
+      },
+    },
   },
   decorators: [withTheme],
 }
