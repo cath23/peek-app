@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { IconMenu2, IconHelpCircle, IconSun, IconMoon, IconDeviceDesktop, IconCheck } from '@tabler/icons-react'
+import { IconMenu2, IconHelpCircle, IconSun, IconMoon, IconDeviceDesktop, IconCheck, IconLogout } from '@tabler/icons-react'
+import { useAuthActions } from '@convex-dev/auth/react'
 import { IconButton } from './ui/IconButton'
 import { Avatar } from './ui/Avatar'
 import { SearchInput } from './ui/SearchInput'
 import { DebugMenu } from './DebugMenu'
 import { useTheme, type Theme } from '@/lib/theme'
+import { hasConvex, useCurrentUser } from '@/api'
 import avatarSrc from '@/assets/avatar.png'
 
 interface TopBarProps {
@@ -22,6 +24,8 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: React.FC<{ size: numbe
 
 export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
   const { theme, setTheme } = useTheme()
+  const { signOut } = useAuthActions()
+  const me = useCurrentUser()
   const [menuOpen, setMenuOpen] = useState(false)
   const [debugOpen, setDebugOpen] = useState(false)
   const avatarRef = useRef<HTMLButtonElement>(null)
@@ -95,6 +99,16 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
           className="fixed z-50 bg-bg-elevated border border-border-default rounded-lg shadow-lg p-1"
           style={{ top: rect.bottom + 6, right: window.innerWidth - rect.right }}
         >
+          {/* Signed-in identity (Convex mode; mock mode has no session) */}
+          {hasConvex && me && (
+            <>
+              <div className="flex flex-col gap-0.5 px-3 py-2 min-w-[160px]">
+                <span className="text-[14px] font-medium leading-[1.4] text-text-primary">{me.name}</span>
+                {me.email && <span className="text-[12px] leading-[1.2] text-text-secondary">{me.email}</span>}
+              </div>
+              <div className="border-t border-border-subtle my-1" />
+            </>
+          )}
           <div className="flex items-center h-7 px-3">
             <span className="text-[12px] font-medium leading-none text-text-secondary">Theme</span>
           </div>
@@ -117,6 +131,23 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
               </div>
             )
           })}
+          {/* Sign out (Convex mode only) */}
+          {hasConvex && (
+            <>
+              <div className="border-t border-border-subtle my-1" />
+              <div
+                className="flex items-center gap-3 h-9 px-3 rounded-lg cursor-pointer transition-colors hover:bg-bg-hover min-w-[160px]"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  setMenuOpen(false)
+                  void signOut()
+                }}
+              >
+                <IconLogout size={16} stroke={1.5} className="text-text-secondary shrink-0" />
+                <span className="flex-1 text-[14px] font-normal leading-[1.4] text-text-primary">Sign out</span>
+              </div>
+            </>
+          )}
         </div>,
         document.body
       )}

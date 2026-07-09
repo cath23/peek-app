@@ -356,20 +356,10 @@ export const seed = internalMutation({
   },
 })
 
-/** Marks the demo account's email verified so sign-in never asks for a code. */
-export const markAccountVerified = internalMutation({
-  args: { accountId: v.id('authAccounts'), email: v.string() },
-  handler: async (ctx, { accountId, email }) => {
-    await ctx.db.patch(accountId, { emailVerified: email })
-    const account = await ctx.db.get(accountId)
-    if (account) await ctx.db.patch(account.userId, { emailVerificationTime: Date.now() })
-  },
-})
-
 /**
  * Seed + demo login in one step (decision 2026-07-09): creates the
- * pre-verified demo@peek.dev / Peek-demo-1 account as the seed user "Cath"
- * (seedKey 'you'), then runs the full demo seed against that identity.
+ * demo@peek.dev / Peek-demo-1 account as the seed user "Cath" (seedKey
+ * 'you'), then runs the full demo seed against that identity.
  *
  * Run:  npx convex run dev/seedDemo:seedWithLogin '{"wipe": true}'
  */
@@ -377,14 +367,10 @@ export const seedWithLogin = internalAction({
   args: { wipe: v.optional(v.boolean()) },
   handler: async (ctx, { wipe }): Promise<unknown> => {
     if (wipe) await ctx.runMutation(internal.dev.seedDemo.wipe, {})
-    const { account } = await createAccount<DataModel>(ctx, {
+    await createAccount<DataModel>(ctx, {
       provider: 'password',
       account: { id: DEMO_EMAIL, secret: DEMO_PASSWORD },
       profile: { name: SEED_YOU.name, email: DEMO_EMAIL, seedKey: SEED_YOU.seedKey },
-    })
-    await ctx.runMutation(internal.dev.seedDemo.markAccountVerified, {
-      accountId: account._id,
-      email: DEMO_EMAIL,
     })
     return ctx.runMutation(internal.dev.seedDemo.seed, {})
   },

@@ -513,6 +513,19 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   login) and **peek-develop** (empty DB, real sign-ups — pushed to
   Vercel as the real app); "demo"/"develop" naming lives in the Vercel
   URLs, Convex deployment names are auto-generated.
+- 2026-07-09 — **Simplification ruling (user: "too complex")** —
+  supersedes the two 2026-07-09 items above where they conflict:
+  (1) email verification + password reset DEFERRED to Phase 5 (they
+  require an email service; OTP flows live in git history at 737a9fb) —
+  sign-up goes straight in; "Forgot password?" hidden until then.
+  (2) **peek-demo carries NO login and NO backend**: it is the
+  mock-mode static build (no `VITE_CONVEX_URL`), opening directly into
+  the demo dataset — the prototype experience, session-local writes.
+  (3) **peek-develop** = the real app on the Convex **prod** deployment
+  `patient-grouse-611` (created + JWT/SITE_URL configured 2026-07-09,
+  empty DB), free plan. Vercel projects are the remaining user step
+  (recipe in HOW-TO-RUN.md). Sign-out + identity added to the top-bar
+  avatar menu. Empty-string VITE_CONVEX_URL now counts as absent.
 - 2026-07-08 — Phase 1 seam built (5 commits, batch A–D + finalization).
   Deliberate behavior change: DM sent messages now live in the seam store
   and survive navigation (previously hook-local and lost — matches topics

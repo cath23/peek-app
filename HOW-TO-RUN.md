@@ -1,6 +1,6 @@
 # How to run Peek (simple guide)
 
-*Written 2026-07-08, updated the same day after the Phase 2 data swap —
+*Written 2026-07-08, updated 2026-07-09 after Phase 3 sign-in landed —
 if something here doesn't match what you see, ask Claude to update it.*
 
 ## The picture in plain words
@@ -13,8 +13,10 @@ if something here doesn't match what you see, ask Claude to update it.*
   starred/screener/open-work lists all come from the database, and the
   things you do (send, reply, resolve, react, star, dismiss) are **really
   saved**. Refresh, restart, come back tomorrow: still there.
-- **Sign-in doesn't exist yet.** It arrives in Phase 3. Until then the app
-  always pretends you are the user called "You".
+- **Sign-in exists now (Phase 3).** Sign up with name + email + password
+  and you're in immediately — no verification email, nothing external.
+  Sign out from the menu behind your avatar (top right). Everything you
+  see and send belongs to the account you're signed in as.
 
 ## Running the app
 
@@ -29,10 +31,12 @@ The app shows whatever is **in the database**:
 |---|---|
 | Look inside the database (opens a website) | `npx convex dashboard` |
 | A brand-new, **empty** workspace (what real customers see on day one) | `npx convex run dev/seedDemo:wipe` |
-| The familiar **demo dataset** (sample conversations) | `npx convex run dev/seedDemo:seed '{"wipe": true}'` |
+| The familiar **demo dataset** (sample conversations) | `npx convex run dev/seedDemo:seedWithLogin '{"wipe": true}'` |
 
 Switch between the two freely — it's the same app, just different contents
-in the storage room.
+in the storage room. The demo dataset comes with a ready-made login —
+**demo@peek.dev / Peek-demo-1** — sign in as that to be "Cath", the person
+the sample conversations belong to.
 
 ## The demo dataset is kept forever (decision 2026-07-08)
 
@@ -44,29 +48,47 @@ The sample data is preserved in two places and will never be deleted:
 - `convex/dev/seedDemo.ts` — the loader that fills any database
   deployment with that sample data.
 
-**To set up a separate demo instance later** (a demo that runs alongside
-the real app, never touching real customer data): create a second Convex
-deployment (`npx convex dev` in a copy of the project, or a named
-deployment from the Convex dashboard), run the *fill* command against it,
-and point that copy of the app at it via its own `VITE_CONVEX_URL`. The
-real app launches with an empty database; the demo instance carries the
-sample data.
+## The two public instances (decision 2026-07-09)
+
+| | **peek-demo** | **peek-develop** |
+|---|---|---|
+| What it is | The prototype: opens straight into the demo data, **no login** | The real app: sign up, sign in, communicate |
+| Backend | **None** — the demo data is baked into the app itself; anything you do lasts until you refresh | Convex **production** deployment `patient-grouse-611` (already created and configured; starts empty) |
+| Cost | Free (a static site) | Free (Convex free plan) |
+
+### Publishing them on Vercel (one-time, ~5 minutes)
+
+Both are Vercel projects on the same GitHub repo — the only difference is
+one environment variable.
+
+1. Go to https://vercel.com/new and import the `Peek` repo → name the
+   project **peek-demo** → **do not add any environment variables** →
+   Deploy. Done: `peek-demo.vercel.app` is the no-login prototype.
+2. https://vercel.com/new again, same repo → name it **peek-develop** →
+   add one environment variable:
+   `VITE_CONVEX_URL` = `https://patient-grouse-611.convex.cloud`
+   → Deploy. Done: `peek-develop.vercel.app` is the real app — sign up
+   and you're the first user.
+
+After that, every `git push` updates both automatically. Backend changes
+(anything in `convex/`) additionally need `npx convex deploy` once per
+change (ask Claude — it's part of finishing any backend work).
 
 ## LATER — what the next phases add
 
-**Phase 3 (sign-in):** a login screen (email/password or Google). Each
-person who signs in gets their own identity, and the app keeps their data
-under their account — the "wiped data + sign in + keeps data for
-logged-in users" setup you asked about.
+**Phase 4 (multi-user):** unread state goes live per person, the Screener
+fills itself from incoming messages, and two browsers see each other's
+messages instantly (already free with Convex).
 
-**Phase 4 (multi-user):** other people sign up, appear in your People
-list, and you communicate with live updates on both screens.
+**Phase 5 (hardening):** verification/password-reset emails (needs an
+email service + domain), file uploads, error screens, pagination.
 
 ## Cheat sheet
 
-| I want to… | Today | After Phase 3 |
-|---|---|---|
-| See the app with sample data | fill DB, then run both terminals | same (on the demo instance) |
-| See a fresh empty workspace | empty DB, then run both terminals | same, plus sign-up creates your account |
-| Sign in as a real user | *(doesn't exist)* | yes — built in this phase |
-| Keep my changes after refresh | yes (as "You") | yes (as your own account) |
+| I want to… | How |
+|---|---|
+| See the app with sample data locally | fill DB, run both terminals, sign in as demo@peek.dev / Peek-demo-1 |
+| See a fresh empty workspace locally | empty DB, run both terminals, sign up |
+| Show someone the prototype | send them the peek-demo link (no login) |
+| Use the real app | the peek-develop link — sign up once, sign in ever after |
+| Keep my changes after refresh | yes — everything is saved under your account (demo instance: session-only) |

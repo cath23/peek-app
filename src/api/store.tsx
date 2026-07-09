@@ -29,7 +29,9 @@ import type { ConversationData } from './types'
 // tests and in checkouts without a deployment, where the mock-backed
 // internals below serve everything, so the app works in both modes.
 const CONVEX_URL =
-  import.meta.env.MODE === 'test' ? undefined : (import.meta.env.VITE_CONVEX_URL as string | undefined)
+  import.meta.env.MODE === 'test'
+    ? undefined
+    : (import.meta.env.VITE_CONVEX_URL as string | undefined) || undefined // '' counts as absent
 // The client always exists so seam hooks can call useQuery/useMutation
 // unconditionally (rules of hooks); without a deployment every query passes
 // 'skip' (gated on hasConvex), so the placeholder client never connects.
