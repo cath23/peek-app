@@ -67,8 +67,6 @@ export default {
         'accent-muted':   'var(--accent-muted)',
         // brand wordmark (PeekLogo renders in currentColor)
         logo: 'var(--logo)',
-        'logo-badge-bg': 'var(--logo-badge-bg)',
-        'logo-badge-fg': 'var(--logo-badge-fg)',
         // semantic
         'info-default':    'var(--info-default)',
         'info-muted':      'var(--info-muted)',

@@ -26,17 +26,19 @@ export function PeekLogoMark({ height = 24, className }: { height?: number; clas
 }
 
 /**
- * Favicon-style brand badge: the mark in brand indigo on a lavender rounded
- * square (fixed brand constants — identical in both themes, mirrors
- * public/favicon.svg). Size = the square's edge in px.
+ * Brand badge: the mark on a rounded square. In-app it uses the theme's
+ * lighter treatment (design review 2026-07-09): `accent-muted` background
+ * with the mark in the `logo` color (indigo on light, white on dark).
+ * The favicon keeps the saturated fixed-color version (public/favicon.svg).
+ * Size = the square's edge in px.
  */
 export function PeekLogoBadge({ size = 32, className }: { size?: number; className?: string }) {
   return (
     <div
-      className={cn('bg-logo-badge-bg flex items-center justify-center shrink-0', className)}
+      className={cn('bg-accent-muted flex items-center justify-center shrink-0', className)}
       style={{ width: size, height: size, borderRadius: size * 0.3125 }}
     >
-      <PeekLogoMark height={size * 0.625} className="text-logo-badge-fg" />
+      <PeekLogoMark height={size * 0.625} />
     </div>
   )
 }
