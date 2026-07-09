@@ -1,3 +1,4 @@
+import { IconUser } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { avatarFor } from '@/api'
 
@@ -20,7 +21,11 @@ export function Avatar({ src, name, alt = '', size = 36, className }: AvatarProp
       {resolved ? (
         <img src={resolved} alt={alt || name || ''} className="w-full h-full object-cover" />
       ) : (
-        <div className="w-full h-full bg-accent-muted" />
+        // No portrait (e.g. a signed-up user before uploading one):
+        // generic silhouette (user decision 2026-07-09).
+        <div className="w-full h-full bg-accent-muted flex items-center justify-center text-text-muted">
+          <IconUser size={Math.round(size * 0.55)} stroke={1.5} />
+        </div>
       )}
     </div>
   )

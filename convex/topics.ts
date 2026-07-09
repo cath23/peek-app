@@ -2,12 +2,13 @@
  * Topic reads + creation (domain model §2.2–2.3).
  *
  * `id` is the stable seedKey where present (see convex/schema.ts).
- * `memberNames` renders the seed user as 'You' (the CURRENT_USER_NAME
- * convention) until Phase 3 auth. isResolved is DERIVED (§4.1), never
+ * `memberNames` are real names with `memberIds` index-aligned - the client
+ * seam renders the viewer as 'You'. isResolved is DERIVED (§4.1), never
  * stored — computed in `list` from the topic's messages.
  */
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import { viewerOrThrow } from './users'
 
 export const list = query({
   args: {},
@@ -20,9 +21,13 @@ export const list = query({
         .withIndex('by_topic', (q) => q.eq('topicId', t._id))
         .collect()
       const memberNames: string[] = []
+      const memberIds: string[] = []
       for (const m of members) {
         const u = await ctx.db.get(m.userId)
-        if (u) memberNames.push(u.seedKey === 'you' ? 'You' : u.name)
+        if (u) {
+          memberNames.push(u.name)
+          memberIds.push(u._id as string)
+        }
       }
       // §4.1 — a topic is resolved when it has ≥1 message and every one is
       // resolved. Derived here, never stored.
@@ -36,6 +41,7 @@ export const list = query({
         title: t.title,
         createdAt: t.createdAt,
         memberNames,
+        memberIds,
         isResolved,
       })
     }
@@ -52,11 +58,7 @@ export const create = mutation({
     inviteeNames: v.array(v.string()),
   },
   handler: async (ctx, { title, seedKey, inviteeNames }) => {
-    const you = await ctx.db
-      .query('users')
-      .withIndex('by_seedKey', (q) => q.eq('seedKey', 'you'))
-      .unique()
-    if (!you) throw new Error("Seed user missing — run dev/seedDemo:seed first (Phase 2 uses the hardcoded 'you' identity)")
+    const you = await viewerOrThrow(ctx)
     const now = Date.now()
     const topicId = await ctx.db.insert('topics', {
       title,

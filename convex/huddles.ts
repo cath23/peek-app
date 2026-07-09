@@ -5,11 +5,13 @@
  * conversation, extra messages, promotion metadata) — the client builds its
  * per-topic and per-origin-DM lookups from it (the dataset is small and the
  * sidebar needs all topics' huddles anyway). Id conventions as in the other
- * modules: stable seedKeys where present, 'You' convention for names.
+ * modules: stable seedKeys where present; members carry real names plus ids
+ * (memberIds, index-aligned) - the client seam renders the viewer as 'You'.
  */
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { aggregateReactions, shape, userNames, youUser } from './messages'
+import { aggregateReactions, shape, userNames } from './messages'
+import { viewerId, viewerOrThrow } from './users'
 import type { Doc } from './_generated/dataModel'
 
 export const list = query({
@@ -17,7 +19,7 @@ export const list = query({
   handler: async (ctx) => {
     const huddles = await ctx.db.query('huddles').collect()
     const names = await userNames(ctx)
-    const you = await youUser(ctx)
+    const me = await viewerId(ctx)
     const topics = await ctx.db.query('topics').collect()
     const topicKey = new Map(topics.map((t) => [t._id as string, t.seedKey ?? (t._id as string)]))
     const out = []
@@ -28,9 +30,13 @@ export const list = query({
         .collect()
       memberRows.sort((a, b) => a._creationTime - b._creationTime)
       const members: string[] = []
+      const memberIds: string[] = []
       for (const m of memberRows) {
         const u = await ctx.db.get(m.userId)
-        if (u) members.push(u.seedKey === 'you' ? 'You' : u.name)
+        if (u) {
+          members.push(u.name)
+          memberIds.push(u._id as string)
+        }
       }
 
       const msgs = await ctx.db
@@ -46,7 +52,7 @@ export const list = query({
         return {
           ...(await shape(ctx, m, names)),
           replyCount: replies.length,
-          reactions: await aggregateReactions(ctx, m._id, you?._id),
+          reactions: await aggregateReactions(ctx, m._id, me ?? undefined),
         }
       }
       const shaped = []
@@ -64,6 +70,7 @@ export const list = query({
         id: h.seedKey ?? (h._id as string),
         topicId: topicKey.get(h.topicId as string) ?? (h.topicId as string),
         members,
+        memberIds,
         state: h.state,
         lastActivityMs: lastMs,
         conversation,
@@ -94,8 +101,7 @@ export const create = mutation({
     const topics = await ctx.db.query('topics').collect()
     const topic = topics.find((t) => t.seedKey === topicKey || (t._id as string) === topicKey)
     if (!topic) throw new Error(`Unknown topic '${topicKey}'`)
-    const you = await youUser(ctx)
-    if (!you) throw new Error("Seed user missing — run dev/seedDemo:seed first (Phase 2 uses the hardcoded 'you' identity)")
+    const you = await viewerOrThrow(ctx)
     const now = Date.now()
     const huddleId = await ctx.db.insert('huddles', {
       topicId: topic._id,
@@ -144,8 +150,7 @@ export const createFromDm = mutation({
       .query('messages')
       .withIndex('by_seedKey', (q) => q.eq('seedKey', seedMessageKey))
       .unique()
-    const you = await youUser(ctx)
-    if (!you) throw new Error("Seed user missing — run dev/seedDemo:seed first (Phase 2 uses the hardcoded 'you' identity)")
+    const you = await viewerOrThrow(ctx)
     const now = Date.now()
     const huddleId = await ctx.db.insert('huddles', {
       topicId: topic._id,

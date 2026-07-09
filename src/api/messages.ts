@@ -14,6 +14,7 @@ import { REPLIES } from '@/data/replyData'
 import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useTopicStore } from '@/api/internal/topicStore'
 import { formatDateLabel, formatTimestamp, dayKey } from './format'
+import { CURRENT_USER_NAME, useCurrentUser } from './currentUser'
 import { hasConvex, useDmRuntime } from './store'
 import { useHuddleLookup } from './huddles'
 import type { ConversationData, ConvGroup, Huddle, ReactionData, ReplyData } from './types'
@@ -21,6 +22,7 @@ import type { ConversationData, ConvGroup, Huddle, ReactionData, ReplyData } fro
 /** Row shape returned by convex/messages.ts list/get. Seam-internal. */
 export interface RemoteMessage {
   id: string
+  authorId?: string
   authorName: string
   createdAt: number
   body: string
@@ -28,6 +30,7 @@ export interface RemoteMessage {
   highlightType?: ConversationData['highlightType']
   isResolved?: boolean
   resolvedBy?: string
+  resolvedById?: string
   resolutionMessage?: string
   resolvedByReplyId?: string
   attachments?: string[]
@@ -40,6 +43,7 @@ export interface RemoteMessage {
 /** Row shape returned by convex/replies.ts list. */
 interface RemoteReply {
   id: string
+  authorId?: string
   authorName: string
   createdAt: number
   body: string
@@ -48,11 +52,13 @@ interface RemoteReply {
   attachments?: string[]
 }
 
-/** Remote reply → presentation shape; the mock reply with the same id bridges the seeded isNew flag (readState is Phase 4). */
-function toReplyData(r: RemoteReply, mock: ReplyData | undefined): ReplyData {
+/** Remote reply → presentation shape; the viewer's own rows render as 'You'
+ *  (id comparison — Phase 3); the mock reply with the same id bridges the
+ *  seeded isNew flag (readState is Phase 4). */
+function toReplyData(r: RemoteReply, mock: ReplyData | undefined, meId: string | undefined): ReplyData {
   return {
     id: r.id,
-    authorName: r.authorName,
+    authorName: r.authorId && r.authorId === meId ? CURRENT_USER_NAME : r.authorName,
     timestamp: formatTimestamp(r.createdAt),
     body: r.body,
     isNew: mock?.isNew,
@@ -64,19 +70,25 @@ function toReplyData(r: RemoteReply, mock: ReplyData | undefined): ReplyData {
 }
 
 /**
- * Remote row → presentation shape. The mock record with the same id (when
- * one exists) bridges only the seeded unread flags — readState is Phase 4.
+ * Remote row → presentation shape. The viewer's own rows render as 'You'
+ * (authorId/resolvedById vs the current user's id — the Phase 3 sweep).
+ * The mock record with the same id (when one exists) bridges only the
+ * seeded unread flags — readState is Phase 4.
  */
-export function toConversationData(r: RemoteMessage, mock: ConversationData | undefined): ConversationData {
+export function toConversationData(
+  r: RemoteMessage,
+  mock: ConversationData | undefined,
+  meId: string | undefined,
+): ConversationData {
   return {
     id: r.id,
-    authorName: r.authorName,
+    authorName: r.authorId && r.authorId === meId ? CURRENT_USER_NAME : r.authorName,
     timestamp: formatTimestamp(r.createdAt),
     body: r.body,
     isUrgent: r.isUrgent,
     highlightType: r.highlightType,
     isResolved: r.isResolved,
-    resolvedBy: r.resolvedBy,
+    resolvedBy: r.resolvedById && r.resolvedById === meId ? CURRENT_USER_NAME : r.resolvedBy,
     resolutionMessage: r.resolutionMessage,
     attachments: r.attachments,
     reactions: r.reactions,
@@ -188,6 +200,7 @@ const EMPTY_TOPIC: TopicMessages = {
 export function useTopicMessages(topicId: string | null): TopicMessages {
   const o = useTopicMutations()
   const { findTopic } = useTopicStore()
+  const me = useCurrentUser()
   const remote = useQuery(
     api.messages.list,
     hasConvex && topicId != null ? { parentKind: 'topic', parentKey: topicId } : 'skip',
@@ -199,10 +212,10 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
   let groups: ConvGroup[]
   let sent: ConversationData[]
   if (hasConvex) {
-    if (remote === undefined) return { ...EMPTY_TOPIC, isLoading: true }
+    if (remote === undefined || me === undefined) return { ...EMPTY_TOPIC, isLoading: true }
     const mockById = mockMessagesById(TOPIC_CONVERSATIONS[topicId])
     const rows = remote.filter((r) => !o.deletedIds.has(r.id))
-    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id)), o, false))
+    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id), me.id), o, false))
     // The confirmed copy renders from the query; the local copy covers the
     // optimistic window only.
     const remoteIds = new Set(remote.map((r) => r.id))
@@ -239,6 +252,7 @@ export interface DmMessages {
 export function useDmMessages(dmId: number | null): DmMessages {
   const o = useTopicMutations()
   const { sentDmMessages } = useDmRuntime()
+  const me = useCurrentUser()
   const remote = useQuery(
     api.messages.list,
     hasConvex && dmId != null ? { parentKind: 'dm', parentKey: String(dmId) } : 'skip',
@@ -249,10 +263,10 @@ export function useDmMessages(dmId: number | null): DmMessages {
   let groups: ConvGroup[]
   let sent: ConversationData[]
   if (hasConvex) {
-    if (remote === undefined) return { groups: [], sent: [], isLoading: true }
+    if (remote === undefined || me === undefined) return { groups: [], sent: [], isLoading: true }
     const mockById = mockMessagesById(DM_CONVERSATIONS[dmId])
     const rows = remote.filter((r) => !o.deletedIds.has(r.id))
-    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id)), o, false))
+    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id), me.id), o, false))
     const remoteIds = new Set(remote.map((r) => r.id))
     sent = sentLocal.filter((c) => !remoteIds.has(c.id)).map((c) => mergeConv(c, o))
   } else {
@@ -299,6 +313,7 @@ export function useThread(messageId: string | null): ThreadData {
   const o = useTopicMutations()
   const { topics } = useTopicStore()
   const { sentDmMessages } = useDmRuntime()
+  const me = useCurrentUser()
   const huddleLookup = useHuddleLookup()
   // Refresh fallback: a message sent in an earlier session exists only in
   // Convex — the local pools below can't see it (mock data + this session's
@@ -350,7 +365,7 @@ export function useThread(messageId: string | null): ThreadData {
   // window, and the beat while the get query is in flight; it also bridges
   // the seeded unread flags (readState is Phase 4).
   const local = find()
-  const raw = hasConvex && remoteMsg ? toConversationData(remoteMsg, local) : local
+  const raw = hasConvex && remoteMsg ? toConversationData(remoteMsg, local, me?.id) : local
   const conversation = raw ? mergeConv(raw, o) : null
 
   const sentLocal = o.sentReplies[messageId] ?? []
@@ -364,7 +379,7 @@ export function useThread(messageId: string | null): ThreadData {
       isLoading = true
     } else {
       const mockById = new Map((REPLIES[messageId] ?? []).map((r) => [r.id, r]))
-      replies = remoteReplies.map((r) => mergeReply(toReplyData(r, mockById.get(r.id)), o))
+      replies = remoteReplies.map((r) => mergeReply(toReplyData(r, mockById.get(r.id), me?.id), o))
       const remoteIds = new Set(remoteReplies.map((r) => r.id))
       sentReplies = sentLocal.filter((r) => !remoteIds.has(r.id)).map((r) => mergeReply(r, o))
     }

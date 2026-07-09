@@ -13,6 +13,7 @@ import { useCallback } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { useTopicMutations } from '@/api/internal/topicMutations'
+import { CURRENT_USER_NAME, useCurrentUser } from './currentUser'
 import { useTopicStore } from '@/api/internal/topicStore'
 import { hasConvex } from './store'
 import type { Topic } from './types'
@@ -21,14 +22,17 @@ import type { Person } from './types'
 /** All topics. `undefined` while the Convex query is loading. */
 export function useTopics(): Topic[] | undefined {
   const { topics: localTopics, extraTopics } = useTopicStore()
+  const me = useCurrentUser()
   const remote = useQuery(api.topics.list, hasConvex ? {} : 'skip')
   if (!hasConvex) return localTopics
-  if (remote === undefined) return undefined
+  if (remote === undefined || me === undefined) return undefined
   const mapped: Topic[] = remote.map((t) => ({
     id: t.id,
     title: t.title,
     isResolved: t.isResolved, // server-derived (§4.1); surfaced via useIsTopicResolved
-    invitees: t.memberNames.length ? t.memberNames : undefined,
+    invitees: t.memberNames.length
+      ? t.memberNames.map((n, i) => (t.memberIds[i] === me.id ? CURRENT_USER_NAME : n))
+      : undefined,
   }))
   const ids = new Set(mapped.map((t) => t.id))
   return [...mapped, ...extraTopics.filter((t) => !ids.has(t.id))]

@@ -1,14 +1,39 @@
 /**
- * Current-user identity.
+ * Current-user identity (Phase 3).
  *
- * Phase 1/2: the hardcoded prototype convention — the current user is the
- * literal author name 'You' (domain model §1). Phase 3 (auth) replaces this
- * with the authenticated user's id; "You" becomes a render-time label for
- * `authorId === currentUser.id`. All seam writes stamp this constant so the
- * eventual sweep has one obvious seam-side switch point.
+ * Convex mode: the authenticated user from `users.me`; the seam's read
+ * mappers compare row `authorId`/member ids against `useCurrentUser().id`
+ * and render the viewer's own rows as the 'You' label — components keep
+ * the label contract unchanged. Mock mode keeps the prototype convention
+ * (the literal author name 'You').
  */
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
+import { hasConvex } from './store'
+
+/** The render-time label for the viewer's own rows. */
 export const CURRENT_USER_NAME = 'You'
 
 export function isCurrentUser(authorName: string): boolean {
   return authorName === CURRENT_USER_NAME
+}
+
+export interface CurrentUser {
+  id: string
+  name: string
+  email?: string
+  role?: string
+}
+
+const MOCK_CURRENT_USER: CurrentUser = { id: 'you', name: CURRENT_USER_NAME }
+
+/**
+ * The signed-in user. `undefined` while the profile query is in flight
+ * (Convex mode only — the seam's read hooks treat that as loading).
+ */
+export function useCurrentUser(): CurrentUser | undefined {
+  const me = useQuery(api.users.me, hasConvex ? {} : 'skip')
+  if (!hasConvex) return MOCK_CURRENT_USER
+  if (me === undefined || me === null) return undefined
+  return { id: me.id, name: me.name, email: me.email, role: me.role }
 }

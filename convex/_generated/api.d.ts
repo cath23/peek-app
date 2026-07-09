@@ -19,6 +19,7 @@ import type * as otp from "../otp.js";
 import type * as people from "../people.js";
 import type * as replies from "../replies.js";
 import type * as topics from "../topics.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   people: typeof people;
   replies: typeof replies;
   topics: typeof topics;
+  users: typeof users;
 }>;
 
 /**

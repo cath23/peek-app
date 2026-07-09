@@ -1,13 +1,13 @@
 /**
  * Per-user desk data: stars, screener inbox, open work (domain model
- * §2.11–2.13). All scoped to the hardcoded seed user until Phase 3 auth.
+ * §2.11–2.13). All scoped to the authenticated viewer (ctx.auth).
  *
  * Rows store real target _ids (as the seed writes them); responses resolve
  * back to the stable client keys (seedKeys) the client joins on.
  */
 import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'
-import { youUser } from './messages'
+import { viewer, viewerOrThrow } from './users'
 import type { Doc, Id } from './_generated/dataModel'
 
 const kindArg = v.union(v.literal('topic'), v.literal('dm'))
@@ -47,7 +47,7 @@ async function topicResolved(ctx: QueryCtx | MutationCtx, topicId: Id<'topics'>)
 export const starsList = query({
   args: {},
   handler: async (ctx) => {
-    const you = await youUser(ctx)
+    const you = await viewer(ctx)
     if (!you) return []
     const rows = await ctx.db
       .query('stars')
@@ -86,8 +86,7 @@ export const toggleStar = mutation({
     dmPartnerName: v.optional(v.string()),
   },
   handler: async (ctx, { kind, targetKey, dmPartnerName: partnerName }) => {
-    const you = await youUser(ctx)
-    if (!you) throw new Error("Seed user missing — run dev/seedDemo:seed first (Phase 2 uses the hardcoded 'you' identity)")
+    const you = await viewerOrThrow(ctx)
     let target = await resolveTarget(ctx, kind, targetKey)
     if (!target && kind === 'dm' && partnerName) {
       const partner = (await ctx.db.query('users').collect()).find((u) => u.name === partnerName)
@@ -125,7 +124,7 @@ export const toggleStar = mutation({
 export const screenerList = query({
   args: {},
   handler: async (ctx) => {
-    const you = await youUser(ctx)
+    const you = await viewer(ctx)
     if (!you) return []
     const now = Date.now()
     const rows = await ctx.db
@@ -177,7 +176,7 @@ export const snoozeScreenerItem = mutation({
 export const openWorkList = query({
   args: {},
   handler: async (ctx) => {
-    const you = await youUser(ctx)
+    const you = await viewer(ctx)
     if (!you) return []
     const rows = await ctx.db
       .query('deskOpenWork')
@@ -212,7 +211,7 @@ export const removeOpenWorkItem = mutation({
 export const urgentList = query({
   args: {},
   handler: async (ctx) => {
-    const you = await youUser(ctx)
+    const you = await viewer(ctx)
     if (!you) return []
     const readRows = await ctx.db.query('readState').collect()
     const watermark = new Map(

@@ -17,8 +17,10 @@
  * Run:  npx convex run dev/seedDemo:seed '{"wipe": true}'
  */
 import { v } from 'convex/values'
-import { internalMutation, type MutationCtx } from '../_generated/server'
-import type { Id, TableNames } from '../_generated/dataModel'
+import { createAccount } from '@convex-dev/auth/server'
+import { internalAction, internalMutation, type MutationCtx } from '../_generated/server'
+import { internal } from '../_generated/api'
+import type { DataModel, Id, TableNames } from '../_generated/dataModel'
 import { TOPICS, TOPIC_CONVERSATIONS, type ConversationData } from '../../src/data/topicData'
 import { DM_CONVERSATIONS } from '../../src/data/dmData'
 import { REPLIES } from '../../src/data/replyData'
@@ -47,8 +49,10 @@ const SEED_EXTRAS = [
   { seedKey: 'maya',   name: 'Maya Patel' },
 ] as const
 
-/** The seed user — "You". Display name is a placeholder until Phase 3. */
+/** The seed user — "You". seedWithLogin gives her real credentials. */
 const SEED_YOU = { seedKey: 'you', name: 'Cath' } as const
+export const DEMO_EMAIL = 'demo@peek.dev'
+const DEMO_PASSWORD = 'Peek-demo-1'
 
 /** Mock numeric DM id → partner (mirrors src/api/directory.ts). */
 const DM_SEED: Array<{ dmId: number; name: string }> = [
@@ -92,8 +96,12 @@ export const seed = internalMutation({
   args: { wipe: v.optional(v.boolean()) },
   handler: async (ctx, { wipe }) => {
     if (wipe) await wipeAll(ctx)
-    const existing = await ctx.db.query('users').first()
-    if (existing) return { skipped: 'users table not empty — pass {"wipe": true} to reseed' }
+    // The demo-login user (seedKey 'you') may already exist — seedWithLogin
+    // creates the account first; the seed then reuses that user as "You".
+    const users = await ctx.db.query('users').collect()
+    const existingYou = users.find((u) => u.seedKey === 'you')
+    if (users.some((u) => u.seedKey !== 'you'))
+      return { skipped: 'users table not empty — pass {"wipe": true} to reseed' }
 
     const anchor = Date.now()
     const justNow = anchor - 45_000
@@ -102,7 +110,7 @@ export const seed = internalMutation({
 
     // ── users ──
     const byName: Record<string, Id<'users'>> = {}
-    const youId = await ctx.db.insert('users', { ...SEED_YOU })
+    const youId = existingYou?._id ?? (await ctx.db.insert('users', { ...SEED_YOU }))
     byName[SEED_YOU.name] = youId
     byName['You'] = youId // mock authorName convention → seed user
     for (const p of [...SEED_PEOPLE, ...SEED_EXTRAS]) {
@@ -345,5 +353,39 @@ export const seed = internalMutation({
       // itself (they were hand-written); the inserted counts are the truth.
       replyCountMismatches: mismatches,
     }
+  },
+})
+
+/** Marks the demo account's email verified so sign-in never asks for a code. */
+export const markAccountVerified = internalMutation({
+  args: { accountId: v.id('authAccounts'), email: v.string() },
+  handler: async (ctx, { accountId, email }) => {
+    await ctx.db.patch(accountId, { emailVerified: email })
+    const account = await ctx.db.get(accountId)
+    if (account) await ctx.db.patch(account.userId, { emailVerificationTime: Date.now() })
+  },
+})
+
+/**
+ * Seed + demo login in one step (decision 2026-07-09): creates the
+ * pre-verified demo@peek.dev / Peek-demo-1 account as the seed user "Cath"
+ * (seedKey 'you'), then runs the full demo seed against that identity.
+ *
+ * Run:  npx convex run dev/seedDemo:seedWithLogin '{"wipe": true}'
+ */
+export const seedWithLogin = internalAction({
+  args: { wipe: v.optional(v.boolean()) },
+  handler: async (ctx, { wipe }): Promise<unknown> => {
+    if (wipe) await ctx.runMutation(internal.dev.seedDemo.wipe, {})
+    const { account } = await createAccount<DataModel>(ctx, {
+      provider: 'password',
+      account: { id: DEMO_EMAIL, secret: DEMO_PASSWORD },
+      profile: { name: SEED_YOU.name, email: DEMO_EMAIL, seedKey: SEED_YOU.seedKey },
+    })
+    await ctx.runMutation(internal.dev.seedDemo.markAccountVerified, {
+      accountId: account._id,
+      email: DEMO_EMAIL,
+    })
+    return ctx.runMutation(internal.dev.seedDemo.seed, {})
   },
 })

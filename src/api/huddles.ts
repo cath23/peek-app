@@ -12,6 +12,7 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useTopicStore } from '@/api/internal/topicStore'
+import { CURRENT_USER_NAME, useCurrentUser } from './currentUser'
 import { formatDateLabel, formatPromotedAt } from './format'
 import { toConversationData, type RemoteMessage } from './messages'
 import { hasConvex } from './store'
@@ -21,6 +22,8 @@ interface RemoteHuddle {
   id: string
   topicId: string
   members: string[]
+  /** Index-aligned with members — the seam renders the viewer as 'You'. */
+  memberIds: string[]
   state: 'active' | 'resolved'
   lastActivityMs: number
   conversation?: RemoteMessage
@@ -30,15 +33,15 @@ interface RemoteHuddle {
   seedMessageId?: string
 }
 
-function toHuddle(r: RemoteHuddle): Huddle {
+function toHuddle(r: RemoteHuddle, meId: string | undefined): Huddle {
   return {
     id: r.id,
     topicId: r.topicId,
-    members: r.members,
+    members: r.members.map((n, i) => (r.memberIds[i] === meId ? CURRENT_USER_NAME : n)),
     state: r.state,
     lastActivity: formatDateLabel(r.lastActivityMs),
-    conversation: r.conversation ? toConversationData(r.conversation, undefined) : undefined,
-    extraConvs: r.extraConvs.map((c) => toConversationData(c, undefined)),
+    conversation: r.conversation ? toConversationData(r.conversation, undefined, meId) : undefined,
+    extraConvs: r.extraConvs.map((c) => toConversationData(c, undefined, meId)),
     originDmId: r.originDmKey !== undefined ? Number(r.originDmKey) : undefined,
     promotedAt: r.promotedAtMs !== undefined ? formatPromotedAt(r.promotedAtMs) : undefined,
     promotedAtMs: r.promotedAtMs,
@@ -69,6 +72,7 @@ function applyOverrides(
 export function useHuddleLookup(): (topicId: string) => Huddle[] {
   const { getHuddlesForTopic, getExtraHuddlesForTopic } = useTopicStore()
   const o = useTopicMutations()
+  const me = useCurrentUser()
   const remote = useRemoteHuddles()
   return useCallback(
     (topicId: string) => {
@@ -78,7 +82,7 @@ export function useHuddleLookup(): (topicId: string) => Huddle[] {
           o,
         )
       }
-      const fromRemote = (remote ?? []).filter((h) => h.topicId === topicId).map(toHuddle)
+      const fromRemote = (remote ?? []).filter((h) => h.topicId === topicId).map((h) => toHuddle(h, me?.id))
       const remoteIds = new Set(fromRemote.map((h) => h.id))
       const localOnly = [
         ...getExtraHuddlesForTopic(topicId),
@@ -86,7 +90,7 @@ export function useHuddleLookup(): (topicId: string) => Huddle[] {
       ].filter((h) => !remoteIds.has(h.id))
       return applyOverrides([...fromRemote, ...localOnly], o)
     },
-    [getHuddlesForTopic, getExtraHuddlesForTopic, o, remote],
+    [getHuddlesForTopic, getExtraHuddlesForTopic, o, remote, me],
   )
 }
 
@@ -100,17 +104,18 @@ export function useHuddlesLoading(): boolean {
 export function usePromotedHuddleLookup(): (dmId: number) => Huddle[] {
   const { findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm } = useTopicStore()
   const o = useTopicMutations()
+  const me = useCurrentUser()
   const remote = useRemoteHuddles()
   return useCallback(
     (dmId: number) => {
       if (!hasConvex) return findAllHuddlesByOriginDm(dmId)
       const fromRemote = (remote ?? [])
         .filter((h) => h.originDmKey !== undefined && Number(h.originDmKey) === dmId)
-        .map(toHuddle)
+        .map((h) => toHuddle(h, me?.id))
       const remoteIds = new Set(fromRemote.map((h) => h.id))
       const localOnly = findExtraHuddlesByOriginDm(dmId).filter((h) => !remoteIds.has(h.id))
       return applyOverrides([...fromRemote, ...localOnly], o)
     },
-    [findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, o, remote],
+    [findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, o, remote, me],
   )
 }

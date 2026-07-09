@@ -2,13 +2,15 @@
  * Message reads + writes (domain model §2.5, §3 — one polymorphic table).
  *
  * Ids returned to the client are stable seedKeys where present (demo-seed
- * ids + client-generated optimistic ids — see convex/schema.ts); author
- * names are resolved server-side with the 'You' convention (hardcoded seed
- * identity until Phase 3 auth).
+ * ids + client-generated optimistic ids — see convex/schema.ts). Rows carry
+ * real author names plus authorId; the client seam renders the viewer's own
+ * rows as 'You' by id comparison (Phase 3 identity sweep). The viewer comes
+ * from ctx.auth (convex/users.ts).
  */
 import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'
 import { highlightType } from './schema'
+import { viewerId, viewerOrThrow } from './users'
 import type { Doc, Id } from './_generated/dataModel'
 
 const parentKindArg = v.union(v.literal('topic'), v.literal('dm'), v.literal('huddle'))
@@ -26,14 +28,7 @@ async function resolveParentId(
 
 export async function userNames(ctx: QueryCtx | MutationCtx): Promise<Map<Id<'users'>, string>> {
   const users = await ctx.db.query('users').collect()
-  return new Map(users.map((u) => [u._id, u.seedKey === 'you' ? 'You' : u.name]))
-}
-
-export async function youUser(ctx: QueryCtx | MutationCtx): Promise<Doc<'users'> | null> {
-  return ctx.db
-    .query('users')
-    .withIndex('by_seedKey', (q) => q.eq('seedKey', 'you'))
-    .unique()
+  return new Map(users.map((u) => [u._id, u.name]))
 }
 
 /** Per-user rows → the aggregate array the cards render (§4.6): first-seen
@@ -66,6 +61,7 @@ export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, nam
   const resolvedByReply = m.resolvedByReplyId ? await ctx.db.get(m.resolvedByReplyId) : null
   return {
     id: m.seedKey ?? (m._id as string),
+    authorId: m.authorId as string,
     authorName: names.get(m.authorId) ?? 'Unknown',
     createdAt: m.createdAt,
     body: m.body,
@@ -73,6 +69,7 @@ export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, nam
     highlightType: m.highlightType,
     isResolved: m.resolved,
     resolvedBy: m.resolvedById ? names.get(m.resolvedById) : undefined,
+    resolvedById: m.resolvedById ? (m.resolvedById as string) : undefined,
     resolutionMessage: m.resolutionMessage,
     resolvedByReplyId: resolvedByReply ? resolvedByReply.seedKey ?? (resolvedByReply._id as string) : undefined,
     attachments: m.attachments,
@@ -90,7 +87,7 @@ export const list = query({
       .withIndex('by_parent', (q) => q.eq('parentKind', parentKind).eq('parentId', parentId))
       .collect()
     const names = await userNames(ctx)
-    const you = await youUser(ctx)
+    const me = await viewerId(ctx)
     const shaped = []
     for (const m of rows.sort((a, b) => a.createdAt - b.createdAt)) {
       const replies = await ctx.db
@@ -100,7 +97,7 @@ export const list = query({
       shaped.push({
         ...(await shape(ctx, m, names)),
         replyCount: replies.length,
-        reactions: await aggregateReactions(ctx, m._id, you?._id),
+        reactions: await aggregateReactions(ctx, m._id, me ?? undefined),
       })
     }
     return shaped
@@ -120,10 +117,10 @@ export const get = query({
       m = normalized ? await ctx.db.get(normalized) : null
     }
     if (!m) return null
-    const you = await youUser(ctx)
+    const me = await viewerId(ctx)
     return {
       ...(await shape(ctx, m, await userNames(ctx))),
-      reactions: await aggregateReactions(ctx, m._id, you?._id),
+      reactions: await aggregateReactions(ctx, m._id, me ?? undefined),
     }
   },
 })
@@ -134,8 +131,7 @@ export const toggleReaction = mutation({
   handler: async (ctx, { key, emoji }) => {
     const m = await findByKey(ctx, key)
     if (!m) return // reply reactions stay session-local until modeled (§2.7 is message-keyed)
-    const you = await youUser(ctx)
-    if (!you) throw new Error("Seed user missing — run dev/seedDemo:seed first (Phase 2 uses the hardcoded 'you' identity)")
+    const you = await viewerOrThrow(ctx)
     const mine = await ctx.db
       .query('reactions')
       .withIndex('by_message_user', (q) => q.eq('messageId', m._id).eq('userId', you._id))
@@ -170,11 +166,7 @@ export const send = mutation({
     dmPartnerName: v.optional(v.string()),
   },
   handler: async (ctx, { parentKind, parentKey, seedKey, body, highlightType, resolved, resolutionMessage, attachments, dmPartnerName }) => {
-    const you = await ctx.db
-      .query('users')
-      .withIndex('by_seedKey', (q) => q.eq('seedKey', 'you'))
-      .unique()
-    if (!you) throw new Error("Seed user missing — run dev/seedDemo:seed first (Phase 2 uses the hardcoded 'you' identity)")
+    const you = await viewerOrThrow(ctx)
     let parentId = await resolveParentId(ctx, parentKind, parentKey)
     if (!parentId && parentKind === 'dm' && dmPartnerName) {
       const partner = (await ctx.db.query('users').collect()).find((u) => u.name === dmPartnerName)
@@ -258,10 +250,7 @@ export const setResolution = mutation({
       })
       return
     }
-    const you = await ctx.db
-      .query('users')
-      .withIndex('by_seedKey', (q) => q.eq('seedKey', 'you'))
-      .unique()
+    const you = await viewerOrThrow(ctx)
     let resolvedByReplyId: Id<'replies'> | undefined
     if (resolvedByReplyKey) {
       const bySeed = await ctx.db
@@ -274,7 +263,7 @@ export const setResolution = mutation({
     }
     await ctx.db.patch(m._id, {
       resolved: true,
-      resolvedById: you?._id,
+      resolvedById: you._id,
       resolutionMessage,
       resolvedByReplyId,
       resolvedAt: Date.now(),
