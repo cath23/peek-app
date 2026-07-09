@@ -380,11 +380,40 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
 - [ ] QA checklist regression pass (manual visual — user; incl. the
       deferred Phase 1 pass)
 
-### Phase 3 — Auth + profiles *(coarse until Phase 2)*
-- [ ] Convex Auth setup (email + password only at first — user ruling
-      2026-07-08; Google OAuth later) · login/profile UI built directly
-      in code (no Figma design pass — user ruling 2026-07-08) ·
-      auth gate · "You" identity sweep
+### Phase 3 — Auth + profiles *(decisions locked 2026-07-09 — see log)*
+- [x] Backend (2026-07-09): `@convex-dev/auth` + Password provider;
+      authTables merged into `users` (auth fields added, name stays
+      required, email/phone/by_seedKey indexes); `convex/otp.ts` =
+      verify + reset providers (8-digit codes via Resend raw fetch,
+      **dev fallback logs the code when RESEND_API_KEY is unset**);
+      JWT_PRIVATE_KEY/JWKS/SITE_URL set on dev; seed wipe now covers
+      the auth tables (else wiping users orphans accounts)
+- [ ] **USER STEP — Resend account + API key** → `RESEND_API_KEY` env
+      var on the dev deployment (test sender only delivers to the
+      account owner's address — fine for dev; verified domain = Phase 5)
+- [x] Client (2026-07-09): `ConvexAuthProvider` in the seam store;
+      `AuthGate` in main.tsx (AuthLoading → delayed pulsing wordmark,
+      Unauthenticated → AuthScreen, mock mode auto-signed-in — 93 tests
+      + Storybook unaffected)
+- [x] Auth screens (2026-07-09): sign-in / sign-up (email + password +
+      full name) / verify-email / forgot + reset, one centered card,
+      Field/TextInput/Button primitives, friendly error mapping;
+      `PeekLogo` wordmark component (currentColor + `--logo` token:
+      brand purple on light, white on dark — user-provided asset).
+      Runtime-verified headless end-to-end: gate, sign-up → code from
+      logs → verified → app renders; unverified sign-in re-prompts
+      verification; wrong password shows friendly error; both themes
+      screenshotted
+- [ ] Identity swap: every convex function reads `getAuthUserId(ctx)`
+      (youUser/'you' seedKey convention deleted); queries scope by the
+      authenticated user
+- [ ] "You" sweep in the UI: self-attribution via
+      `authorId === currentUser.id`; "You" is a render-time label only
+- [ ] Profile: view/edit (name, role, avatar upload via Convex file
+      storage) + sign-out in the top-bar user menu
+- [ ] **USER STEP — instances**: two Convex prod deployments + two
+      Vercel apps — `peek-demo` (seeded + demo login) and
+      `peek-develop` (empty; the real app)
 
 ### Phase 4 — Multi-user *(coarse)*
 - [ ] Shared workspace · live readState · two-browser QA pass
@@ -467,6 +496,14 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   the auth flows — login/profile UI is built directly in code. Email +
   password only as the first step; **no Google OAuth initially** (may be
   added later).
+- 2026-07-09 — **Phase 3 decisions (user)**: sign-up collects email +
+  password + full name (role/avatar later in profile). Email
+  verification AND password reset ship now (Resend, OTP codes) — not
+  deferred. Login/sign-up = centered-card layout on the app's dark
+  canvas. Two instances: **peek-demo** (seeded demo dataset + demo
+  login) and **peek-develop** (empty DB, real sign-ups — pushed to
+  Vercel as the real app); "demo"/"develop" naming lives in the Vercel
+  URLs, Convex deployment names are auto-generated.
 - 2026-07-08 — Phase 1 seam built (5 commits, batch A–D + finalization).
   Deliberate behavior change: DM sent messages now live in the seam store
   and survive navigation (previously hook-local and lost — matches topics

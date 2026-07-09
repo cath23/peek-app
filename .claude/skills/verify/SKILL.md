@@ -40,6 +40,20 @@ Always revert afterwards (original bodies are in `src/data/*`), or reseed:
 `npx convex run dev/seedDemo:seed '{"wipe": true}'` (dev-only; also resets
 any test topics/messages created while driving).
 
+## Auth flows (Phase 3)
+
+- Unauthenticated → the AuthScreen card ("Welcome back"). Drive sign-up /
+  verify / reset by placeholder text (see `.verify-auth.mjs` pattern from
+  the Phase 3 session if present).
+- OTP codes: with no `RESEND_API_KEY` env var the code is LOGGED, not
+  emailed — fetch the newest with
+  `npx convex logs --history 50 | grep "code for"` (the command streams;
+  spawn + kill after ~8s, or run it under `timeout` in bash).
+- A sign-in attempt on an unverified account re-sends a NEW code — always
+  take the newest log line.
+- Test accounts pollute the People list; reseed
+  (`dev/seedDemo:seed {"wipe": true}`) wipes auth tables too.
+
 ## Gotchas
 
 - The seeded dataset may have accumulated extra records from earlier

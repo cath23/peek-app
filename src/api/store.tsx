@@ -17,7 +17,8 @@
  * Nothing outside src/api may import the underlying providers directly.
  */
 import { createContext, useContext, useState, useMemo, type ReactNode, type Dispatch, type SetStateAction } from 'react'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { ConvexReactClient } from 'convex/react'
+import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { StarredProvider } from '@/api/internal/starred'
 import { TopicStoreProvider } from '@/api/internal/topicStore'
 import { TopicMutationsProvider } from '@/api/internal/topicMutations'
@@ -65,7 +66,9 @@ export function PeekDataProvider({ children }: { children: ReactNode }) {
       </TopicStoreProvider>
     </StarredProvider>
   )
-  return <ConvexProvider client={convexClient}>{tree}</ConvexProvider>
+  // ConvexAuthProvider wraps ConvexProvider internally; in mock mode the
+  // placeholder client never connects and the AuthGate bypasses auth.
+  return <ConvexAuthProvider client={convexClient}>{tree}</ConvexAuthProvider>
 }
 
 /** Whether a Convex deployment is wired up (drives seam-internal fallbacks). */

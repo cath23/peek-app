@@ -63,6 +63,9 @@
   --accent-hover:   #7C3AED;
   --accent-muted:   #EDE9FE;
 
+  /* brand wordmark (purple on light, white on dark) */
+  --logo: #211077;
+
   /* semantic */
   --info-default:    #3B82F6;
   --info-muted:      #DBEAFE;
@@ -112,6 +115,9 @@
   --accent-primary: #A78BFA;
   --accent-hover:   #8B5CF6;
   --accent-muted:   #2E2554;
+
+  /* brand wordmark (purple on light, white on dark) */
+  --logo: #FFFFFF;
 
   /* semantic */
   --info-default:    #60A5FA;

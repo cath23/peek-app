@@ -18,7 +18,8 @@
        the app's '@/' alias and (transitively) Vite asset modules. */
     "baseUrl": ".",
     "paths": { "@/*": ["../src/*"] },
-    "types": ["vite/client"]
+    /* "node" for process.env in auth/otp config (Convex runtime provides it). */
+    "types": ["vite/client", "node"]
   },
   "include": ["./**/*"],
   "exclude": ["./_generated"]

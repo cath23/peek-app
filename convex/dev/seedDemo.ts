@@ -65,6 +65,10 @@ const ALL_TABLES: TableNames[] = [
   'users', 'topics', 'topicMembers', 'dmConversations', 'messages',
   'replies', 'reactions', 'huddles', 'huddleMembers', 'readState',
   'stars', 'screenerItems', 'deskOpenWork',
+  // Convex Auth bookkeeping — wiped too, else wiping `users` orphans
+  // accounts/sessions and prior sign-ins break irrecoverably.
+  'authAccounts', 'authSessions', 'authRefreshTokens',
+  'authVerificationCodes', 'authVerifiers', 'authRateLimits',
 ]
 
 async function wipeAll(ctx: MutationCtx) {

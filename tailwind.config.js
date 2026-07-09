@@ -65,6 +65,8 @@ export default {
         'accent-primary': 'var(--accent-primary)',
         'accent-hover':   'var(--accent-hover)',
         'accent-muted':   'var(--accent-muted)',
+        // brand wordmark (PeekLogo renders in currentColor)
+        logo: 'var(--logo)',
         // semantic
         'info-default':    'var(--info-default)',
         'info-muted':      'var(--info-muted)',

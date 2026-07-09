@@ -7,6 +7,7 @@
  * the optional dev-only fixture.
  */
 import { defineSchema, defineTable } from 'convex/server'
+import { authTables } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
 export const highlightType = v.union(
@@ -24,15 +25,31 @@ export const parentKind = v.union(v.literal('topic'), v.literal('dm'), v.literal
 export const containerKind = v.union(v.literal('topic'), v.literal('dm'))
 
 export default defineSchema({
-  // §2.1 — replaces PEOPLE + the 'You' literal + AVATAR_BY_NAME
+  // Convex Auth bookkeeping tables (authAccounts, authSessions, …).
+  // `users` is overridden below with Peek's fields merged in.
+  ...authTables,
+
+  // §2.1 — replaces PEOPLE + the 'You' literal + AVATAR_BY_NAME.
+  // Auth fields (name/image/email/…) per @convex-dev/auth authTables.users;
+  // name stays required — the Password profile always provides it
+  // (sign-up collects full name, decision 2026-07-09).
   users: defineTable({
     name: v.string(),
+    image: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+    // ── Peek profile fields ──
     role: v.optional(v.string()),
     avatarStorageId: v.optional(v.id('_storage')),
-    email: v.optional(v.string()),
     /** Stable key for idempotent seeding ('you', 'alice', …). Fixture-only. */
     seedKey: v.optional(v.string()),
-  }).index('by_seedKey', ['seedKey']),
+  })
+    .index('email', ['email'])
+    .index('phone', ['phone'])
+    .index('by_seedKey', ['seedKey']),
 
   // §2.2 — isResolved is DERIVED (§4.1), never stored
   topics: defineTable({
