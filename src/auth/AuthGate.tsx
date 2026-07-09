@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { Authenticated, Unauthenticated, AuthLoading } from 'convex/react'
 import { hasConvex } from '@/api'
-import { PeekLogo } from '@/components/ui/PeekLogo'
+import { PeekLogoBadge } from '@/components/ui/PeekLogo'
 import { AuthScreen } from './AuthScreen'
 
 /**
@@ -30,7 +30,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 function AuthLoadingScreen() {
   return (
     <div className="min-h-screen bg-bg-base flex items-center justify-center">
-      <PeekLogo height={28} className="animate-skeleton-in animate-pulse" />
+      <PeekLogoBadge size={40} className="animate-skeleton-in animate-pulse" />
     </div>
   )
 }

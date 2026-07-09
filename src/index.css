@@ -63,8 +63,13 @@
   --accent-hover:   #7C3AED;
   --accent-muted:   #EDE9FE;
 
-  /* brand wordmark (purple on light, white on dark) */
-  --logo: #211077;
+  /* brand mark/wordmark (indigo on light, white on dark) */
+  --logo: #140855;
+
+  /* brand badge (favicon-style: indigo mark on lavender square) — fixed
+     brand constants, identical in both themes */
+  --logo-badge-bg: #D5CBF5;
+  --logo-badge-fg: #140855;
 
   /* semantic */
   --info-default:    #3B82F6;
@@ -116,8 +121,12 @@
   --accent-hover:   #8B5CF6;
   --accent-muted:   #2E2554;
 
-  /* brand wordmark (purple on light, white on dark) */
+  /* brand mark/wordmark (purple on light, white on dark) */
   --logo: #FFFFFF;
+
+  /* brand badge — same fixed constants as light (self-contained badge) */
+  --logo-badge-bg: #D5CBF5;
+  --logo-badge-fg: #140855;
 
   /* semantic */
   --info-default:    #60A5FA;

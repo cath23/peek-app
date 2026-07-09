@@ -2,14 +2,15 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
-import { PeekLogo } from '@/components/ui/PeekLogo'
+import { PeekLogoBadge } from '@/components/ui/PeekLogo'
 import { TextInput } from '@/components/ui/TextInput'
 
 /**
  * The unauthenticated surface (Phase 3): sign-in / sign-up / verify-email /
- * forgot-password, one centered card on the app canvas (decision 2026-07-09).
- * Email + password only (ruling 2026-07-08); sign-up collects full name;
- * email verification and password reset are 8-digit OTP codes (convex/otp.ts).
+ * forgot-password as a plain page-level form column — badge mark, big
+ * left-aligned heading, full-width primary action (user's design reference,
+ * 2026-07-09). Email + password only (ruling 2026-07-08); sign-up collects
+ * full name; verification and reset are 8-digit OTP codes (convex/otp.ts).
  */
 type Mode = 'signIn' | 'signUp' | 'verify' | 'forgot' | 'resetVerify'
 
@@ -24,16 +25,17 @@ function friendlyError(mode: Mode, e: unknown): string {
   return 'Something went wrong — please try again.'
 }
 
+/** Page-level form column per the design reference: badge mark above a
+ *  left-aligned heading, fields, full-width primary action — no card chrome,
+ *  straight on the canvas. */
 function AuthCard({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-bg-base flex flex-col items-center justify-center gap-8 p-6">
-      <PeekLogo height={28} />
-      <div className="w-[400px] max-w-full bg-bg-elevated border border-border-subtle rounded-xl shadow-lg p-6 flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-h4 text-text-primary">{title}</h1>
-          {hint && <p className="text-caption text-text-secondary">{hint}</p>}
-        </div>
-        {children}
+    <div className="min-h-screen bg-bg-base flex items-center justify-center p-6">
+      <div className="w-[400px] max-w-full flex flex-col">
+        <PeekLogoBadge size={40} />
+        <h1 className="text-h1 text-text-primary mt-8">{title}</h1>
+        {hint && <p className="text-body-2 text-text-secondary mt-2">{hint}</p>}
+        <div className="mt-10">{children}</div>
       </div>
     </div>
   )
@@ -100,14 +102,12 @@ export function AuthScreen() {
 
   const errorRow = error && <p className="text-caption text-error-default">{error}</p>
 
+  // Text-only actions reuse the Button primitive (muted = the system's
+  // text button), per design review 2026-07-09.
   const footerLink = (label: string, action: () => void) => (
-    <button
-      type="button"
-      className="text-caption text-accent-primary hover:underline cursor-pointer"
-      onClick={action}
-    >
+    <Button variant="muted" size="small" type="button" onClick={action}>
       {label}
-    </button>
+    </Button>
   )
 
   if (mode === 'verify' || mode === 'resetVerify') {
@@ -139,7 +139,7 @@ export function AuthScreen() {
             </Field>
           )}
           {errorRow}
-          <Button variant="primary" disabled={pending || !code} type="submit">
+          <Button variant="primary" className="w-full h-10" disabled={pending || !code} type="submit">
             {mode === 'verify' ? 'Verify' : 'Reset password'}
           </Button>
           <div className="flex justify-center">{footerLink('Start over', () => switchMode('signIn'))}</div>
@@ -163,7 +163,7 @@ export function AuthScreen() {
             />
           </Field>
           {errorRow}
-          <Button variant="primary" disabled={pending || !email} type="submit">
+          <Button variant="primary" className="w-full h-10" disabled={pending || !email} type="submit">
             Send code
           </Button>
           <div className="flex justify-center">{footerLink('Back to sign in', () => switchMode('signIn'))}</div>
@@ -174,7 +174,7 @@ export function AuthScreen() {
 
   const isSignUp = mode === 'signUp'
   return (
-    <AuthCard title={isSignUp ? 'Create your account' : 'Welcome back'}>
+    <AuthCard title={isSignUp ? 'Sign up' : 'Sign in'}>
       <form className="flex flex-col gap-4" onSubmit={submit}>
         {isSignUp && (
           <Field label="Full name" required>
@@ -209,6 +209,7 @@ export function AuthScreen() {
         {errorRow}
         <Button
           variant="primary"
+          className="w-full h-10"
           disabled={pending || !email || !password || (isSignUp && !name)}
           type="submit"
         >
