@@ -51,8 +51,12 @@ any test topics/messages created while driving).
   spawn + kill after ~8s, or run it under `timeout` in bash).
 - A sign-in attempt on an unverified account re-sends a NEW code — always
   take the newest log line.
-- Test accounts pollute the People list; reseed
-  (`dev/seedDemo:seed {"wipe": true}`) wipes auth tables too.
+- Test accounts pollute the People list; reseed wipes auth tables too.
+- **Reseed command (post identity-swap):**
+  `npx convex run dev/seedDemo:seedWithLogin '{"wipe": true}'` — recreates
+  the pre-verified demo login **demo@peek.dev / Peek-demo-1** (the seed
+  user Cath) and the demo dataset. Sign in as that to see seeded data as
+  "You"; a fresh sign-up sees it as another workspace member.
 
 ## Gotchas
 

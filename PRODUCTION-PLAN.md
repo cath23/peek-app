@@ -404,11 +404,20 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       logs → verified → app renders; unverified sign-in re-prompts
       verification; wrong password shows friendly error; both themes
       screenshotted
-- [ ] Identity swap: every convex function reads `getAuthUserId(ctx)`
-      (youUser/'you' seedKey convention deleted); queries scope by the
-      authenticated user
-- [ ] "You" sweep in the UI: self-attribution via
-      `authorId === currentUser.id`; "You" is a render-time label only
+- [x] Identity swap (2026-07-09): `convex/users.ts` viewer helpers
+      (getAuthUserId) + `users.me`; every function swapped off the
+      hardcoded 'you' identity — mutations throw signed-out, queries
+      return empty; reactions/urgent/stars/screener/open-work per-viewer;
+      `dev/seedDemo:seedWithLogin` creates the pre-verified demo login
+      (demo@peek.dev / Peek-demo-1) as seed-user Cath then seeds
+- [x] "You" sweep (2026-07-09): rows carry real names + authorId /
+      resolvedById / memberIds; the seam's `useCurrentUser()` compares
+      ids client-side and renders the viewer's own rows as the 'You'
+      label — components keep the label contract (pixel-identical,
+      runtime-verified as both the demo user and a fresh sign-up).
+      Avatar falls back to a generic silhouette for unknown users
+      (ruling); known gap: the viewer's own avatar still resolves to
+      the mock portrait until profile uploads land
 - [ ] Profile: view/edit (name, role, avatar upload via Convex file
       storage) + sign-out in the top-bar user menu
 - [ ] **USER STEP — instances**: two Convex prod deployments + two
