@@ -24,6 +24,9 @@ import type { ConversationData, ConvGroup, Huddle, ReactionData, ReplyData } fro
 export interface RemoteMessage {
   id: string
   authorId?: string
+  /** Derived per viewer from readState (§4.3). */
+  hasNewMessage?: boolean
+  hasNewReply?: boolean
   authorName: string
   createdAt: number
   body: string
@@ -45,6 +48,8 @@ export interface RemoteMessage {
 interface RemoteReply {
   id: string
   authorId?: string
+  /** Derived from YOUR thread watermark (§4.3). */
+  isNew?: boolean
   authorName: string
   createdAt: number
   body: string
@@ -56,13 +61,13 @@ interface RemoteReply {
 /** Remote reply → presentation shape; the viewer's own rows render as 'You'
  *  (id comparison — Phase 3); the mock reply with the same id bridges the
  *  seeded isNew flag (readState is Phase 4). */
-function toReplyData(r: RemoteReply, mock: ReplyData | undefined, meId: string | undefined): ReplyData {
+function toReplyData(r: RemoteReply, meId: string | undefined): ReplyData {
   return {
     id: r.id,
     authorName: r.authorId && r.authorId === meId ? CURRENT_USER_NAME : r.authorName,
     timestamp: formatTimestamp(r.createdAt),
     body: r.body,
-    isNew: mock?.isNew,
+    isNew: r.isNew,
     isUrgent: r.isUrgent,
     highlightType: r.highlightType,
     attachments: r.attachments,
@@ -72,15 +77,10 @@ function toReplyData(r: RemoteReply, mock: ReplyData | undefined, meId: string |
 
 /**
  * Remote row → presentation shape. The viewer's own rows render as 'You'
- * (authorId/resolvedById vs the current user's id — the Phase 3 sweep).
- * The mock record with the same id (when one exists) bridges only the
- * seeded unread flags — readState is Phase 4.
+ * (authorId/resolvedById vs the current user's id). Unread is derived
+ * server-side per viewer from readState (§4.3) — no mock bridge left.
  */
-export function toConversationData(
-  r: RemoteMessage,
-  mock: ConversationData | undefined,
-  meId: string | undefined,
-): ConversationData {
+export function toConversationData(r: RemoteMessage, meId: string | undefined): ConversationData {
   return {
     id: r.id,
     authorName: r.authorId && r.authorId === meId ? CURRENT_USER_NAME : r.authorName,
@@ -93,8 +93,8 @@ export function toConversationData(
     resolutionMessage: r.resolutionMessage,
     attachments: r.attachments,
     reactions: r.reactions,
-    hasNewMessage: mock?.hasNewMessage,
-    hasNewReply: mock?.hasNewReply,
+    hasNewMessage: r.hasNewMessage,
+    hasNewReply: r.hasNewReply,
     replyCount: r.replyCount,
   }
 }
@@ -216,7 +216,7 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
     if (remote === undefined || me === undefined) return { ...EMPTY_TOPIC, isLoading: true }
     const mockById = mockMessagesById(TOPIC_CONVERSATIONS[topicId])
     const rows = remote.filter((r) => !o.deletedIds.has(r.id))
-    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id), me.id), o, false))
+    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, me.id), o, false))
     // The confirmed copy renders from the query; the local copy covers the
     // optimistic window only.
     const remoteIds = new Set(remote.map((r) => r.id))
@@ -271,7 +271,7 @@ export function useDmMessages(dmId: string | null): DmMessages {
     if (remote === undefined || me === undefined) return { groups: [], sent: [], isLoading: true }
     const mockById = mockMessagesById(mockGroups)
     const rows = remote.filter((r) => !o.deletedIds.has(r.id))
-    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id), me.id), o, false))
+    groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, me.id), o, false))
     const remoteIds = new Set(remote.map((r) => r.id))
     sent = sentLocal.filter((c) => !remoteIds.has(c.id)).map((c) => mergeConv(c, o))
   } else {
@@ -370,7 +370,7 @@ export function useThread(messageId: string | null): ThreadData {
   // window, and the beat while the get query is in flight; it also bridges
   // the seeded unread flags (readState is Phase 4).
   const local = find()
-  const raw = hasConvex && remoteMsg ? toConversationData(remoteMsg, local, me?.id) : local
+  const raw = hasConvex && remoteMsg ? toConversationData(remoteMsg, me?.id) : local
   const conversation = raw ? mergeConv(raw, o) : null
 
   const sentLocal = o.sentReplies[messageId] ?? []
@@ -384,7 +384,7 @@ export function useThread(messageId: string | null): ThreadData {
       isLoading = true
     } else {
       const mockById = new Map((REPLIES[messageId] ?? []).map((r) => [r.id, r]))
-      replies = remoteReplies.map((r) => mergeReply(toReplyData(r, mockById.get(r.id), me?.id), o))
+      replies = remoteReplies.map((r) => mergeReply(toReplyData(r, me?.id), o))
       const remoteIds = new Set(remoteReplies.map((r) => r.id))
       sentReplies = sentLocal.filter((r) => !remoteIds.has(r.id)).map((r) => mergeReply(r, o))
     }

@@ -8,7 +8,8 @@
 import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'
 import { highlightType } from './schema'
-import { viewerOrThrow } from './users'
+import { viewerId, viewerOrThrow } from './users'
+import { watermarks } from './readState'
 import type { Doc, Id } from './_generated/dataModel'
 
 async function findMessageByKey(ctx: QueryCtx | MutationCtx, key: string): Promise<Doc<'messages'> | null> {
@@ -37,6 +38,10 @@ export const list = query({
       .withIndex('by_message', (q) => q.eq('messageId', message._id))
       .collect()
     const names = await userNames(ctx)
+    // isNew is derived from YOUR thread watermark for this message (§4.3) —
+    // set when you open its thread panel, not when you open the container.
+    const me = await viewerId(ctx)
+    const threadWm = me ? (await watermarks(ctx, me)).get(message._id as string) : undefined
     return rows
       .sort((a, b) => a.createdAt - b.createdAt)
       .map((r) => ({
@@ -48,6 +53,10 @@ export const list = query({
         isUrgent: r.urgent,
         highlightType: r.highlightType,
         attachments: r.attachments,
+        isNew:
+          me && r.authorId !== me && (threadWm === undefined || r.createdAt > threadWm)
+            ? true
+            : undefined,
       }))
   },
 })

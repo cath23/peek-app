@@ -10,7 +10,8 @@
  */
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { aggregateReactions, findDmForPair, resolveUserKey, shape, userNames } from './messages'
+import { aggregateReactions, findDmForPair, resolveUserKey, shape, unreadFlags, userNames } from './messages'
+import { watermarks } from './readState'
 import { viewerId, viewerOrThrow } from './users'
 import type { Doc } from './_generated/dataModel'
 
@@ -20,6 +21,7 @@ export const list = query({
     const huddles = await ctx.db.query('huddles').collect()
     const names = await userNames(ctx)
     const me = await viewerId(ctx)
+    const wm = me ? await watermarks(ctx, me) : new Map<string, number>()
     const topics = await ctx.db.query('topics').collect()
     const topicKey = new Map(topics.map((t) => [t._id as string, t.seedKey ?? (t._id as string)]))
     const out = []
@@ -53,6 +55,7 @@ export const list = query({
           ...(await shape(ctx, m, names)),
           replyCount: replies.length,
           reactions: await aggregateReactions(ctx, m._id, me ?? undefined),
+          ...(await unreadFlags(ctx, m, me, wm, replies)),
         }
       }
       const shaped = []

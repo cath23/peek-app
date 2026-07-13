@@ -11,6 +11,7 @@ import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'
 import { highlightType } from './schema'
 import { viewerId, viewerOrThrow } from './users'
+import { watermarks } from './readState'
 import type { Doc, Id } from './_generated/dataModel'
 
 const parentKindArg = v.union(v.literal('topic'), v.literal('dm'), v.literal('huddle'))
@@ -50,7 +51,7 @@ export async function findDmForPair(
 }
 
 /** `key` is a topic/huddle seedKey-or-_id, or — for DMs — the partner's person key. */
-async function resolveParentId(
+export async function resolveParentId(
   ctx: QueryCtx | MutationCtx,
   kind: 'topic' | 'dm' | 'huddle',
   key: string,
@@ -100,6 +101,31 @@ export async function aggregateReactions(
   return agg
 }
 
+/**
+ * The two unread signals (§4.3), derived per viewer:
+ *   hasNewMessage — the message itself is newer than your CONTAINER watermark
+ *   hasNewReply   — it has a reply newer than your THREAD watermark for it
+ * Your own writing is never unread. No watermark = never opened = all new.
+ */
+export async function unreadFlags(
+  ctx: QueryCtx | MutationCtx,
+  m: Doc<'messages'>,
+  me: Id<'users'> | null,
+  wm: Map<string, number>,
+  replies: Doc<'replies'>[],
+): Promise<{ hasNewMessage?: boolean; hasNewReply?: boolean }> {
+  if (!me) return {}
+  const containerWm = wm.get(m.parentId)
+  const threadWm = wm.get(m._id as string)
+  const isNew = (at: number, mark: number | undefined) => mark === undefined || at > mark
+  const hasNewMessage = m.authorId !== me && isNew(m.createdAt, containerWm)
+  const hasNewReply = replies.some((r) => r.authorId !== me && isNew(r.createdAt, threadWm))
+  return {
+    hasNewMessage: hasNewMessage || undefined,
+    hasNewReply: hasNewReply || undefined,
+  }
+}
+
 export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
   const resolvedByReply = m.resolvedByReplyId ? await ctx.db.get(m.resolvedByReplyId) : null
   return {
@@ -131,6 +157,7 @@ export const list = query({
       .withIndex('by_parent', (q) => q.eq('parentKind', parentKind).eq('parentId', parentId))
       .collect()
     const names = await userNames(ctx)
+    const wm = me ? await watermarks(ctx, me) : new Map<string, number>()
     const shaped = []
     for (const m of rows.sort((a, b) => a.createdAt - b.createdAt)) {
       const replies = await ctx.db
@@ -141,6 +168,7 @@ export const list = query({
         ...(await shape(ctx, m, names)),
         replyCount: replies.length,
         reactions: await aggregateReactions(ctx, m._id, me ?? undefined),
+        ...(await unreadFlags(ctx, m, me, wm, replies)),
       })
     }
     return shaped
@@ -172,7 +200,7 @@ export const get = query({
 export const toggleReaction = mutation({
   args: { key: v.string(), emoji: v.string() },
   handler: async (ctx, { key, emoji }) => {
-    const m = await findByKey(ctx, key)
+    const m = await findMessageByKey(ctx, key)
     if (!m) return // reply reactions stay session-local until modeled (§2.7 is message-keyed)
     const you = await viewerOrThrow(ctx)
     const mine = await ctx.db
@@ -238,7 +266,10 @@ export const send = mutation({
   },
 })
 
-async function findByKey(ctx: MutationCtx, key: string): Promise<Doc<'messages'> | null> {
+export async function findMessageByKey(
+  ctx: QueryCtx | MutationCtx,
+  key: string,
+): Promise<Doc<'messages'> | null> {
   const bySeed = await ctx.db
     .query('messages')
     .withIndex('by_seedKey', (q) => q.eq('seedKey', key))
@@ -251,7 +282,7 @@ async function findByKey(ctx: MutationCtx, key: string): Promise<Doc<'messages'>
 export const editBody = mutation({
   args: { key: v.string(), body: v.string() },
   handler: async (ctx, { key, body }) => {
-    const m = await findByKey(ctx, key)
+    const m = await findMessageByKey(ctx, key)
     if (m) {
       await ctx.db.patch(m._id, { body })
       return
@@ -278,7 +309,7 @@ export const setResolution = mutation({
     dropReplyPointer: v.optional(v.boolean()),
   },
   handler: async (ctx, { key, resolved, resolutionMessage, resolvedByReplyKey, dropReplyPointer }) => {
-    const m = await findByKey(ctx, key)
+    const m = await findMessageByKey(ctx, key)
     if (!m) return
     if (!resolved) {
       await ctx.db.patch(m._id, {
@@ -314,7 +345,7 @@ export const setResolution = mutation({
 export const setHighlight = mutation({
   args: { key: v.string(), highlightType: v.optional(highlightType) },
   handler: async (ctx, { key, highlightType: hl }) => {
-    const m = await findByKey(ctx, key)
+    const m = await findMessageByKey(ctx, key)
     if (m) {
       await ctx.db.patch(m._id, { highlightType: hl })
       return
@@ -333,7 +364,7 @@ export const setHighlight = mutation({
 export const remove = mutation({
   args: { key: v.string() },
   handler: async (ctx, { key }) => {
-    const m = await findByKey(ctx, key)
+    const m = await findMessageByKey(ctx, key)
     if (!m) return
     const replies = await ctx.db
       .query('replies')

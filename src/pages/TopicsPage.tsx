@@ -4,12 +4,13 @@ import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
 import { PersonRow } from '@/components/ui/PersonRow'
 import { useTopicView } from '@/components/views/useTopicView'
-import { CURRENT_USER_NAME, topicHasUnread, useTopics, useIsTopicResolved, useHuddleLookup } from '@/api'
+import { CURRENT_USER_NAME, useUnread, useTopics, useIsTopicResolved, useHuddleLookup } from '@/api'
 import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
 
 export function TopicsPage() {
+  const { topicHasUnread } = useUnread()
   const navigate = useNavigate()
   const { id: routeId } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()

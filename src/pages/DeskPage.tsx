@@ -11,8 +11,7 @@ import { useDmConversationView } from '@/components/views/useDmConversationView'
 import { useTopicView } from '@/components/views/useTopicView'
 import {
   dmNameById,
-  topicHasUnread,
-  dmHasUnread,
+  useUnread,
   useScreenerItems,
   useDeskItems,
   useDeskLoading,
@@ -35,6 +34,7 @@ type Selected =
   | { kind: 'topic'; topicId: string; topicTitle: string; topicResolved: boolean; section: SectionKey }
 
 export function DeskPage() {
+  const { topicHasUnread, dmHasUnread } = useUnread()
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()

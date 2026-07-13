@@ -16,8 +16,10 @@ import type * as http from "../http.js";
 import type * as huddles from "../huddles.js";
 import type * as messages from "../messages.js";
 import type * as people from "../people.js";
+import type * as readState from "../readState.js";
 import type * as replies from "../replies.js";
 import type * as topics from "../topics.js";
+import type * as unread from "../unread.js";
 import type * as users from "../users.js";
 
 import type {
@@ -35,8 +37,10 @@ declare const fullApi: ApiFromModules<{
   huddles: typeof huddles;
   messages: typeof messages;
   people: typeof people;
+  readState: typeof readState;
   replies: typeof replies;
   topics: typeof topics;
+  unread: typeof unread;
   users: typeof users;
 }>;
 

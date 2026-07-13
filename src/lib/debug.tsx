@@ -35,9 +35,11 @@ const DEFAULT_DEBUG: DebugState = {
     openWorkHasData: true,
     starredHasData: true,
   },
+  // Unread is real now (readState, §4.3) — on by default; the toggles remain
+  // so the demo can be shown without dots.
   unreads: {
-    topics: false,
-    people: false,
+    topics: true,
+    people: true,
   },
   huddles: {
     variant: 3,

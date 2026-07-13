@@ -127,6 +127,8 @@ export const seed = internalMutation({
     const msgIdByMock: Record<string, Id<'messages'>> = {}
     const msgMeta: Record<string, { day: SeedDay; containerId: string }> = {}
     const flagged: Record<string, number[]> = {}
+    /** Per-message (thread) flags — a reply marked isNew makes that THREAD unread. */
+    const threadFlagged: Record<string, number[]> = {}
     const containerIds: string[] = []
     const flag = (containerId: string, at: number) =>
       (flagged[containerId] ??= []).push(at)
@@ -279,18 +281,30 @@ export const seed = internalMutation({
         })
         counts.replies++
         replyCountByMock[mockMsgId] = (replyCountByMock[mockMsgId] ?? 0) + 1
-        if (r.isNew) flag(meta.containerId, createdAt)
+        // A new reply makes the THREAD unread, not the container — opening the
+        // topic must not clear a "1 new reply" badge (§4.3).
+        if (r.isNew) (threadFlagged[messageId] ??= []).push(createdAt)
       }
     }
 
-    // ── readState: one watermark per container (§2.10) ──
-    // Placed 1s before the earliest flagged item; unflagged containers are
-    // fully read as of the anchor.
+    // ── readState: watermarks per container AND per thread (§2.10, §4.3) ──
+    // Each is placed 1s before its earliest flagged item; anything unflagged is
+    // fully read as of the anchor. Without the thread watermarks every seeded
+    // thread would render as having unread replies.
     for (const containerId of containerIds) {
       const times = flagged[containerId]
       await ctx.db.insert('readState', {
         userId: youId,
         containerId,
+        lastReadAt: times?.length ? Math.min(...times) - 1000 : anchor,
+      })
+    }
+    for (const mockMsgId of Object.keys(replyCountByMock)) {
+      const messageId = msgIdByMock[mockMsgId] as string
+      const times = threadFlagged[messageId]
+      await ctx.db.insert('readState', {
+        userId: youId,
+        containerId: messageId,
         lastReadAt: times?.length ? Math.min(...times) - 1000 : anchor,
       })
     }

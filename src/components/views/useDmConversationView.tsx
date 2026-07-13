@@ -1,3 +1,4 @@
+import { useMarkRead } from '@/lib/useMarkRead'
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { ConversationHeader } from '@/components/ConversationHeader'
 import { NewTopicBanner } from '@/components/NewTopicBanner'
@@ -39,6 +40,10 @@ interface ViewSlots {
 
 export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnreads = false, onStartTopicFromDm }: UseDmConversationViewArgs): ViewSlots {
   const [threadConvId, setThreadConvId] = useState<string | null>(null)
+
+  // Opening the DM clears new-message state; opening a thread clears that
+  // thread's new-reply state (§4.3).
+  useMarkRead('dm', dmId, threadConvId)
   const scrollRef = useRef<HTMLDivElement>(null)
   const { isDmStarred, toggleDm } = useStarred()
   const findTopic = useTopicLookup()

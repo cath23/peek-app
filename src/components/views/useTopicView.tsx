@@ -1,3 +1,4 @@
+import { useMarkRead } from '@/lib/useMarkRead'
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { IconPlus } from '@tabler/icons-react'
 import { ConversationHeader } from '@/components/ConversationHeader'
@@ -75,6 +76,10 @@ export function useTopicView({
 
   // Thread + huddle UI state stays local — it's transient view state, not data.
   const [threadConvId, setThreadConvId] = useState<string | null>(null)
+
+  // Opening the topic clears new-message state; opening a thread clears that
+  // thread's new-reply state (§4.3).
+  useMarkRead('topic', topicId, threadConvId)
   const [selectedHuddleId, setSelectedHuddleId] = useState<string | null>(null)
   const [isCreatingHuddle, setIsCreatingHuddle] = useState(false)
 

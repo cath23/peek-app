@@ -7,7 +7,7 @@ import { Divider } from '@/components/ui/Divider'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StarredSection, type StarredItem } from '@/components/ui/StarredSection'
 import { useDmConversationView } from '@/components/views/useDmConversationView'
-import { dmHasUnread, useCreateTopicFromDm, usePeople, useStarred } from '@/api'
+import { useUnread, useCreateTopicFromDm, usePeople, useStarred } from '@/api'
 import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
@@ -24,6 +24,7 @@ const TEAMS = [
 ]
 
 export function PeoplePage() {
+  const { dmHasUnread } = useUnread()
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()
