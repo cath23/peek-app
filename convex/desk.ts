@@ -8,11 +8,12 @@
 import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'
 import { viewer, viewerOrThrow } from './users'
+import { findDmForPair, resolveUserKey } from './messages'
 import type { Doc, Id } from './_generated/dataModel'
 
 const kindArg = v.union(v.literal('topic'), v.literal('dm'))
 
-/** Resolve a stored targetId (usually an _id, possibly a seedKey) to its doc. */
+/** Resolve a stored targetId (an _id, possibly a legacy seedKey) to its doc. */
 async function resolveTarget(
   ctx: QueryCtx | MutationCtx,
   kind: 'topic' | 'dm',
@@ -29,11 +30,13 @@ async function resolveTarget(
 }
 
 /** The DM partner (the not-you side of the pair). */
-async function dmPartnerName(ctx: QueryCtx | MutationCtx, dm: Doc<'dmConversations'>, youId: Id<'users'> | undefined) {
+async function dmPartner(ctx: QueryCtx | MutationCtx, dm: Doc<'dmConversations'>, youId: Id<'users'> | undefined) {
   const partnerId = dm.userLowId === youId ? dm.userHighId : dm.userLowId
-  const partner = await ctx.db.get(partnerId)
-  return partner?.name
+  return ctx.db.get(partnerId)
 }
+
+/** A DM's client id is its partner's person key (§2.4). */
+const personKey = (u: Doc<'users'>) => u.seedKey ?? (u._id as string)
 
 /** §4.1 — derived, same rule as topics.list. */
 async function topicResolved(ctx: QueryCtx | MutationCtx, topicId: Id<'topics'>): Promise<boolean> {
@@ -57,10 +60,10 @@ export const starsList = query({
     for (const s of rows) {
       if (s.kind === 'dm') {
         const dm = (await resolveTarget(ctx, 'dm', s.targetId)) as Doc<'dmConversations'> | null
-        if (!dm?.seedKey) continue
-        const name = await dmPartnerName(ctx, dm, you._id)
-        if (!name) continue
-        out.push({ id: s._id as string, kind: 'dm' as const, dmId: Number(dm.seedKey), name })
+        if (!dm) continue
+        const partner = await dmPartner(ctx, dm, you._id)
+        if (!partner) continue
+        out.push({ id: s._id as string, kind: 'dm' as const, dmId: personKey(partner), name: partner.name })
       } else {
         const topic = (await resolveTarget(ctx, 'topic', s.targetId)) as Doc<'topics'> | null
         if (!topic) continue
@@ -80,27 +83,26 @@ export const starsList = query({
 export const toggleStar = mutation({
   args: {
     kind: kindArg,
-    /** Topic seedKey/_id, or the DM's numeric mock id as a string. */
+    /** Topic seedKey/_id, or — for DMs — the partner's person key (§2.4). */
     targetKey: v.string(),
-    /** First star on a person with no conversation yet creates the DM record. */
-    dmPartnerName: v.optional(v.string()),
   },
-  handler: async (ctx, { kind, targetKey, dmPartnerName: partnerName }) => {
+  handler: async (ctx, { kind, targetKey }) => {
     const you = await viewerOrThrow(ctx)
-    let target = await resolveTarget(ctx, kind, targetKey)
-    if (!target && kind === 'dm' && partnerName) {
-      const partner = (await ctx.db.query('users').collect()).find((u) => u.name === partnerName)
-      if (partner) {
+    let target: Doc<'topics'> | Doc<'dmConversations'> | null
+    if (kind === 'dm') {
+      // Resolve the pair server-side; starring someone you've never messaged
+      // creates the conversation.
+      const partner = await resolveUserKey(ctx, targetKey)
+      if (!partner || partner._id === you._id) throw new Error(`Unknown person '${targetKey}'`)
+      target = await findDmForPair(ctx, you._id, partner._id)
+      if (!target) {
         const [userLowId, userHighId] =
           (you._id as string) < (partner._id as string) ? [you._id, partner._id] : [partner._id, you._id]
-        const dmId = await ctx.db.insert('dmConversations', {
-          userLowId,
-          userHighId,
-          createdAt: Date.now(),
-          seedKey: targetKey,
-        })
+        const dmId = await ctx.db.insert('dmConversations', { userLowId, userHighId, createdAt: Date.now() })
         target = await ctx.db.get(dmId)
       }
+    } else {
+      target = await resolveTarget(ctx, kind, targetKey)
     }
     if (!target) throw new Error(`Unknown ${kind} '${targetKey}'`)
     const rows = await ctx.db
@@ -147,9 +149,15 @@ export const screenerList = query({
       } else {
         const dm = (await resolveTarget(ctx, 'dm', item.targetId)) as Doc<'dmConversations'> | null
         if (!dm) continue
-        const name = await dmPartnerName(ctx, dm, you._id)
-        if (!name) continue
-        out.push({ id: item._id as string, kind: 'dm' as const, authorName: name, preview: item.preview })
+        const partner = await dmPartner(ctx, dm, you._id)
+        if (!partner) continue
+        out.push({
+          id: item._id as string,
+          kind: 'dm' as const,
+          dmId: personKey(partner),
+          authorName: partner.name,
+          preview: item.preview,
+        })
       }
     }
     return out
@@ -237,11 +245,12 @@ export const urgentList = query({
     }
     const out = []
     for (const dm of await ctx.db.query('dmConversations').collect()) {
-      if (!dm.seedKey) continue
+      if (dm.userLowId !== you._id && dm.userHighId !== you._id) continue
       if (!(await hasUnreadUrgent('dm', dm._id as string))) continue
-      const name = await dmPartnerName(ctx, dm, you._id)
-      if (!name) continue
-      out.push({ id: `urg_dm_${dm.seedKey}`, kind: 'dm' as const, dmId: Number(dm.seedKey), name })
+      const partner = await dmPartner(ctx, dm, you._id)
+      if (!partner) continue
+      const key = personKey(partner)
+      out.push({ id: `urg_dm_${key}`, kind: 'dm' as const, dmId: key, name: partner.name })
     }
     for (const topic of await ctx.db.query('topics').collect()) {
       if (!(await hasUnreadUrgent('topic', topic._id as string))) continue

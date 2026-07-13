@@ -12,8 +12,8 @@ export interface Huddle {
   /** Top-level messages posted inside the huddle after the seed. Drives the V2 huddle main-view body.
    *  Empty/undefined → empty huddle (just compose box). */
   extraConvs?: ConversationData[]
-  /** When set, this huddle was promoted from a DM. Messages are sourced from DM_CONVERSATIONS[originDmId]. */
-  originDmId?: number
+  /** When set, this huddle was promoted from a DM — the partner's person key (§2.4). */
+  originDmId?: string
   /** Display timestamp for when the DM was promoted into this huddle. Used to render the "Started topic" divider. */
   promotedAt?: string
   /** Numeric promotion time (ms since epoch). Drives chronological partitioning of replies around the divider. */
@@ -179,7 +179,7 @@ export const TOPIC_HUDDLES: Record<string, Huddle[]> = {
 }
 
 /** Find the huddle that was promoted from the given DM, if any. */
-export function getHuddleByOriginDm(dmId: number): Huddle | undefined {
+export function getHuddleByOriginDm(dmId: string): Huddle | undefined {
   for (const huddles of Object.values(TOPIC_HUDDLES)) {
     const match = huddles.find((h) => h.originDmId === dmId)
     if (match) return match

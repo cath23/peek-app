@@ -37,7 +37,7 @@ describe('useTopicStore static lookups', () => {
     act(() => {
       result.current.createTopicFromDm({
         title: 'Runtime huddle test',
-        dmId: 1,
+        dmId: 'alice',
         dmName: 'Alice Johnson',
         invitees: [],
         seedMessageId: DM1_FIRST.id,
@@ -55,7 +55,7 @@ describe('createTopicFromDm', () => {
     act(() => {
       const out = result.current.createTopicFromDm({
         title: 'My new topic',
-        dmId: 1,
+        dmId: 'alice',
         dmName: 'Alice Johnson',
         invitees: [{ id: 'daniel', name: 'Daniel Stanton', role: 'Backend Engineer' }],
         seedMessageId: DM1_FIRST.id,
@@ -76,7 +76,7 @@ describe('createTopicFromDm', () => {
     act(() => {
       const out = result.current.createTopicFromDm({
         title: 'T',
-        dmId: 1,
+        dmId: 'alice',
         dmName: 'Alice Johnson',
         invitees: [],
         seedMessageId: DM1_FIRST.id,
@@ -88,7 +88,7 @@ describe('createTopicFromDm', () => {
     expect(huddles).toHaveLength(1)
     const h = huddles[0]
     expect(h.id).toBe(huddleId)
-    expect(h.originDmId).toBe(1)
+    expect(h.originDmId).toBe('alice')
     expect(h.seedMessageId).toBe(DM1_FIRST.id)
     expect(typeof h.promotedAt).toBe('string')
     expect(h.promotedAt!.length).toBeGreaterThan(0)
@@ -102,14 +102,14 @@ describe('createTopicFromDm', () => {
     act(() => {
       const out = result.current.createTopicFromDm({
         title: 'T',
-        dmId: 1,
+        dmId: 'alice',
         dmName: 'Alice Johnson',
         invitees: [],
         seedMessageId: DM1_FIRST.id,
       })
       huddleId = out.huddleId
     })
-    const huddle = result.current.findHuddleByOriginDm(1)
+    const huddle = result.current.findHuddleByOriginDm('alice')
     expect(huddle).toBeDefined()
     expect(huddle!.id).toBe(huddleId)
     expect(huddle!.conversation!.body).toBe(DM1_FIRST.body)
@@ -121,14 +121,14 @@ describe('createTopicFromDm', () => {
     act(() => {
       returned = result.current.createTopicFromDm({
         title: 'T',
-        dmId: 1,
+        dmId: 'alice',
         dmName: 'Alice Johnson',
         invitees: [],
         seedMessageId: DM1_FIRST.id,
       })
     })
     expect(returned).toBeDefined()
-    const huddle = result.current.findHuddleByOriginDm(1)
+    const huddle = result.current.findHuddleByOriginDm('alice')
     expect(huddle!.id).toBe(returned!.huddleId)
     expect(huddle!.promotedAt).toBe(returned!.promotedAt)
     expect(huddle!.topicId).toBe(returned!.topicId)
@@ -141,21 +141,21 @@ describe('createTopicFromDm', () => {
     act(() => {
       h1 = result.current.createTopicFromDm({
         title: 'First',
-        dmId: 1,
+        dmId: 'alice',
         dmName: 'Alice Johnson',
         invitees: [],
         seedMessageId: DM1_FIRST.id,
       }).huddleId
       h2 = result.current.createTopicFromDm({
         title: 'Second',
-        dmId: 1,
+        dmId: 'alice',
         dmName: 'Alice Johnson',
         invitees: [],
         seedMessageId: DM_CONVERSATIONS[1][0].convs[1].id, // different seed
       }).huddleId
     })
     expect(h1).not.toBe(h2)
-    const all = result.current.findAllHuddlesByOriginDm(1)
+    const all = result.current.findAllHuddlesByOriginDm('alice')
     const runtimeIds = all.map((h) => h.id).filter((id) => id === h1 || id === h2)
     expect(runtimeIds).toContain(h1)
     expect(runtimeIds).toContain(h2)
@@ -166,28 +166,28 @@ describe('findHuddleByOriginDm / findAllHuddlesByOriginDm', () => {
   it('findHuddleByOriginDm returns undefined when no huddle for that DM', () => {
     const { result } = setup()
     // DM id 999 doesn't exist; no static or runtime huddle.
-    expect(result.current.findHuddleByOriginDm(999)).toBeUndefined()
+    expect(result.current.findHuddleByOriginDm('alice')).toBeUndefined()
   })
 
   it('findAllHuddlesByOriginDm returns [] when nothing matches', () => {
     const { result } = setup()
-    expect(result.current.findAllHuddlesByOriginDm(999)).toEqual([])
+    expect(result.current.findAllHuddlesByOriginDm('alice')).toEqual([])
   })
 
   it('after createTopicFromDm, findHuddleByOriginDm finds the runtime huddle', () => {
     const { result } = setup()
-    expect(result.current.findHuddleByOriginDm(1)).toBeUndefined()
+    expect(result.current.findHuddleByOriginDm('alice')).toBeUndefined()
     act(() => {
       result.current.createTopicFromDm({
         title: 'T',
-        dmId: 1,
+        dmId: 'alice',
         dmName: 'Alice Johnson',
         invitees: [],
         seedMessageId: DM1_FIRST.id,
       })
     })
-    const found = result.current.findHuddleByOriginDm(1)
+    const found = result.current.findHuddleByOriginDm('alice')
     expect(found).toBeDefined()
-    expect(found!.originDmId).toBe(1)
+    expect(found!.originDmId).toBe('alice')
   })
 })

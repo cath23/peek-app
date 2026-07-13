@@ -42,7 +42,7 @@ function toHuddle(r: RemoteHuddle, meId: string | undefined): Huddle {
     lastActivity: formatDateLabel(r.lastActivityMs),
     conversation: r.conversation ? toConversationData(r.conversation, undefined, meId) : undefined,
     extraConvs: r.extraConvs.map((c) => toConversationData(c, undefined, meId)),
-    originDmId: r.originDmKey !== undefined ? Number(r.originDmKey) : undefined,
+    originDmId: r.originDmKey,
     promotedAt: r.promotedAtMs !== undefined ? formatPromotedAt(r.promotedAtMs) : undefined,
     promotedAtMs: r.promotedAtMs,
     seedMessageId: r.seedMessageId,
@@ -101,16 +101,16 @@ export function useHuddlesLoading(): boolean {
 }
 
 /** All huddles promoted from a given DM (there can be several). */
-export function usePromotedHuddleLookup(): (dmId: number) => Huddle[] {
+export function usePromotedHuddleLookup(): (dmId: string) => Huddle[] {
   const { findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm } = useTopicStore()
   const o = useTopicMutations()
   const me = useCurrentUser()
   const remote = useRemoteHuddles()
   return useCallback(
-    (dmId: number) => {
+    (dmId: string) => {
       if (!hasConvex) return findAllHuddlesByOriginDm(dmId)
       const fromRemote = (remote ?? [])
-        .filter((h) => h.originDmKey !== undefined && Number(h.originDmKey) === dmId)
+        .filter((h) => h.originDmKey === dmId)
         .map((h) => toHuddle(h, me?.id))
       const remoteIds = new Set(fromRemote.map((h) => h.id))
       const localOnly = findExtraHuddlesByOriginDm(dmId).filter((h) => !remoteIds.has(h.id))

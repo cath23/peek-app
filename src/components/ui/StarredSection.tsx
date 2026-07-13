@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import type { TopicStateType, TopicStateStatus } from './TopicState'
 
 export interface StarredItem {
-  id: number
+  id: string
   name: string
   type?: TopicStateType
   topicStatus?: TopicStateStatus
@@ -16,8 +16,8 @@ export interface StarredItem {
 
 interface StarredSectionProps {
   items?: StarredItem[]
-  selectedId?: number | null
-  onSelect?: (id: number) => void
+  selectedId?: string | null
+  onSelect?: (id: string) => void
   className?: string
 }
 

@@ -3,9 +3,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { StarredSection, type StarredItem } from './StarredSection'
 
 const ITEMS: StarredItem[] = [
-  { id: 1, name: 'Alice Johnson', type: 'DM' },
-  { id: 2, name: 'CI/CD pipeline stuck during build stage', type: 'topic', isUnread: true },
-  { id: 3, name: 'Remote work policy clarifications', type: 'topic', topicStatus: 'resolved' },
+  { id: 'alice', name: 'Alice Johnson', type: 'DM' },
+  { id: '1', name: 'CI/CD pipeline stuck during build stage', type: 'topic', isUnread: true },
+  { id: '4', name: 'Remote work policy clarifications', type: 'topic', topicStatus: 'resolved' },
 ]
 
 const meta = {
@@ -31,7 +31,7 @@ export const Populated: Story = {
 /** Selection follows clicks. */
 export const WithSelection: Story = {
   render: function Render() {
-    const [selectedId, setSelectedId] = useState<number | null>(2)
+    const [selectedId, setSelectedId] = useState<string | null>('1')
     return (
       <div className="w-72">
         <StarredSection items={ITEMS} selectedId={selectedId} onSelect={setSelectedId} />

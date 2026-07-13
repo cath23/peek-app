@@ -10,7 +10,7 @@ const entryLabel = (e: StarredEntry) => (e.kind === 'dm' ? e.name : e.title)
 const entryKey = (e: StarredEntry) => (e.kind === 'dm' ? `dm:${e.dmId}` : `topic:${e.topicId}`)
 
 interface StarDmInput {
-  dmId: number
+  dmId: string
   name: string
   avatarSrc?: string
 }
@@ -23,7 +23,7 @@ interface StarTopicInput {
 
 interface StarredContextValue {
   entries: StarredEntry[]
-  isDmStarred: (dmId: number) => boolean
+  isDmStarred: (dmId: string) => boolean
   isTopicStarred: (topicId: string) => boolean
   toggleDm: (input: StarDmInput) => void
   toggleTopic: (input: StarTopicInput) => void
@@ -62,7 +62,7 @@ export function StarredProvider({ children }: { children: ReactNode }) {
   )
 
   const isDmStarred = useCallback(
-    (dmId: number) => rawEntries.some((e) => e.kind === 'dm' && e.dmId === dmId),
+    (dmId: string) => rawEntries.some((e) => e.kind === 'dm' && e.dmId === dmId),
     [rawEntries],
   )
 
@@ -90,7 +90,7 @@ export function StarredProvider({ children }: { children: ReactNode }) {
       })
       return next
     })
-    void toggleRemote({ kind: 'dm', targetKey: String(dmId), dmPartnerName: name })
+    void toggleRemote({ kind: 'dm', targetKey: dmId })
   }, [rawEntries, toggleRemote, avatarSrcFor])
 
   const toggleTopic = useCallback(({ topicId, title, topicStatus }: StarTopicInput) => {

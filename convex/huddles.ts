@@ -10,7 +10,7 @@
  */
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { aggregateReactions, shape, userNames } from './messages'
+import { aggregateReactions, findDmForPair, resolveUserKey, shape, userNames } from './messages'
 import { viewerId, viewerOrThrow } from './users'
 import type { Doc } from './_generated/dataModel'
 
@@ -64,7 +64,18 @@ export const list = query({
       const conversation = seedMsg ? await shapeFull(seedMsg) : shaped[0]
       const extraConvs = seedMsg ? shaped : shaped.slice(1)
 
+      // The origin DM is addressed by the partner's person key, relative to
+      // the viewer — a member who isn't in that DM simply gets no back-link.
       const originDm = h.originDmId ? await ctx.db.get(h.originDmId) : null
+      let originDmKey: string | undefined
+      if (originDm && me) {
+        const otherId =
+          originDm.userLowId === me ? originDm.userHighId : originDm.userHighId === me ? originDm.userLowId : null
+        if (otherId) {
+          const other = await ctx.db.get(otherId)
+          if (other) originDmKey = other.seedKey ?? (otherId as string)
+        }
+      }
       const lastMs = Math.max(h.createdAt, ...msgs.map((m) => m.createdAt))
       out.push({
         id: h.seedKey ?? (h._id as string),
@@ -75,7 +86,7 @@ export const list = query({
         lastActivityMs: lastMs,
         conversation,
         extraConvs,
-        originDmKey: originDm ? originDm.seedKey ?? (originDm._id as string) : undefined,
+        originDmKey,
         promotedAtMs: h.promotedAt,
         seedMessageId: seedMsg ? seedMsg.seedKey ?? (seedMsg._id as string) : undefined,
       })
@@ -144,8 +155,9 @@ export const createFromDm = mutation({
     const topics = await ctx.db.query('topics').collect()
     const topic = topics.find((t) => t.seedKey === topicKey || (t._id as string) === topicKey)
     if (!topic) throw new Error(`Unknown topic '${topicKey}'`)
-    const dms = await ctx.db.query('dmConversations').collect()
-    const dm = dms.find((d) => d.seedKey === originDmKey || (d._id as string) === originDmKey)
+    const you0 = await viewerOrThrow(ctx)
+    const partner = await resolveUserKey(ctx, originDmKey)
+    const dm = partner ? await findDmForPair(ctx, you0._id, partner._id) : null
     const seedMsg = await ctx.db
       .query('messages')
       .withIndex('by_seedKey', (q) => q.eq('seedKey', seedMessageKey))

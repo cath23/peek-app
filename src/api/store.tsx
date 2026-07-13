@@ -40,14 +40,14 @@ const convexClient = new ConvexReactClient(CONVEX_URL ?? 'https://peek-no-deploy
 
 interface DmRuntimeValue {
   /** Runtime-sent DM messages, keyed by dmId. */
-  sentDmMessages: Record<number, ConversationData[]>
-  setSentDmMessages: Dispatch<SetStateAction<Record<number, ConversationData[]>>>
+  sentDmMessages: Record<string, ConversationData[]>
+  setSentDmMessages: Dispatch<SetStateAction<Record<string, ConversationData[]>>>
 }
 
 const DmRuntimeContext = createContext<DmRuntimeValue | null>(null)
 
 function DmRuntimeProvider({ children }: { children: ReactNode }) {
-  const [sentDmMessages, setSentDmMessages] = useState<Record<number, ConversationData[]>>({})
+  const [sentDmMessages, setSentDmMessages] = useState<Record<string, ConversationData[]>>({})
   const value = useMemo(() => ({ sentDmMessages, setSentDmMessages }), [sentDmMessages])
   return <DmRuntimeContext.Provider value={value}>{children}</DmRuntimeContext.Provider>
 }

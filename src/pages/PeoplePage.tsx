@@ -7,23 +7,20 @@ import { Divider } from '@/components/ui/Divider'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StarredSection, type StarredItem } from '@/components/ui/StarredSection'
 import { useDmConversationView } from '@/components/views/useDmConversationView'
-import { DM_DIRECTORY, dmHasUnread, useCreateTopicFromDm, usePeople, useStarred } from '@/api'
+import { dmHasUnread, useCreateTopicFromDm, usePeople, useStarred } from '@/api'
 import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
 import { useToast } from '@/lib/toast'
 import type { StartTopicResult } from '@/components/CreateTopicDialog'
 
-/** Mock-era DM ids for the seeded conversations (dies with the dmConversations swap). */
-const DM_ID_BY_NAME = new Map(DM_DIRECTORY.map((d) => [d.name, d.dmId]))
-
 const TEAMS = [
-  { id: 10, name: 'Account Management' },
-  { id: 11, name: 'Designers' },
-  { id: 12, name: 'Engineering' },
-  { id: 13, name: 'HR / People Ops' },
-  { id: 14, name: 'Product Management' },
-  { id: 15, name: 'Sales' },
+  { id: 'team-account-management', name: 'Account Management' },
+  { id: 'team-designers', name: 'Designers' },
+  { id: 'team-engineering', name: 'Engineering' },
+  { id: 'team-hr', name: 'HR / People Ops' },
+  { id: 'team-product', name: 'Product Management' },
+  { id: 'team-sales', name: 'Sales' },
 ]
 
 export function PeoplePage() {
@@ -38,25 +35,24 @@ export function PeoplePage() {
   const { state: debug } = useDebug()
   const showUnreads = debug.unreads.people
 
-  // Everyone in the workspace appears in the DM list (ruling 2026-07-08) —
-  // people without a seeded conversation get a synthetic id and simply start
-  // with an empty conversation. undefined = Convex still loading.
+  // Everyone in the workspace appears in the DM list (ruling 2026-07-08).
+  // A DM's id IS the partner's person key (§2.4) — stable for every viewer,
+  // so two people always address the same conversation. (The old scheme minted
+  // ids from list position, which collided across viewers.) People with no
+  // conversation yet simply start empty. undefined = Convex still loading.
   const people = usePeople()
-  const DMS = useMemo(
-    () => people?.map((p, i) => ({ id: DM_ID_BY_NAME.get(p.name) ?? 100 + i, name: p.name })),
-    [people],
-  )
+  const DMS = useMemo(() => people?.map((p) => ({ id: p.id, name: p.name })), [people])
   const ALL_ITEMS = useMemo(() => [...(DMS ?? []), ...TEAMS], [DMS])
   const DM_IDS = useMemo(() => new Set((DMS ?? []).map((d) => d.id)), [DMS])
 
   // URL is the source of truth — derive selection from routeId.
-  const selectedId = routeId ? Number(routeId) : lastDmId ?? null
+  const selectedId: string | null = routeId ?? lastDmId ?? null
 
-  const handleSelect = (id: number) => {
+  const handleSelect = (id: string) => {
     navigate(`/people/${id}`)
   }
 
-  const handleStartTopicFromDm = (dmId: number, dmName: string, seedMessageId: string, data: StartTopicResult) => {
+  const handleStartTopicFromDm = (dmId: string, dmName: string, seedMessageId: string, data: StartTopicResult) => {
     const { topicId } = createTopicFromDm({
       title: data.title,
       dmId,
@@ -92,9 +88,8 @@ export function PeoplePage() {
   const visibleDms = sortedDms.filter((dm) => !starredDmIds.has(dm.id))
 
   useEffect(() => {
-    const numericId = Number(routeId)
-    if (routeId && DM_IDS.has(numericId)) {
-      setLastDmId(numericId)
+    if (routeId && DM_IDS.has(routeId)) {
+      setLastDmId(routeId)
     } else if (!routeId && lastDmId != null) {
       // Returning to /people with no id — restore last selection in URL.
       navigate(`/people/${lastDmId}`, { replace: true })

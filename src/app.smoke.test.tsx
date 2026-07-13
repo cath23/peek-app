@@ -61,7 +61,7 @@ describe('app smoke (seam wiring)', () => {
   })
 
   it('renders a DM conversation with merged reply counts', () => {
-    renderApp('/people/1')
+    renderApp('/people/alice')  // DMs are keyed by the partner's person key (§2.4)
     expect(present('Alice Johnson')).toBeGreaterThan(0)
     // Token-free line (reference chips like #48821 split text nodes)
     expect(present(/EU completions dropped 28% in 5 days/)).toBeGreaterThan(0)

@@ -12,7 +12,7 @@ export type UrgentItem =
   | {
       id: string
       kind: 'dm'
-      dmId: number
+      dmId: string
       name: string
       avatarSrc?: string
     }
@@ -28,7 +28,7 @@ export type StarredEntry =
   | {
       id: string
       kind: 'dm'
-      dmId: number
+      dmId: string
       name: string
       avatarSrc?: string
       isUnread?: boolean
@@ -43,8 +43,8 @@ export type StarredEntry =
     }
 
 export const URGENT_ITEMS: UrgentItem[] = [
-  { id: 'urg_1', kind: 'dm', dmId: 2, name: 'Daniel Stanton' },
-  { id: 'urg_2', kind: 'dm', dmId: 3, name: 'Hallie Pratt' },
+  { id: 'urg_1', kind: 'dm', dmId: 'daniel', name: 'Daniel Stanton' },
+  { id: 'urg_2', kind: 'dm', dmId: 'hallie', name: 'Hallie Pratt' },
 ]
 
 export const OPEN_WORK_ITEMS: OpenWorkItem[] = [
@@ -63,8 +63,8 @@ export const OPEN_WORK_ITEMS: OpenWorkItem[] = [
 ]
 
 export const STARRED_ENTRIES: StarredEntry[] = [
-  { id: 'star_1', kind: 'dm', dmId: 4, name: 'Greg Bothman' },
-  { id: 'star_2', kind: 'dm', dmId: 5, name: 'Juan Foley' },
+  { id: 'star_1', kind: 'dm', dmId: 'greg', name: 'Greg Bothman' },
+  { id: 'star_2', kind: 'dm', dmId: 'juan', name: 'Juan Foley' },
   {
     id: 'star_3',
     kind: 'topic',

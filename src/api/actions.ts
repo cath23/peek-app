@@ -48,7 +48,6 @@ export function usePeekActions() {
     parentKind: 'topic' | 'dm' | 'huddle',
     parentKey: string,
     msg: ConversationData,
-    dmPartnerName?: string,
   ) => {
     if (!hasConvex) return
     void sendRemote({
@@ -60,7 +59,6 @@ export function usePeekActions() {
       resolved: msg.isResolved,
       resolutionMessage: msg.resolutionMessage,
       attachments: msg.attachments,
-      dmPartnerName,
     })
   }
 
@@ -102,11 +100,12 @@ export function usePeekActions() {
       }
     },
 
-    sendDmMessage(dmId: number, payload: SendMessagePayload, dmPartnerName?: string) {
+    /** `dmId` is the partner's person key — the server resolves the pair (§2.4). */
+    sendDmMessage(dmId: string, payload: SendMessagePayload) {
       if (payload.text || payload.attachments?.length) {
         const newMsg = buildMessage(payload)
         setSentDmMessages((prev) => ({ ...prev, [dmId]: [...(prev[dmId] ?? []), newMsg] }))
-        persistMessage('dm', String(dmId), newMsg, dmPartnerName)
+        persistMessage('dm', dmId, newMsg)
       } else if (payload.resolution) {
         const message = payload.resolution.message
         setSentDmMessages((prev) => ({ ...prev, [dmId]: resolveLastSent(prev[dmId] ?? [], message) }))
@@ -133,7 +132,7 @@ export function usePeekActions() {
       if (hasConvex) void removeRemote({ key: messageId })
     },
 
-    deleteDmMessage(dmId: number, messageId: string) {
+    deleteDmMessage(dmId: string, messageId: string) {
       setSentDmMessages((prev) => ({ ...prev, [dmId]: (prev[dmId] ?? []).filter((msg) => msg.id !== messageId) }))
       m.setDeletedIds((prev) => new Set([...prev, messageId]))
       if (hasConvex) void removeRemote({ key: messageId })

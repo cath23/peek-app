@@ -65,7 +65,7 @@ export function useIsTopicResolved(): (topicId: string) => boolean {
 
 export interface CreateTopicFromDmInput {
   title: string
-  dmId: number
+  dmId: string
   dmName: string
   invitees: Person[]
   seedMessageId: string

@@ -54,15 +54,16 @@ const SEED_YOU = { seedKey: 'you', name: 'Cath' } as const
 export const DEMO_EMAIL = 'demo@peek.dev'
 const DEMO_PASSWORD = 'Peek-demo-1'
 
-/** Mock numeric DM id → partner (mirrors src/api/directory.ts). */
-const DM_SEED: Array<{ dmId: number; name: string }> = [
-  { dmId: 1, name: 'Alice Johnson' },
-  { dmId: 2, name: 'Daniel Stanton' },
-  { dmId: 3, name: 'Hallie Pratt' },
-  { dmId: 4, name: 'Greg Bothman' },
-  { dmId: 5, name: 'Juan Foley' },
-  { dmId: 6, name: 'Amie Miles' },
-  { dmId: 7, name: 'Zack Bright' },
+/** Mock conversation number → partner (mirrors src/api/directory.ts).
+ *  `key` is the partner's person key — the DM's real id (§2.4). */
+const DM_SEED: Array<{ mockConvId: number; key: string; name: string }> = [
+  { mockConvId: 1, key: 'alice',  name: 'Alice Johnson' },
+  { mockConvId: 2, key: 'daniel', name: 'Daniel Stanton' },
+  { mockConvId: 3, key: 'hallie', name: 'Hallie Pratt' },
+  { mockConvId: 4, key: 'greg',   name: 'Greg Bothman' },
+  { mockConvId: 5, key: 'juan',   name: 'Juan Foley' },
+  { mockConvId: 6, key: 'amie',   name: 'Amie Miles' },
+  { mockConvId: 7, key: 'zack',   name: 'Zack Bright' },
 ]
 
 const ALL_TABLES: TableNames[] = [
@@ -203,7 +204,9 @@ export const seed = internalMutation({
 
     // ── DM conversations + their messages ──
     const dmIdByMock: Record<number, Id<'dmConversations'>> = {}
-    for (const { dmId, name } of DM_SEED) {
+    // Person key → that person's DM with the seed user (the §2.4 addressing).
+    const dmIdByPerson: Record<string, Id<'dmConversations'>> = {}
+    for (const { mockConvId: dmId, key: personKey, name } of DM_SEED) {
       const otherId = userIdOf(name)
       const [userLowId, userHighId] =
         (youId as string) < (otherId as string) ? [youId, otherId] : [otherId, youId]
@@ -220,6 +223,7 @@ export const seed = internalMutation({
         seedKey: String(dmId),
       })
       dmIdByMock[dmId] = convId
+      dmIdByPerson[personKey] = convId
       containerIds.push(convId)
       for (const group of groups) {
         const day = resolveDateLabel(group.dateLabel, anchor)
@@ -297,7 +301,7 @@ export const seed = internalMutation({
       await ctx.db.insert('stars', {
         userId: youId,
         kind: e.kind,
-        targetId: e.kind === 'dm' ? dmIdByMock[e.dmId] : topicIdByMock[e.topicId],
+        targetId: e.kind === 'dm' ? dmIdByPerson[e.dmId] : topicIdByMock[e.topicId],
         createdAt: anchor - i,
       })
     }
@@ -306,9 +310,7 @@ export const seed = internalMutation({
       // Schema fix (§2.12): the mock DM item has only authorName — map to
       // that person's DM conversation.
       const targetId =
-        item.kind === 'topic'
-          ? topicIdByMock[item.topicId]
-          : dmIdByMock[DM_SEED.find((d) => d.name === item.authorName)!.dmId]
+        item.kind === 'topic' ? topicIdByMock[item.topicId] : dmIdByPerson[item.dmId]
       await ctx.db.insert('screenerItems', {
         userId: youId,
         kind: item.kind,

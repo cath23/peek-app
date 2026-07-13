@@ -9,6 +9,8 @@ export type ScreenerItem =
   | {
       id: string
       kind: 'dm'
+      /** The partner's person key — the DM's id (§2.4). */
+      dmId: string
       authorName: string
       authorAvatarSrc?: string
       preview: string
@@ -26,6 +28,7 @@ export const SCREENER_ITEMS: ScreenerItem[] = [
   {
     id: 'sc_2',
     kind: 'dm',
+    dmId: 'amie',
     authorName: 'Amie Miles',
     preview:
       "Q4 platform allocation needs your sign-off by Friday - we're trading two weeks of payments work for the auth migration. Want to make sure it lands with you before I bring it to leadership.",

@@ -31,7 +31,7 @@ import type { StartTopicResult } from '@/components/CreateTopicDialog'
 type SectionKey = 'urgent' | 'openWork' | 'starred'
 
 type Selected =
-  | { kind: 'dm'; dmId: number; dmName: string; section: SectionKey }
+  | { kind: 'dm'; dmId: string; dmName: string; section: SectionKey }
   | { kind: 'topic'; topicId: string; topicTitle: string; topicResolved: boolean; section: SectionKey }
 
 export function DeskPage() {
@@ -108,7 +108,7 @@ export function DeskPage() {
     if (!topic) return
     setSelected({ kind: 'topic', topicId, topicTitle: topic.title, topicResolved: isTopicResolved(topicId), section })
   }
-  const selectDm = (dmId: number, fallbackName: string, section: SectionKey) => {
+  const selectDm = (dmId: string, fallbackName: string, section: SectionKey) => {
     const dmName = dmNameById(dmId) ?? fallbackName
     setSelected({ kind: 'dm', dmId, dmName, section })
   }
@@ -143,7 +143,7 @@ export function DeskPage() {
     }
   }
 
-  const handleStartTopicFromDm = (dmId: number, dmName: string, seedMessageId: string, data: StartTopicResult) => {
+  const handleStartTopicFromDm = (dmId: string, dmName: string, seedMessageId: string, data: StartTopicResult) => {
     const { topicId } = createTopicFromDm({
       title: data.title,
       dmId,

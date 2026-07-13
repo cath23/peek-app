@@ -22,14 +22,14 @@ import { useLastSelection } from '@/lib/lastSelection'
 import type { StartTopicResult } from '@/components/CreateTopicDialog'
 
 interface UseDmConversationViewArgs {
-  dmId: number | null
+  dmId: string | null
   dmName?: string
   /** Override the default toggleDm-and-stay behavior (e.g. Desk wants to clear selection on unstar) */
   onToggleStarred?: () => void
   /** When false, suppress non-urgent hasNewMessage/hasNewReply flags. Urgent flags always show. */
   showUnreads?: boolean
   /** Promote the current DM into the first huddle of a new topic. */
-  onStartTopicFromDm?: (dmId: number, dmName: string, seedMessageId: string, data: StartTopicResult) => void
+  onStartTopicFromDm?: (dmId: string, dmName: string, seedMessageId: string, data: StartTopicResult) => void
 }
 
 interface ViewSlots {
@@ -113,8 +113,9 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
   const handleSend = ({ text, resolution, attachments }: SendPayload) => {
     if (dmId == null) return
     // DM messages never carry a highlight (matches pre-seam behavior).
-    // dmName lets the backend create the conversation on first message.
-    actions.sendDmMessage(dmId, { text, resolution, attachments }, dmName)
+    // dmId is the partner's person key — the server resolves the pair and
+    // creates the conversation on the first message (§2.4).
+    actions.sendDmMessage(dmId, { text, resolution, attachments })
   }
 
   const handleDelete = (id: string) => {
@@ -125,7 +126,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
   // Close thread when switching DMs — but skip the initial mount, since we may have
   // just consumed a pendingDmThreadId from the huddle's "Open original" button and
   // setting threadConvId back to null would clobber that.
-  const prevDmIdRef = useRef<number | null>(dmId)
+  const prevDmIdRef = useRef<string | null>(dmId)
   useEffect(() => {
     if (prevDmIdRef.current !== dmId) {
       // genuine DM switch (not initial bind) — close any open thread

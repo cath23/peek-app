@@ -15,12 +15,55 @@ import type { Doc, Id } from './_generated/dataModel'
 
 const parentKindArg = v.union(v.literal('topic'), v.literal('dm'), v.literal('huddle'))
 
+/** Resolve a person key (seedKey like 'alice', or a users _id) to the user. */
+export async function resolveUserKey(
+  ctx: QueryCtx | MutationCtx,
+  key: string,
+): Promise<Doc<'users'> | null> {
+  const bySeed = await ctx.db
+    .query('users')
+    .withIndex('by_seedKey', (q) => q.eq('seedKey', key))
+    .unique()
+  if (bySeed) return bySeed
+  const normalized = ctx.db.normalizeId('users', key)
+  return normalized ? await ctx.db.get(normalized) : null
+}
+
+/**
+ * The one canonical DM conversation for a pair of users (§2.4).
+ *
+ * DMs are addressed by the PARTNER's person key, never by a client-minted
+ * conversation id: the pair is ordered canonically and looked up on
+ * `by_pair`, so both people always land on the same row and no client can
+ * name a conversation it isn't part of.
+ */
+export async function findDmForPair(
+  ctx: QueryCtx | MutationCtx,
+  aId: Id<'users'>,
+  bId: Id<'users'>,
+) {
+  const [userLowId, userHighId] = (aId as string) < (bId as string) ? [aId, bId] : [bId, aId]
+  return ctx.db
+    .query('dmConversations')
+    .withIndex('by_pair', (q) => q.eq('userLowId', userLowId).eq('userHighId', userHighId))
+    .unique()
+}
+
+/** `key` is a topic/huddle seedKey-or-_id, or — for DMs — the partner's person key. */
 async function resolveParentId(
   ctx: QueryCtx | MutationCtx,
   kind: 'topic' | 'dm' | 'huddle',
   key: string,
+  viewer: Id<'users'> | null,
 ): Promise<string | null> {
-  const table = kind === 'topic' ? 'topics' : kind === 'dm' ? 'dmConversations' : 'huddles'
+  if (kind === 'dm') {
+    if (!viewer) return null
+    const partner = await resolveUserKey(ctx, key)
+    if (!partner) return null
+    const dm = await findDmForPair(ctx, viewer, partner._id)
+    return dm ? (dm._id as string) : null
+  }
+  const table = kind === 'topic' ? 'topics' : 'huddles'
   const rows = await ctx.db.query(table).collect()
   const hit = rows.find((r) => r.seedKey === key || (r._id as string) === key)
   return hit ? (hit._id as string) : null
@@ -80,14 +123,14 @@ export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, nam
 export const list = query({
   args: { parentKind: parentKindArg, parentKey: v.string() },
   handler: async (ctx, { parentKind, parentKey }) => {
-    const parentId = await resolveParentId(ctx, parentKind, parentKey)
+    const me = await viewerId(ctx)
+    const parentId = await resolveParentId(ctx, parentKind, parentKey, me)
     if (!parentId) return []
     const rows = await ctx.db
       .query('messages')
       .withIndex('by_parent', (q) => q.eq('parentKind', parentKind).eq('parentId', parentId))
       .collect()
     const names = await userNames(ctx)
-    const me = await viewerId(ctx)
     const shaped = []
     for (const m of rows.sort((a, b) => a.createdAt - b.createdAt)) {
       const replies = await ctx.db
@@ -161,23 +204,20 @@ export const send = mutation({
     resolved: v.optional(v.boolean()),
     resolutionMessage: v.optional(v.string()),
     attachments: v.optional(v.array(v.string())),
-    /** First message to a person with no conversation yet: the DM record is
-     *  created on demand for this partner (name lookup — Phase 3 makes it an id). */
-    dmPartnerName: v.optional(v.string()),
   },
-  handler: async (ctx, { parentKind, parentKey, seedKey, body, highlightType, resolved, resolutionMessage, attachments, dmPartnerName }) => {
+  handler: async (ctx, { parentKind, parentKey, seedKey, body, highlightType, resolved, resolutionMessage, attachments }) => {
     const you = await viewerOrThrow(ctx)
-    let parentId = await resolveParentId(ctx, parentKind, parentKey)
-    if (!parentId && parentKind === 'dm' && dmPartnerName) {
-      const partner = (await ctx.db.query('users').collect()).find((u) => u.name === dmPartnerName)
-      if (partner) {
+    let parentId = await resolveParentId(ctx, parentKind, parentKey, you._id)
+    // First DM to someone: create the pair's conversation on demand.
+    if (!parentId && parentKind === 'dm') {
+      const partner = await resolveUserKey(ctx, parentKey)
+      if (partner && partner._id !== you._id) {
         const [userLowId, userHighId] =
           (you._id as string) < (partner._id as string) ? [you._id, partner._id] : [partner._id, you._id]
         parentId = await ctx.db.insert('dmConversations', {
           userLowId,
           userHighId,
           createdAt: Date.now(),
-          seedKey: parentKey,
         })
       }
     }

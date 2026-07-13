@@ -10,6 +10,7 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { TOPIC_CONVERSATIONS } from '@/data/topicData'
 import { DM_CONVERSATIONS } from '@/data/dmData'
+import { mockConvIdFor } from './directory'
 import { REPLIES } from '@/data/replyData'
 import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useTopicStore } from '@/api/internal/topicStore'
@@ -249,7 +250,7 @@ export interface DmMessages {
   isLoading: boolean
 }
 
-export function useDmMessages(dmId: number | null): DmMessages {
+export function useDmMessages(dmId: string | null): DmMessages {
   const o = useTopicMutations()
   const { sentDmMessages } = useDmRuntime()
   const me = useCurrentUser()
@@ -260,17 +261,21 @@ export function useDmMessages(dmId: number | null): DmMessages {
   if (dmId == null) return { groups: [], sent: [], isLoading: false }
 
   const sentLocal = sentDmMessages[dmId] ?? []
+  // The mock fixture stores DMs under legacy conversation numbers; the seam
+  // speaks person keys (§2.4).
+  const mockConvId = mockConvIdFor(dmId)
+  const mockGroups = mockConvId === undefined ? undefined : DM_CONVERSATIONS[mockConvId]
   let groups: ConvGroup[]
   let sent: ConversationData[]
   if (hasConvex) {
     if (remote === undefined || me === undefined) return { groups: [], sent: [], isLoading: true }
-    const mockById = mockMessagesById(DM_CONVERSATIONS[dmId])
+    const mockById = mockMessagesById(mockGroups)
     const rows = remote.filter((r) => !o.deletedIds.has(r.id))
     groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, mockById.get(r.id), me.id), o, false))
     const remoteIds = new Set(remote.map((r) => r.id))
     sent = sentLocal.filter((c) => !remoteIds.has(c.id)).map((c) => mergeConv(c, o))
   } else {
-    groups = (DM_CONVERSATIONS[dmId] ?? [])
+    groups = (mockGroups ?? [])
       .map((g) => ({
         dateLabel: g.dateLabel,
         convs: g.convs.filter((c) => !o.deletedIds.has(c.id)).map((c) => mergeConv(c, o)),

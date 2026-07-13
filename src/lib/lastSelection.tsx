@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useMemo, type ReactNode } from 're
 
 interface LastSelectionState {
   topicId: string | null
-  dmId: number | null
+  dmId: string | null
   /** One-shot: when set, the next mounted DM view should auto-open this thread, then clear. */
   pendingDmThreadId: string | null
   /** One-shot: when set, the topic view matching topicId should auto-open this thread, then clear.
@@ -12,7 +12,7 @@ interface LastSelectionState {
 
 interface LastSelectionValue extends LastSelectionState {
   setLastTopicId: (id: string | null) => void
-  setLastDmId: (id: number | null) => void
+  setLastDmId: (id: string | null) => void
   setPendingDmThreadId: (id: string | null) => void
   setPendingTopicThread: (v: { topicId: string; convId: string } | null) => void
 }
@@ -21,7 +21,7 @@ const LastSelectionContext = createContext<LastSelectionValue | null>(null)
 
 export function LastSelectionProvider({ children }: { children: ReactNode }) {
   const [topicId, setLastTopicId] = useState<string | null>(null)
-  const [dmId, setLastDmId] = useState<number | null>(null)
+  const [dmId, setLastDmId] = useState<string | null>(null)
   const [pendingDmThreadId, setPendingDmThreadId] = useState<string | null>(null)
   const [pendingTopicThread, setPendingTopicThread] = useState<{ topicId: string; convId: string } | null>(null)
 

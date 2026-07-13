@@ -2,11 +2,12 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 import { TOPICS, type Topic, type ConversationData } from '@/data/topicData'
 import { TOPIC_HUDDLES, type Huddle } from '@/data/huddleData'
 import { DM_CONVERSATIONS } from '@/data/dmData'
+import { mockConvIdFor } from '@/api/directory'
 import type { Person } from '@/data/peopleData'
 
 interface CreateTopicFromDmInput {
   title: string
-  dmId: number
+  dmId: string
   dmName: string
   invitees: Person[]
   /** The DM message id that triggered the promotion. Used to render the huddle anchor above this specific message. */
@@ -31,13 +32,13 @@ interface TopicStoreValue {
    *  list to cover the optimistic window. */
   getExtraHuddlesForTopic: (topicId: string) => Huddle[]
   /** Runtime-only variant of findAllHuddlesByOriginDm (optimistic window). */
-  findExtraHuddlesByOriginDm: (dmId: number) => Huddle[]
+  findExtraHuddlesByOriginDm: (dmId: string) => Huddle[]
   /** Look up a topic by id. */
   findTopic: (topicId: string) => Topic | undefined
   /** Find the huddle that was promoted from the given DM (searches static + runtime). Returns the first match if multiple exist. */
-  findHuddleByOriginDm: (dmId: number) => Huddle | undefined
+  findHuddleByOriginDm: (dmId: string) => Huddle | undefined
   /** Find every huddle that was promoted from the given DM (searches static + runtime). */
-  findAllHuddlesByOriginDm: (dmId: number) => Huddle[]
+  findAllHuddlesByOriginDm: (dmId: string) => Huddle[]
   /** Promote a DM into the first huddle of a freshly created topic. Returns the new topic id. */
   createTopicFromDm: (input: CreateTopicFromDmInput) => CreateTopicFromDmResult
 }
@@ -73,8 +74,10 @@ function formatTime(d: Date): string {
   return `${h12}:${String(mm).padStart(2, '0')} ${ampm}`
 }
 
-function findDmMessageById(dmId: number, messageId: string): ConversationData | undefined {
-  const groups = DM_CONVERSATIONS[dmId]
+function findDmMessageById(dmId: string, messageId: string): ConversationData | undefined {
+  // The mock fixture is keyed by legacy conversation numbers (§2.4).
+  const convId = mockConvIdFor(dmId)
+  const groups = convId === undefined ? undefined : DM_CONVERSATIONS[convId]
   if (!groups) return undefined
   for (const g of groups) {
     const found = g.convs.find((c) => c.id === messageId)
@@ -105,7 +108,7 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const findExtraHuddlesByOriginDm = useCallback(
-    (dmId: number): Huddle[] => {
+    (dmId: string): Huddle[] => {
       const result: Huddle[] = []
       for (const huddles of Object.values(extraHuddles)) {
         for (const h of huddles) {
@@ -118,7 +121,7 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const findAllHuddlesByOriginDm = useCallback(
-    (dmId: number): Huddle[] => {
+    (dmId: string): Huddle[] => {
       const result: Huddle[] = []
       for (const huddles of Object.values(extraHuddles)) {
         for (const h of huddles) {
@@ -136,7 +139,7 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const findHuddleByOriginDm = useCallback(
-    (dmId: number): Huddle | undefined => findAllHuddlesByOriginDm(dmId)[0],
+    (dmId: string): Huddle | undefined => findAllHuddlesByOriginDm(dmId)[0],
     [findAllHuddlesByOriginDm],
   )
 
