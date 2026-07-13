@@ -437,8 +437,31 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       Vercel apps — `peek-demo` (seeded + demo login) and
       `peek-develop` (empty; the real app)
 
-### Phase 4 — Multi-user *(coarse)*
-- [ ] Shared workspace · live readState · two-browser QA pass
+### Phase 4 — Multi-user *(2026-07-09)*
+- [x] **DM identity (§2.4)** — a DM is addressed by the PARTNER's person
+      key; the server resolves the canonical (viewer, partner) pair on
+      `by_pair`. Fixes a cross-talk/privacy bug: PeoplePage minted DM ids
+      as `100 + index of the viewer's People list` but stored them as a
+      GLOBAL key, so with 3+ users B's DM to C could resolve to A's
+      conversation with C. Synthetic ids gone; `/people/1` → `/people/alice`.
+      Verified with three real users in three browsers: same key for C from
+      both senders, separate conversations, no leak either way — and live
+      sync with no reload.
+- [x] **readState (§4.3)** — TWO watermarks, revising the earlier
+      "one per container" ruling: opening a topic/DM (after a 1.5s dwell)
+      clears `hasNewMessage`; only opening a message's thread panel clears
+      `hasNewReply`/`isNew`. All three derived per viewer; the mock unread
+      bridge is gone. Unread dots on by default (they were a debug toggle
+      while fake).
+- [x] **Screener auto-fill (§2.12)** — DMs to you; topics you were added to
+      but never opened; @mentions (membership not required). One row per
+      conversation, refreshed not duplicated. Urgent (`!@`) diverts to Desk
+      Urgent and never screens. "Later" survives a refresh. Hover a row →
+      preview card with the triggering message + recent replies.
+- [x] **@mentions** suggest real workspace people (were a static mock list);
+      the seam feeds the Tiptap plugins a directory snapshot and rebuilds
+      the render-time regex.
+- [ ] Manual two-browser QA pass (user)
 
 ### Phase 5 — Hardening *(coarse)*
 - [ ] Prod deploy + env wiring · pagination · uploads · error boundaries
@@ -459,6 +482,17 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
   per-user `deskOpenWork` table until Phase 4; screener previews are stored
   (bespoke text). Two extra avatar-less users (Carlos Rivera, Maya Patel)
   must be seeded — static huddle members reference them.
+- 2026-07-09 — **Phase 4 rulings (user)**. (1) **Unread has two signals and
+  they clear independently** — this REVISES the 2026-07-08 "one readState
+  watermark per container": a first message becomes read when you open the
+  topic/DM and linger a second or two; a new REPLY only becomes read when
+  you open that message's thread panel. Two watermarks (container + thread).
+  (2) **Screener rules**: all DMs to you; topics you were just added to that
+  have a new message; anything that mentions you. Mentioned + urgent → Urgent
+  section, not the Screener. New replies in a thread you were mentioned in
+  refresh that Screener item. NOT every message/reply — "the Screener is just
+  a preview". (3) One row per conversation, never duplicated. (4) Hovering a
+  Screener row shows a **new hover card** with more of the thread/message.
 - 2026-07-08 — Two user rulings folded into the spec: (1) unread = the tail
   of a topic/DM since last visit — one readState watermark per container, no
   per-thread read state (a few contradictory mock flags render as unread;
