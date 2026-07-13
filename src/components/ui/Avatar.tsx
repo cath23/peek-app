@@ -1,6 +1,6 @@
 import { IconUser } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
-import { avatarFor } from '@/api'
+import { useAvatarSrc } from '@/api'
 
 interface AvatarProps {
   src?: string
@@ -12,7 +12,10 @@ interface AvatarProps {
 }
 
 export function Avatar({ src, name, alt = '', size = 36, className }: AvatarProps) {
-  const resolved = src ?? avatarFor(name) ?? avatarFor(alt)
+  // Uploaded avatar > seeded demo portrait > silhouette. Outside a
+  // PeekDataProvider (Storybook, tests) this falls back to the mock portraits.
+  const avatarSrcFor = useAvatarSrc()
+  const resolved = src ?? avatarSrcFor(name) ?? avatarSrcFor(alt)
   return (
     <div
       className={cn('rounded-sm overflow-hidden shrink-0 bg-bg-inset', className)}

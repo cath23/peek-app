@@ -418,8 +418,21 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       Avatar falls back to a generic silhouette for unknown users
       (ruling); known gap: the viewer's own avatar still resolves to
       the mock portrait until profile uploads land
-- [ ] Profile: view/edit (name, role, avatar upload via Convex file
-      storage) + sign-out in the top-bar user menu
+- [x] Profile (2026-07-09): `ProfileDialog` from the avatar menu — edit
+      name + role, upload/remove avatar (real Convex file storage:
+      `generateAvatarUploadUrl` → POST → `setAvatar`; ≤5 MB, images
+      only). Email is read-only (it's the sign-in identity). Sign-out +
+      identity already in that menu; avatar button got an accessible
+      name ("Account menu").
+- [x] Avatar registry (2026-07-09): one lookup for the whole app —
+      **uploaded avatar > seeded demo portrait > silhouette**. It's a
+      context with a MOCK DEFAULT (`src/api/avatars.tsx`), so `Avatar`
+      stays a dumb primitive and Storybook/tests render with no provider
+      exactly as before. Fixes the known gap: a real sign-up no longer
+      borrows the demo fixture's portrait for their own messages.
+      Screener/Desk/Starred DM avatars route through it too.
+      Runtime-verified: fresh user = silhouette → upload propagates
+      live to top bar + message cards + People; demo user unaffected.
 - [ ] **USER STEP — instances**: two Convex prod deployments + two
       Vercel apps — `peek-demo` (seeded + demo login) and
       `peek-develop` (empty; the real app)

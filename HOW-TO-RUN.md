@@ -15,8 +15,12 @@ if something here doesn't match what you see, ask Claude to update it.*
   saved**. Refresh, restart, come back tomorrow: still there.
 - **Sign-in exists now (Phase 3).** Sign up with name + email + password
   and you're in immediately — no verification email, nothing external.
-  Sign out from the menu behind your avatar (top right). Everything you
-  see and send belongs to the account you're signed in as.
+  Everything you see and send belongs to the account you're signed in as.
+- **Your profile** lives behind your avatar (top right) → **Edit profile**:
+  change your name and role, and upload a photo (up to 5 MB). It appears
+  on your messages and in other people's People list straight away.
+  Without a photo you get a neutral silhouette. **Sign out** is in the
+  same menu.
 
 ## Running the app
 

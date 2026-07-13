@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { IconMenu2, IconHelpCircle, IconSun, IconMoon, IconDeviceDesktop, IconCheck, IconLogout } from '@tabler/icons-react'
+import { IconMenu2, IconHelpCircle, IconSun, IconMoon, IconDeviceDesktop, IconCheck, IconLogout, IconUser } from '@tabler/icons-react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { IconButton } from './ui/IconButton'
 import { Avatar } from './ui/Avatar'
 import { SearchInput } from './ui/SearchInput'
 import { DebugMenu } from './DebugMenu'
+import { ProfileDialog } from './ProfileDialog'
 import { useTheme, type Theme } from '@/lib/theme'
-import { hasConvex, useCurrentUser } from '@/api'
-import avatarSrc from '@/assets/avatar.png'
+import { hasConvex, useCurrentUser, CURRENT_USER_NAME } from '@/api'
 
 interface TopBarProps {
   onMenuToggle?: () => void
@@ -28,6 +28,7 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
   const me = useCurrentUser()
   const [menuOpen, setMenuOpen] = useState(false)
   const [debugOpen, setDebugOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const avatarRef = useRef<HTMLButtonElement>(null)
   const helpRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -86,9 +87,10 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
         <button
           ref={avatarRef}
           onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Account menu"
           className="rounded-full cursor-pointer focus:outline-none"
         >
-          <Avatar size={36} src={avatarSrc} alt="Your avatar" />
+          <Avatar size={36} name={CURRENT_USER_NAME} alt="Your avatar" />
         </button>
       </div>
 
@@ -105,6 +107,17 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
               <div className="flex flex-col gap-0.5 px-3 py-2 min-w-[160px]">
                 <span className="text-[14px] font-medium leading-[1.4] text-text-primary">{me.name}</span>
                 {me.email && <span className="text-[12px] leading-[1.2] text-text-secondary">{me.email}</span>}
+              </div>
+              <div
+                className="flex items-center gap-3 h-9 px-3 rounded-lg cursor-pointer transition-colors hover:bg-bg-hover min-w-[160px]"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  setMenuOpen(false)
+                  setProfileOpen(true)
+                }}
+              >
+                <IconUser size={16} stroke={1.5} className="text-text-secondary shrink-0" />
+                <span className="flex-1 text-[14px] font-normal leading-[1.4] text-text-primary">Edit profile</span>
               </div>
               <div className="border-t border-border-subtle my-1" />
             </>
@@ -156,6 +169,9 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
       {debugOpen && (
         <DebugMenu anchorEl={helpRef.current} onClose={() => setDebugOpen(false)} />
       )}
+
+      {/* Profile */}
+      {profileOpen && <ProfileDialog onClose={() => setProfileOpen(false)} />}
     </div>
   )
 }

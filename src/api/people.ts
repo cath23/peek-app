@@ -2,8 +2,9 @@
  * People reads — the workspace directory.
  *
  * Convex-backed when a deployment is configured; static mocks otherwise.
- * Avatars stay client-side (name-keyed `avatarFor`) until Phase 3 profiles,
- * so the Convex rows are joined to their PNGs here.
+ * `avatarSrc` prefers the person's uploaded avatar and falls back to the
+ * seeded demo portrait (name-keyed `avatarFor`), so the demo dataset keeps
+ * its faces while real sign-ups show theirs.
  */
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
@@ -20,5 +21,10 @@ export function usePeople(): Person[] | undefined {
   const remote = useQuery(api.people.list, hasConvex ? {} : 'skip')
   if (!hasConvex) return MOCK_PEOPLE
   if (remote === undefined) return undefined
-  return remote.map((p) => ({ ...p, avatarSrc: avatarFor(p.name) }))
+  return remote.map((p) => ({
+    id: p.id,
+    name: p.name,
+    role: p.role,
+    avatarSrc: p.avatarUrl ?? avatarFor(p.name),
+  }))
 }

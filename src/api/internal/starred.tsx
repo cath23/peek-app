@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { STARRED_ENTRIES, type StarredEntry } from '@/data/deskData'
-import { avatarFor } from '@/data/peopleData'
+import { useAvatarSrc } from '@/api/avatars'
 import { hasConvex } from '@/api/store'
 import type { TopicStateStatus } from '@/components/ui/TopicState'
 
@@ -34,6 +34,7 @@ interface StarredContextValue {
 const StarredContext = createContext<StarredContextValue | null>(null)
 
 export function StarredProvider({ children }: { children: ReactNode }) {
+  const avatarSrcFor = useAvatarSrc()
   // Mock-mode state (full source of truth without a deployment).
   const [mockEntries, setMockEntries] = useState<StarredEntry[]>(STARRED_ENTRIES)
   // Convex-mode optimistic overlay: session toggles applied over the query
@@ -45,7 +46,7 @@ export function StarredProvider({ children }: { children: ReactNode }) {
   const rawEntries = useMemo<StarredEntry[]>(() => {
     if (!hasConvex) return mockEntries
     const base: StarredEntry[] = (remote ?? []).map((e) =>
-      e.kind === 'dm' ? { ...e, avatarSrc: avatarFor(e.name) } : e,
+      e.kind === 'dm' ? { ...e, avatarSrc: avatarSrcFor(e.name) } : e,
     )
     const baseKeys = new Set(base.map(entryKey))
     const kept = base.filter((e) => pending.get(entryKey(e))?.starred !== false)
@@ -53,7 +54,7 @@ export function StarredProvider({ children }: { children: ReactNode }) {
       .filter((p) => p.starred && p.entry && !baseKeys.has(entryKey(p.entry)))
       .map((p) => p.entry!)
     return [...kept, ...added]
-  }, [mockEntries, remote, pending])
+  }, [mockEntries, remote, pending, avatarSrcFor])
 
   const entries = useMemo(
     () => [...rawEntries].sort((a, b) => entryLabel(a).localeCompare(entryLabel(b), undefined, { sensitivity: 'base' })),
@@ -85,12 +86,12 @@ export function StarredProvider({ children }: { children: ReactNode }) {
       const next = new Map(prev)
       next.set(key, {
         starred: !currentlyStarred,
-        entry: { id: `star_dm_${dmId}`, kind: 'dm', dmId, name, avatarSrc: avatarSrc ?? avatarFor(name) },
+        entry: { id: `star_dm_${dmId}`, kind: 'dm', dmId, name, avatarSrc: avatarSrc ?? avatarSrcFor(name) },
       })
       return next
     })
     void toggleRemote({ kind: 'dm', targetKey: String(dmId), dmPartnerName: name })
-  }, [rawEntries, toggleRemote])
+  }, [rawEntries, toggleRemote, avatarSrcFor])
 
   const toggleTopic = useCallback(({ topicId, title, topicStatus }: StarTopicInput) => {
     if (!hasConvex) {

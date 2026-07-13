@@ -23,9 +23,13 @@ export interface CurrentUser {
   name: string
   email?: string
   role?: string
+  /** Uploaded avatar (Convex file storage); absent until the user sets one. */
+  avatarUrl?: string
+  /** Set only for the demo fixture's user — keeps the demo's portrait. */
+  seedKey?: string
 }
 
-const MOCK_CURRENT_USER: CurrentUser = { id: 'you', name: CURRENT_USER_NAME }
+const MOCK_CURRENT_USER: CurrentUser = { id: 'you', name: CURRENT_USER_NAME, seedKey: 'you' }
 
 /**
  * The signed-in user. `undefined` while the profile query is in flight
@@ -35,5 +39,12 @@ export function useCurrentUser(): CurrentUser | undefined {
   const me = useQuery(api.users.me, hasConvex ? {} : 'skip')
   if (!hasConvex) return MOCK_CURRENT_USER
   if (me === undefined || me === null) return undefined
-  return { id: me.id, name: me.name, email: me.email, role: me.role }
+  return {
+    id: me.id,
+    name: me.name,
+    email: me.email,
+    role: me.role,
+    avatarUrl: me.avatarUrl,
+    seedKey: me.seedKey,
+  }
 }

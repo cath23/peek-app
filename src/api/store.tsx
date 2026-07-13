@@ -22,6 +22,7 @@ import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { StarredProvider } from '@/api/internal/starred'
 import { TopicStoreProvider } from '@/api/internal/topicStore'
 import { TopicMutationsProvider } from '@/api/internal/topicMutations'
+import { AvatarRegistryProvider } from './avatars'
 import type { ConversationData } from './types'
 
 // Convex client — present only when a deployment is configured
@@ -59,14 +60,19 @@ export function useDmRuntime(): DmRuntimeValue {
 }
 
 export function PeekDataProvider({ children }: { children: ReactNode }) {
+  // AvatarRegistryProvider is outermost of the runtime stores: it only needs
+  // the Convex queries above it, and the stores below (Starred) resolve
+  // avatars through it.
   const tree = (
-    <StarredProvider>
-      <TopicStoreProvider>
-        <TopicMutationsProvider>
-          <DmRuntimeProvider>{children}</DmRuntimeProvider>
-        </TopicMutationsProvider>
-      </TopicStoreProvider>
-    </StarredProvider>
+    <AvatarRegistryProvider>
+      <StarredProvider>
+        <TopicStoreProvider>
+          <TopicMutationsProvider>
+            <DmRuntimeProvider>{children}</DmRuntimeProvider>
+          </TopicMutationsProvider>
+        </TopicStoreProvider>
+      </StarredProvider>
+    </AvatarRegistryProvider>
   )
   // ConvexAuthProvider wraps ConvexProvider internally; in mock mode the
   // placeholder client never connects and the AuthGate bypasses auth.
