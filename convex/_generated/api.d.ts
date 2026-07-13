@@ -18,6 +18,7 @@ import type * as messages from "../messages.js";
 import type * as people from "../people.js";
 import type * as readState from "../readState.js";
 import type * as replies from "../replies.js";
+import type * as screener from "../screener.js";
 import type * as topics from "../topics.js";
 import type * as unread from "../unread.js";
 import type * as users from "../users.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   people: typeof people;
   readState: typeof readState;
   replies: typeof replies;
+  screener: typeof screener;
   topics: typeof topics;
   unread: typeof unread;
   users: typeof users;

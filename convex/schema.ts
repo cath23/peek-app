@@ -160,8 +160,9 @@ export default defineSchema({
     .index('by_huddle', ['huddleId'])
     .index('by_user', ['userId']),
 
-  // §2.10 — ONE watermark per container (user decision: unread = the tail);
-  // containerId is a topic/dmConversation/huddle _id as a string
+  // §2.10 — TWO granularities (ruling 2026-07-09): containerId is a
+  // topic/dmConversation/huddle _id (clears hasNewMessage), OR a message _id
+  // for one thread's replies (clears hasNewReply/isNew). See convex/readState.ts.
   readState: defineTable({
     userId: v.id('users'),
     containerId: v.string(),
@@ -184,6 +185,8 @@ export default defineSchema({
     kind: containerKind,
     targetId: v.string(),
     preview: v.string(),
+    /** The message that triggered/refreshed this item — drives the hover preview. */
+    messageId: v.optional(v.id('messages')),
     snoozedUntil: v.optional(v.number()),
     createdAt: v.number(),
   }).index('by_user', ['userId']),

@@ -10,6 +10,7 @@ import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/s
 import { highlightType } from './schema'
 import { viewerId, viewerOrThrow } from './users'
 import { watermarks } from './readState'
+import { isUrgentBody, screenReply } from './screener'
 import type { Doc, Id } from './_generated/dataModel'
 
 async function findMessageByKey(ctx: QueryCtx | MutationCtx, key: string): Promise<Doc<'messages'> | null> {
@@ -74,15 +75,19 @@ export const send = mutation({
     const message = await findMessageByKey(ctx, messageKey)
     if (!message) throw new Error(`Unknown message '${messageKey}'`)
     const you = await viewerOrThrow(ctx)
-    return ctx.db.insert('replies', {
+    const id = await ctx.db.insert('replies', {
       messageId: message._id,
       authorId: you._id,
       body,
       createdAt: Date.now(),
+      urgent: isUrgentBody(body) || undefined,
       highlightType,
       attachments,
       seedKey,
     })
+    const inserted = await ctx.db.get(id)
+    if (inserted) await screenReply(ctx, inserted)
+    return id
   },
 })
 

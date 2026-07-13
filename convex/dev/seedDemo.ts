@@ -202,6 +202,26 @@ export const seed = internalMutation({
         const day = resolveDateLabel(group.dateLabel, anchor)
         for (const conv of group.convs) await insertMessage(conv, 'topic', topicId, day)
       }
+
+      // topicMembers (§2.3). The mock TOPICS carry no invitee list, so the
+      // seeded members are the people who actually appear in the topic —
+      // everyone who wrote a message or a reply in it, plus the seed user.
+      // Without these rows the table was empty, so nothing could be screened
+      // and the members pill had nobody to show.
+      const memberNames = new Set<string>(['You'])
+      for (const group of groups) {
+        for (const conv of group.convs) {
+          memberNames.add(conv.authorName)
+          for (const r of REPLIES[conv.id] ?? []) memberNames.add(r.authorName)
+        }
+      }
+      const seenMember = new Set<string>()
+      for (const name of memberNames) {
+        const userId = userIdOf(name)
+        if (seenMember.has(userId)) continue
+        seenMember.add(userId)
+        await ctx.db.insert('topicMembers', { topicId, userId, addedAt: createdAt })
+      }
     }
 
     // ── DM conversations + their messages ──

@@ -1,4 +1,6 @@
+import { useRef, useState } from 'react'
 import { IconX } from '@tabler/icons-react'
+import { ScreenerPreviewCard } from './ScreenerPreviewCard'
 import { TopicState } from './ui/TopicState'
 import { Avatar } from './ui/Avatar'
 import { Button } from './ui/Button'
@@ -15,11 +17,35 @@ interface ScreenerItemProps {
 
 /** A single incoming item in the Desk Screener: who/what it is, a two-line preview,
  *  and the Open / Later / ✕ Dismiss triage actions. Rendered by ScreenerSection. */
+/** Hovering has to linger — brushing past the list shouldn't flash preview cards. */
+const HOVER_DELAY_MS = 350
+
 export function ScreenerItem({ item, onOpen, onLater, onDismiss }: ScreenerItemProps) {
   const isTopicResolved = useIsTopicResolved()
+  const rowRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [anchor, setAnchor] = useState<DOMRect | null>(null)
+
+  const openPreview = () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      const rect = rowRef.current?.getBoundingClientRect()
+      if (rect) setAnchor(rect)
+    }, HOVER_DELAY_MS)
+  }
+  const closePreview = () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setAnchor(null)
+  }
 
   return (
-    <div className="flex flex-col p-2 rounded-lg transition-colors hover:bg-bg-hover has-[button:hover]:bg-transparent">
+    <div
+      ref={rowRef}
+      onMouseEnter={openPreview}
+      onMouseLeave={closePreview}
+      className="flex flex-col p-2 rounded-lg transition-colors hover:bg-bg-hover has-[button:hover]:bg-transparent"
+    >
+      {anchor && <ScreenerPreviewCard itemId={item.id} anchor={anchor} />}
       {/* Item header */}
       <div className="flex items-center gap-2">
         {item.kind === 'topic' ? (

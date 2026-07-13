@@ -12,6 +12,7 @@ import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/s
 import { highlightType } from './schema'
 import { viewerId, viewerOrThrow } from './users'
 import { watermarks } from './readState'
+import { isUrgentBody, screenMessage } from './screener'
 import type { Doc, Id } from './_generated/dataModel'
 
 const parentKindArg = v.union(v.literal('topic'), v.literal('dm'), v.literal('huddle'))
@@ -250,12 +251,16 @@ export const send = mutation({
       }
     }
     if (!parentId) throw new Error(`Unknown ${parentKind} '${parentKey}'`)
-    return ctx.db.insert('messages', {
+    // `!@Name` is the composer's urgent marker — urgent diverts to Desk
+    // Urgent and never screens (§2.12).
+    const urgent = isUrgentBody(body) || undefined
+    const id = await ctx.db.insert('messages', {
       parentKind,
       parentId,
       authorId: you._id,
       body,
       createdAt: Date.now(),
+      urgent,
       highlightType,
       resolved,
       resolvedById: resolved ? you._id : undefined,
@@ -263,6 +268,9 @@ export const send = mutation({
       attachments,
       seedKey,
     })
+    const inserted = await ctx.db.get(id)
+    if (inserted) await screenMessage(ctx, inserted)
+    return id
   },
 })
 

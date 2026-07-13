@@ -14,10 +14,16 @@ import { APP_FILES, DOCUMENT_FILES } from '@/data/filesData'
 // Names are sorted longest-first so partial-overlap candidates ("Bob" vs
 // "Bob Smith") don't shadow the longer match.
 
-const _escapedNames = PEOPLE
-  .map((p) => p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  .sort((a, b) => b.length - a.length)
-  .join('|')
+// Whose names render as mention chips. Defaults to the mock cast; the seam
+// swaps in the real workspace directory at runtime (src/api/mentions.tsx) so a
+// real teammate's @mention renders as a chip too, not as plain text.
+let _mentionNames: string[] = PEOPLE.map((p) => p.name)
+
+const _escapedNames = () =>
+  _mentionNames
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .sort((a, b) => b.length - a.length)
+    .join('|')
 
 const _escapedBracketTitles = [
   ...TOPICS.map((t) => t.title),
@@ -28,10 +34,24 @@ const _escapedBracketTitles = [
   .sort((a, b) => b.length - a.length)
   .join('|')
 
-export const MENTION_RE = new RegExp(
-  `((?:!@|@)(?:${_escapedNames})|@[a-z][a-z0-9-]+(?![a-zA-Z/-])|\\[(?:${_escapedBracketTitles})\\])`,
-  'g'
-)
+function _buildMentionRe(): RegExp {
+  return new RegExp(
+    `((?:!@|@)(?:${_escapedNames()})|@[a-z][a-z0-9-]+(?![a-zA-Z/-])|\\[(?:${_escapedBracketTitles})\\])`,
+    'g'
+  )
+}
+
+/** `g`-flagged — use matchAll/split, never rely on lastIndex across calls. */
+export let MENTION_RE = _buildMentionRe()
+
+/** The seam calls this when the workspace directory changes. Rebuilds BOTH
+ *  regexes — INLINE_TOKEN_RE is the one read-only bodies actually render with,
+ *  so forgetting it would leave real teammates' mentions as plain text. */
+export function setMentionNames(names: string[]) {
+  _mentionNames = names.length ? names : PEOPLE.map((p) => p.name)
+  MENTION_RE = _buildMentionRe()
+  INLINE_TOKEN_RE = _buildInlineTokenRe()
+}
 
 // ── External references (auto-linked) ──
 //
@@ -52,11 +72,16 @@ const _referenceAlternation = [
 ].join('|')
 
 /** Tokenizer for read-only rendering: mentions, [refs], and external references.
- *  Single capture group so String.split() interleaves cleanly. */
-export const INLINE_TOKEN_RE = new RegExp(
-  `((?:!@|@)(?:${_escapedNames})|@[a-z][a-z0-9-]+(?![a-zA-Z/-])|\\[(?:${_escapedBracketTitles})\\]|${_referenceAlternation})`,
-  'g'
-)
+ *  Single capture group so String.split() interleaves cleanly.
+ *  Rebuilt alongside MENTION_RE when the workspace directory changes. */
+function _buildInlineTokenRe(): RegExp {
+  return new RegExp(
+    `((?:!@|@)(?:${_escapedNames()})|@[a-z][a-z0-9-]+(?![a-zA-Z/-])|\\[(?:${_escapedBracketTitles})\\]|${_referenceAlternation})`,
+    'g'
+  )
+}
+
+export let INLINE_TOKEN_RE = _buildInlineTokenRe()
 
 export type ReferenceKind = 'linear' | 'github' | 'build' | 'ticket'
 

@@ -23,6 +23,7 @@ import { StarredProvider } from '@/api/internal/starred'
 import { TopicStoreProvider } from '@/api/internal/topicStore'
 import { TopicMutationsProvider } from '@/api/internal/topicMutations'
 import { AvatarRegistryProvider } from './avatars'
+import { MentionDirectorySync } from './mentions'
 import type { ConversationData } from './types'
 
 // Convex client — present only when a deployment is configured
@@ -65,6 +66,7 @@ export function PeekDataProvider({ children }: { children: ReactNode }) {
   // avatars through it.
   const tree = (
     <AvatarRegistryProvider>
+      <MentionDirectorySync />
       <StarredProvider>
         <TopicStoreProvider>
           <TopicMutationsProvider>

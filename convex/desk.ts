@@ -227,19 +227,22 @@ export const urgentList = query({
     )
     const hasUnreadUrgent = async (kind: 'topic' | 'dm', containerId: string) => {
       const last = watermark.get(containerId)
-      if (last === undefined) return false
+      // No watermark = never opened = everything in it is new (§4.3). The old
+      // rule said "fully read", which silently swallowed an urgent message in a
+      // conversation you'd never opened — e.g. the first DM from a new person.
+      const isNew = (at: number) => last === undefined || at > last
       const msgs = await ctx.db
         .query('messages')
         .withIndex('by_parent', (q) => q.eq('parentKind', kind).eq('parentId', containerId))
         .collect()
-      for (const m of msgs.filter((m) => m.urgent === true)) {
-        if (m.createdAt > last) return true
+      for (const m of msgs.filter((m) => m.urgent === true && m.authorId !== you._id)) {
+        if (isNew(m.createdAt)) return true
         // An unread reply on an urgent thread keeps it urgent (dm3 case).
         const replies = await ctx.db
           .query('replies')
           .withIndex('by_message', (q) => q.eq('messageId', m._id))
           .collect()
-        if (replies.some((r) => r.createdAt > last)) return true
+        if (replies.some((r) => r.authorId !== you._id && isNew(r.createdAt))) return true
       }
       return false
     }

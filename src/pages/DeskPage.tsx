@@ -12,6 +12,7 @@ import { useTopicView } from '@/components/views/useTopicView'
 import {
   dmNameById,
   useUnread,
+  hasConvex,
   useScreenerItems,
   useDeskItems,
   useDeskLoading,
@@ -52,12 +53,16 @@ export function DeskPage() {
   const [dismissedOpenWorkIds, setDismissedOpenWorkIds] = useState<Set<string>>(new Set())
   const [starredExpanded, setStarredExpanded] = useState(true)
 
-  const screenerItems = allScreenerItems
-    .slice(0, debug.desk.screenerItemsCount)
+  // The 1–2 item caps are a demo-composition affordance for the mock dataset.
+  // With a real backend the Screener IS the inbox and Urgent is real — capping
+  // them would silently hide incoming messages.
+  const screenerItems = (hasConvex ? allScreenerItems : allScreenerItems.slice(0, debug.desk.screenerItemsCount))
     .filter((i) => !dismissedScreenerIds.has(i.id))
 
   const urgentItems = debug.desk.showUrgent
-    ? URGENT_ITEMS.slice(0, debug.desk.urgentItemsCount)
+    ? hasConvex
+      ? URGENT_ITEMS
+      : URGENT_ITEMS.slice(0, debug.desk.urgentItemsCount)
     : []
 
   // Section-level unread visibility (per-page debug toggles).

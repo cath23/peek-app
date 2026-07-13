@@ -4,7 +4,7 @@ import Mention from '@tiptap/extension-mention'
 import { type SuggestionOptions, type SuggestionProps } from '@tiptap/suggestion'
 import { type NodeViewProps } from '@tiptap/react'
 import { IconCircleDashed, IconCircleCheck, IconBrandGithub, IconFile, IconFileTypePdf, IconPhoto, IconTable, IconPresentation } from '@tabler/icons-react'
-import { PEOPLE, type Person } from '@/api'
+import { mentionPeople, type Person } from '@/api'
 import { TOPICS } from '@/api'
 import { APP_FILES, DOCUMENT_FILES } from '@/api'
 import { useIsTopicResolved } from '@/api'
@@ -138,9 +138,9 @@ class SuggestionPopup {
 function makeSuggestion(isUrgent: boolean): Omit<SuggestionOptions<Person>, 'editor'> {
   return {
     items: ({ query }) =>
-      PEOPLE.filter((p) =>
-        query === '' || p.name.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 6),
+      mentionPeople()
+        .filter((p) => query === '' || p.name.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 6),
 
     render: () => {
       const popup = new SuggestionPopup()
