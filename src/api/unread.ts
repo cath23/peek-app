@@ -16,10 +16,18 @@ import { dmHasUnread as mockDmHasUnread } from '@/data/dmData'
 import { mockConvIdFor } from './directory'
 import { hasConvex } from './store'
 
-/** Sidebar dots: does this topic / DM hold anything new for me? */
+/**
+ * Sidebar indicators, per viewer:
+ *   `*HasUnread` → the accent dot (non-urgent).
+ *   `*IsUrgent`  → the warning indicator; an unread URGENT message shows this
+ *                  instead of the dot (issue #11). Mock mode has no urgent
+ *                  derivation, so it's always false there.
+ */
 export function useUnread(): {
   topicHasUnread: (topicId: string) => boolean
   dmHasUnread: (dmId: string) => boolean
+  topicIsUrgent: (topicId: string) => boolean
+  dmIsUrgent: (dmId: string) => boolean
 } {
   const remote = useQuery(api.unread.summary, hasConvex ? {} : 'skip')
 
@@ -42,7 +50,16 @@ export function useUnread(): {
     [remote],
   )
 
-  return { topicHasUnread, dmHasUnread }
+  const topicIsUrgent = useCallback(
+    (topicId: string) => (hasConvex ? (remote?.urgentTopics.includes(topicId) ?? false) : false),
+    [remote],
+  )
+  const dmIsUrgent = useCallback(
+    (dmId: string) => (hasConvex ? (remote?.urgentDms.includes(dmId) ?? false) : false),
+    [remote],
+  )
+
+  return { topicHasUnread, dmHasUnread, topicIsUrgent, dmIsUrgent }
 }
 
 /** How long a conversation/thread must stay open before it counts as read. */

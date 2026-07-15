@@ -1,12 +1,22 @@
 import type { TopicStateStatus } from '@/components/ui/TopicState'
 
-export interface OpenWorkItem {
-  id: string
-  topicId: string
-  title: string
-  topicStatus: TopicStateStatus
-  isUnread?: boolean
-}
+export type OpenWorkItem =
+  | {
+      id: string
+      kind?: 'topic'
+      topicId: string
+      title: string
+      topicStatus: TopicStateStatus
+      isUnread?: boolean
+    }
+  | {
+      id: string
+      kind: 'dm'
+      dmId: string
+      name: string
+      avatarSrc?: string
+      isUnread?: boolean
+    }
 
 export type UrgentItem =
   | {

@@ -1,26 +1,38 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { IconMessagePlus } from '@tabler/icons-react'
 import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
+import { CreateTopicDialog, type StartTopicResult } from '@/components/CreateTopicDialog'
 import { PersonRow } from '@/components/ui/PersonRow'
+import { Button } from '@/components/ui/Button'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useTopicView } from '@/components/views/useTopicView'
-import { CURRENT_USER_NAME, useUnread, useTopics, useIsTopicResolved, useHuddleLookup } from '@/api'
+import { CURRENT_USER_NAME, useUnread, useTopics, useCreateTopic, useIsTopicResolved, useHuddleLookup } from '@/api'
 import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
 
 export function TopicsPage() {
-  const { topicHasUnread } = useUnread()
+  const { topicHasUnread, topicIsUrgent } = useUnread()
   const navigate = useNavigate()
   const { id: routeId } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const { topicId: lastTopicId, setLastTopicId } = useLastSelection()
   const { state: debug } = useDebug()
   const TOPICS = useTopics()
+  const createTopic = useCreateTopic()
   const isTopicResolved = useIsTopicResolved()
   const huddleLookup = useHuddleLookup()
   const showUnreads = debug.unreads.topics
   const huddleVariant = debug.huddles.variant
+  const [createOpen, setCreateOpen] = useState(false)
+
+  const handleCreateTopic = (data: StartTopicResult) => {
+    setCreateOpen(false)
+    const topicId = createTopic(data.title, data.invitees)
+    navigate(`/topics/${topicId}`)
+  }
 
   // URL is the source of truth. Fallbacks only kick in until the redirect-effect lands.
   const selectedId = routeId ?? lastTopicId ?? '3'
@@ -64,7 +76,34 @@ export function TopicsPage() {
     showUnreads,
   })
 
+  // Loaded and no topics at all → "No conversation selected" makes no sense
+  // here; offer to create the first topic instead (issue #3).
+  const isEmptyWorkspace = TOPICS !== undefined && TOPICS.length === 0
+  const rightPanel = isEmptyWorkspace ? (
+    <div className="flex-1 h-full flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <EmptyState
+          icon={<IconMessagePlus size={20} stroke={1.5} />}
+          message="No topics yet. Start one to gather a conversation around it."
+        />
+        <Button variant="primary" onClick={() => setCreateOpen(true)}>New topic</Button>
+      </div>
+    </div>
+  ) : TOPICS === undefined ? (
+    <div className="flex-1 h-full" />
+  ) : (
+    view.rightPanel
+  )
+
   return (
+    <>
+    {createOpen && (
+      <CreateTopicDialog
+        confirmLabel="Create topic"
+        onConfirm={handleCreateTopic}
+        onCancel={() => setCreateOpen(false)}
+      />
+    )}
     <AppShell
       leftPanel={
         <div className="flex flex-col h-full">
@@ -75,6 +114,7 @@ export function TopicsPage() {
             prop2ndActionTooltip="Sort by"
             prop1stAction
             prop1stActionTooltip="New topic"
+            onProp1stAction={() => setCreateOpen(true)}
           />
           <div className="flex-1 overflow-y-auto pt-4 pb-3 px-3 flex flex-col gap-0.5">
             {TOPICS === undefined && <SkeletonSidebarList rows={9} />}
@@ -87,7 +127,8 @@ export function TopicsPage() {
                     name={topic.title}
                     type="topic"
                     topicStatus={isTopicResolved(topic.id) ? 'resolved' : 'unresolved'}
-                    isUnread={showUnreads && topicHasUnread(topic.id)}
+                    isUnread={(showUnreads && topicHasUnread(topic.id)) || (showUnreads && topicIsUrgent(topic.id))}
+                    isUrgent={showUnreads && topicIsUrgent(topic.id)}
                     isSelected={topicSelected}
                     onClick={() => handleSelectTopic(topic.id)}
                   />
@@ -168,8 +209,9 @@ export function TopicsPage() {
           </div>
         </div>
       }
-      rightPanel={TOPICS === undefined ? <div className="flex-1 h-full" /> : view.rightPanel}
+      rightPanel={rightPanel}
       threadPanel={view.threadPanel}
     />
+    </>
   )
 }

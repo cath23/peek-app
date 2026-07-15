@@ -74,16 +74,20 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
 
       {/* Right */}
       <div className="flex items-center gap-[6px] pointer-events-auto">
-        <div ref={helpRef}>
-          <IconButton
-            tooltip="Debug"
-            tooltipPlacement="bottom"
-            aria-label="Debug"
-            onClick={() => setDebugOpen((v) => !v)}
-          >
-            <IconHelpCircle size={16} stroke={1.5} />
-          </IconButton>
-        </div>
+        {/* Debug menu is a dev affordance over the mock dataset — hidden on the
+            real (Convex-backed) app (issue #6). */}
+        {!hasConvex && (
+          <div ref={helpRef}>
+            <IconButton
+              tooltip="Debug"
+              tooltipPlacement="bottom"
+              aria-label="Debug"
+              onClick={() => setDebugOpen((v) => !v)}
+            >
+              <IconHelpCircle size={16} stroke={1.5} />
+            </IconButton>
+          </div>
+        )}
         <button
           ref={avatarRef}
           onClick={() => setMenuOpen((o) => !o)}

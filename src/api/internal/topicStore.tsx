@@ -41,6 +41,8 @@ interface TopicStoreValue {
   findAllHuddlesByOriginDm: (dmId: string) => Huddle[]
   /** Promote a DM into the first huddle of a freshly created topic. Returns the new topic id. */
   createTopicFromDm: (input: CreateTopicFromDmInput) => CreateTopicFromDmResult
+  /** Create a standalone empty topic (no huddle). Returns its id. */
+  createTopic: (title: string, invitees: string[]) => string
 }
 
 const TopicStoreContext = createContext<TopicStoreValue | null>(null)
@@ -193,9 +195,18 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const createTopic = useCallback((title: string, invitees: string[]): string => {
+    const topicId = nextTopicId()
+    setExtraTopics((prev) => [
+      ...prev,
+      { id: topicId, title, isResolved: false, invitees: ['You', ...invitees] },
+    ])
+    return topicId
+  }, [])
+
   const value = useMemo<TopicStoreValue>(
-    () => ({ topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm }),
-    [topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm],
+    () => ({ topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic }),
+    [topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic],
   )
 
   return <TopicStoreContext.Provider value={value}>{children}</TopicStoreContext.Provider>

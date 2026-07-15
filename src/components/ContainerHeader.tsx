@@ -17,12 +17,15 @@ interface ContainerHeaderProps {
   /** 1st action button - defaults to Edit icon */
   prop1stAction?: boolean
   prop1stActionTooltip?: string
+  onProp1stAction?: () => void
   /** 2nd action button - defaults to Sort Descending icon */
   prop2ndAction?: boolean
   prop2ndActionTooltip?: string
+  onProp2ndAction?: () => void
   /** 3rd action button - defaults to Sort Descending icon (hidden by default, for future use) */
   prop3rdAction?: boolean
   prop3rdActionTooltip?: string
+  onProp3rdAction?: () => void
   className?: string
 }
 
@@ -33,10 +36,13 @@ export function ContainerHeader({
   more,
   prop1stAction = false,
   prop1stActionTooltip,
+  onProp1stAction,
   prop2ndAction = false,
   prop2ndActionTooltip,
+  onProp2ndAction,
   prop3rdAction = false,
   prop3rdActionTooltip,
+  onProp3rdAction,
   className,
 }: ContainerHeaderProps) {
   const hasRightContent = more || prop1stAction || prop2ndAction || prop3rdAction
@@ -71,17 +77,17 @@ export function ContainerHeader({
           {(prop1stAction || prop2ndAction || prop3rdAction) && (
             <div className="flex gap-1 items-center justify-end">
               {prop3rdAction && (
-                <IconButton tooltip={prop3rdActionTooltip} aria-label={prop3rdActionTooltip ?? 'Sort'}>
+                <IconButton tooltip={prop3rdActionTooltip} aria-label={prop3rdActionTooltip ?? 'Sort'} onClick={onProp3rdAction}>
                   <IconSortDescending size={16} stroke={1.5} />
                 </IconButton>
               )}
               {prop2ndAction && (
-                <IconButton tooltip={prop2ndActionTooltip} aria-label={prop2ndActionTooltip ?? 'Sort'}>
+                <IconButton tooltip={prop2ndActionTooltip} aria-label={prop2ndActionTooltip ?? 'Sort'} onClick={onProp2ndAction}>
                   <IconSortDescending size={16} stroke={1.5} />
                 </IconButton>
               )}
               {prop1stAction && (
-                <IconButton tooltip={prop1stActionTooltip} aria-label={prop1stActionTooltip ?? 'Edit'}>
+                <IconButton tooltip={prop1stActionTooltip} aria-label={prop1stActionTooltip ?? 'Edit'} onClick={onProp1stAction}>
                   <IconEdit size={16} stroke={1.5} />
                 </IconButton>
               )}

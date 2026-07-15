@@ -3,7 +3,7 @@ import { IconDotsVertical, IconAlertSquareRounded, IconX } from '@tabler/icons-r
 import { TopicState, type TopicStateType, type TopicStateStatus } from './TopicState'
 import { IconButton } from './IconButton'
 import { cn } from '@/lib/utils'
-import { avatarFor } from '@/api'
+import { useAvatarSrc } from '@/api'
 
 interface PersonRowProps {
   name: string
@@ -36,6 +36,9 @@ export function PersonRow({
   className,
 }: PersonRowProps) {
   const [isHovered, setIsHovered] = useState(false)
+  // Resolve DM avatars through the registry (uploaded > seeded portrait >
+  // silhouette) — the static avatarFor never sees real users' uploads.
+  const avatarSrcFor = useAvatarSrc()
 
   return (
     <div
@@ -51,7 +54,7 @@ export function PersonRow({
       <TopicState
         type={type}
         status={type === 'topic' ? topicStatus : 'default'}
-        avatarSrc={avatarSrc ?? (type === 'DM' ? avatarFor(name) : undefined)}
+        avatarSrc={avatarSrc ?? (type === 'DM' ? avatarSrcFor(name) : undefined)}
         memberCount={memberCount}
         iconClassName={isSelected || isUnread ? 'text-text-primary' : undefined}
       />

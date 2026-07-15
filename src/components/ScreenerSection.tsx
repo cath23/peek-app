@@ -8,7 +8,7 @@ import type { ScreenerItem as ScreenerItemData } from '@/api'
 interface ScreenerSectionProps {
   items: ScreenerItemData[]
   onOpen?: (id: string) => void
-  onLater?: (id: string) => void
+  onLater?: (id: string, untilMs: number) => void
   onDismiss?: (id: string) => void
   className?: string
 }

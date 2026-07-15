@@ -1,4 +1,4 @@
-import { IconUser } from '@tabler/icons-react'
+import { IconUserFilled } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { useAvatarSrc } from '@/api'
 
@@ -24,10 +24,10 @@ export function Avatar({ src, name, alt = '', size = 36, className }: AvatarProp
       {resolved ? (
         <img src={resolved} alt={alt || name || ''} className="w-full h-full object-cover" />
       ) : (
-        // No portrait (e.g. a signed-up user before uploading one):
-        // generic silhouette (user decision 2026-07-09).
+        // No portrait (e.g. a signed-up user before uploading one): a small
+        // FILLED person glyph on the accent-muted tint (user decision 2026-07-15).
         <div className="w-full h-full bg-accent-muted flex items-center justify-center text-text-muted">
-          <IconUser size={Math.round(size * 0.55)} stroke={1.5} />
+          <IconUserFilled size={Math.round(size * 0.5)} />
         </div>
       )}
     </div>

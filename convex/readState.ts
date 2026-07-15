@@ -50,6 +50,22 @@ async function touch(ctx: MutationCtx, userId: Id<'users'>, containerId: string,
   }
 }
 
+/**
+ * Reading a conversation from anywhere retires its Screener item (§2.12,
+ * ruling 2026-07-15): the Screener is for what you HAVEN'T looked at yet, so
+ * opening the topic/DM from People or Topics removes it from the Screener.
+ * `containerId` is the container's _id (the screener item's targetId).
+ */
+async function clearScreenerFor(ctx: MutationCtx, userId: Id<'users'>, containerId: string) {
+  const rows = await ctx.db
+    .query('screenerItems')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .collect()
+  for (const r of rows) {
+    if (r.targetId === containerId) await ctx.db.delete(r._id)
+  }
+}
+
 /** You opened a topic / DM / huddle and stayed a moment: its messages are read. */
 export const markContainerRead = mutation({
   args: { parentKind: parentKindArg, parentKey: v.string() },
@@ -58,6 +74,7 @@ export const markContainerRead = mutation({
     const parentId = await resolveParentId(ctx, parentKind, parentKey, you._id)
     if (!parentId) return
     await touch(ctx, you._id, parentId, Date.now())
+    await clearScreenerFor(ctx, you._id, parentId)
   },
 })
 
@@ -69,5 +86,7 @@ export const markThreadRead = mutation({
     const m = await findMessageByKey(ctx, messageKey)
     if (!m) return
     await touch(ctx, you._id, m._id as string, Date.now())
+    // Engaging with the thread also retires the container's Screener item.
+    await clearScreenerFor(ctx, you._id, m.parentId)
   },
 })

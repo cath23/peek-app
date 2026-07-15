@@ -4,7 +4,6 @@ import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
 import { PersonRow } from '@/components/ui/PersonRow'
 import { Divider } from '@/components/ui/Divider'
-import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StarredSection, type StarredItem } from '@/components/ui/StarredSection'
 import { useDmConversationView } from '@/components/views/useDmConversationView'
 import { useUnread, useCreateTopicFromDm, usePeople, useStarred } from '@/api'
@@ -14,24 +13,14 @@ import { useLastSelection } from '@/lib/lastSelection'
 import { useToast } from '@/lib/toast'
 import type { StartTopicResult } from '@/components/CreateTopicDialog'
 
-const TEAMS = [
-  { id: 'team-account-management', name: 'Account Management' },
-  { id: 'team-designers', name: 'Designers' },
-  { id: 'team-engineering', name: 'Engineering' },
-  { id: 'team-hr', name: 'HR / People Ops' },
-  { id: 'team-product', name: 'Product Management' },
-  { id: 'team-sales', name: 'Sales' },
-]
-
 export function PeoplePage() {
-  const { dmHasUnread } = useUnread()
+  const { dmHasUnread, dmIsUrgent } = useUnread()
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()
   const createTopicFromDm = useCreateTopicFromDm()
   const { dmId: lastDmId, setLastDmId } = useLastSelection()
   const { id: routeId } = useParams<{ id: string }>()
-  const [teamsExpanded, setTeamsExpanded] = useState(true)
   const { entries: starredEntries, isLoading: starredLoading } = useStarred()
   const { state: debug } = useDebug()
   const showUnreads = debug.unreads.people
@@ -41,9 +30,10 @@ export function PeoplePage() {
   // so two people always address the same conversation. (The old scheme minted
   // ids from list position, which collided across viewers.) People with no
   // conversation yet simply start empty. undefined = Convex still loading.
+  // (Teams are hidden until they're a real feature — user ruling 2026-07-15.)
   const people = usePeople()
   const DMS = useMemo(() => people?.map((p) => ({ id: p.id, name: p.name })), [people])
-  const ALL_ITEMS = useMemo(() => [...(DMS ?? []), ...TEAMS], [DMS])
+  const ALL_ITEMS = useMemo(() => DMS ?? [], [DMS])
   const DM_IDS = useMemo(() => new Set((DMS ?? []).map((d) => d.id)), [DMS])
 
   // URL is the source of truth — derive selection from routeId.
@@ -72,13 +62,17 @@ export function PeoplePage() {
 
   const starredDmItems: StarredItem[] = starredEntries
     .filter((e) => e.kind === 'dm')
-    .map<StarredItem>((e) => ({
-      id: e.dmId,
-      name: e.name,
-      type: 'DM',
-      avatarSrc: e.avatarSrc,
-      isUnread: showUnreads && dmHasUnread(e.dmId),
-    }))
+    .map<StarredItem>((e) => {
+      const urgent = showUnreads && dmIsUrgent(e.dmId)
+      return {
+        id: e.dmId,
+        name: e.name,
+        type: 'DM',
+        avatarSrc: e.avatarSrc,
+        isUnread: (showUnreads && dmHasUnread(e.dmId)) || urgent,
+        isUrgent: urgent,
+      }
+    })
     .sort((a, b) => Number(b.isUnread) - Number(a.isUnread))
 
   const starredDmIds = new Set(starredDmItems.map((s) => s.id))
@@ -129,37 +123,24 @@ export function PeoplePage() {
                   onSelect={handleSelect}
                 />
 
-                <Divider className="my-2" />
+                {/* Divider only when there are people below it — no dangling
+                    line when the workspace has no one else yet (issue #2). */}
+                {visibleDms.length > 0 && <Divider className="my-2" />}
 
-                {visibleDms.map((dm) => (
-                  <PersonRow
-                    key={dm.id}
-                    name={dm.name}
-                    type="DM"
-                    isUnread={showUnreads && dmHasUnread(dm.id)}
-                    isSelected={selectedId === dm.id}
-                    onClick={() => handleSelect(dm.id)}
-                  />
-                ))}
-
-                <Divider className="my-2" />
-
-                <SectionHeader
-                  title="Teams"
-                  chevron
-                  isExpanded={teamsExpanded}
-                  onToggle={() => setTeamsExpanded((v) => !v)}
-                />
-
-                {teamsExpanded && TEAMS.map((t) => (
-                  <PersonRow
-                    key={t.id}
-                    name={t.name}
-                    type="team"
-                    isSelected={selectedId === t.id}
-                    onClick={() => handleSelect(t.id)}
-                  />
-                ))}
+                {visibleDms.map((dm) => {
+                  const urgent = showUnreads && dmIsUrgent(dm.id)
+                  return (
+                    <PersonRow
+                      key={dm.id}
+                      name={dm.name}
+                      type="DM"
+                      isUnread={(showUnreads && dmHasUnread(dm.id)) || urgent}
+                      isUrgent={urgent}
+                      isSelected={selectedId === dm.id}
+                      onClick={() => handleSelect(dm.id)}
+                    />
+                  )
+                })}
               </>
             )}
           </div>

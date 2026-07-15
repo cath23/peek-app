@@ -77,6 +77,22 @@ export interface CreateTopicFromDmResult {
   promotedAt: string
 }
 
+/** Create a standalone topic (no huddle, no DM promotion). Returns its id. */
+export function useCreateTopic(): (title: string, invitees: Person[]) => string {
+  const createLocal = useTopicStore().createTopic
+  const createRemote = useMutation(api.topics.create)
+  return useCallback(
+    (title: string, invitees: Person[]) => {
+      const topicId = createLocal(title, invitees.map((p) => p.name))
+      if (hasConvex) {
+        void createRemote({ title, seedKey: topicId, inviteeNames: invitees.map((p) => p.name) })
+      }
+      return topicId
+    },
+    [createLocal, createRemote],
+  )
+}
+
 /** Promote a DM into the seed huddle of a freshly created topic. */
 export function useCreateTopicFromDm(): (input: CreateTopicFromDmInput) => CreateTopicFromDmResult {
   const createLocal = useTopicStore().createTopicFromDm

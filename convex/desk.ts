@@ -192,17 +192,50 @@ export const openWorkList = query({
       .collect()
     const out = []
     for (const item of rows.sort((a, b) => b.addedAt - a.addedAt)) {
-      if (item.kind !== 'topic') continue // Open work is topics-only in the UI
-      const topic = (await resolveTarget(ctx, 'topic', item.targetId)) as Doc<'topics'> | null
-      if (!topic) continue
-      out.push({
-        id: item._id as string,
-        topicId: topic.seedKey ?? (topic._id as string),
-        title: topic.title,
-        topicStatus: (await topicResolved(ctx, topic._id)) ? ('resolved' as const) : ('unresolved' as const),
-      })
+      if (item.kind === 'topic') {
+        const topic = (await resolveTarget(ctx, 'topic', item.targetId)) as Doc<'topics'> | null
+        if (!topic) continue
+        out.push({
+          id: item._id as string,
+          kind: 'topic' as const,
+          topicId: topic.seedKey ?? (topic._id as string),
+          title: topic.title,
+          topicStatus: (await topicResolved(ctx, topic._id)) ? ('resolved' as const) : ('unresolved' as const),
+        })
+      } else {
+        const dm = (await resolveTarget(ctx, 'dm', item.targetId)) as Doc<'dmConversations'> | null
+        if (!dm) continue
+        const partner = await dmPartner(ctx, dm, you._id)
+        if (!partner) continue
+        out.push({ id: item._id as string, kind: 'dm' as const, dmId: personKey(partner), name: partner.name })
+      }
     }
     return out
+  },
+})
+
+/** Screener "Open" → move the item into Open work (§2.12/§2.13). */
+export const addToOpenWork = mutation({
+  args: { screenerItemId: v.string() },
+  handler: async (ctx, { screenerItemId }) => {
+    const you = await viewerOrThrow(ctx)
+    const id = ctx.db.normalizeId('screenerItems', screenerItemId)
+    const item = id ? await ctx.db.get(id) : null
+    if (!item || item.userId !== you._id) return
+    // No duplicates: if it's already in Open work, just drop the screener row.
+    const existing = await ctx.db
+      .query('deskOpenWork')
+      .withIndex('by_user', (q) => q.eq('userId', you._id))
+      .collect()
+    if (!existing.some((w) => w.kind === item.kind && w.targetId === item.targetId)) {
+      await ctx.db.insert('deskOpenWork', {
+        userId: you._id,
+        kind: item.kind,
+        targetId: item.targetId,
+        addedAt: Date.now(),
+      })
+    }
+    await ctx.db.delete(item._id)
   },
 })
 

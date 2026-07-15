@@ -41,6 +41,7 @@ const SEED_PEOPLE = [
   { seedKey: 'jake',   name: 'Jake Walter',    role: 'Software Engineer' },
   { seedKey: 'juan',   name: 'Juan Foley',     role: 'Frontend Engineer' },
   { seedKey: 'zack',   name: 'Zack Bright',    role: 'Data Analyst' },
+  { seedKey: 'bob',    name: 'Bob Chen',       role: 'Payments Engineer, Stripe' },
 ] as const
 
 // Referenced by static huddle member lists but absent from PEOPLE (§1).
@@ -354,10 +355,12 @@ export const seed = internalMutation({
       })
     }
     for (let i = 0; i < OPEN_WORK_ITEMS.length; i++) {
+      const item = OPEN_WORK_ITEMS[i]
+      if (item.kind === 'dm') continue // seed fixture is topics-only
       await ctx.db.insert('deskOpenWork', {
         userId: youId,
         kind: 'topic',
-        targetId: topicIdByMock[OPEN_WORK_ITEMS[i].topicId],
+        targetId: topicIdByMock[item.topicId],
         addedAt: anchor - i,
       })
     }

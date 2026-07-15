@@ -11,56 +11,81 @@ import { watermarks } from './readState'
 import { viewerId } from './users'
 import type { Doc, Id } from './_generated/dataModel'
 
-async function containerHasUnread(
+/**
+ * Per-container unread state for a viewer: the regular accent dot
+ * (`unread`, non-urgent only) and the urgent flag (`urgent`). Kept as one
+ * pass so the People/Topics rows can show the urgent icon instead of the dot
+ * when there's an unread URGENT message (issue #11).
+ */
+async function containerFlags(
   ctx: Parameters<typeof watermarks>[0],
   me: Id<'users'>,
   wm: Map<string, number>,
   kind: 'topic' | 'dm',
   containerId: string,
-): Promise<boolean> {
+): Promise<{ unread: boolean; urgent: boolean }> {
   const msgs = await ctx.db
     .query('messages')
     .withIndex('by_parent', (q) => q.eq('parentKind', kind).eq('parentId', containerId))
     .collect()
   const containerWm = wm.get(containerId)
   const isNew = (at: number, mark: number | undefined) => mark === undefined || at > mark
+  let unread = false
+  let urgent = false
   for (const m of msgs) {
-    if (m.urgent) continue // urgent → Desk Urgent, not the unread dot
-    if (m.authorId !== me && isNew(m.createdAt, containerWm)) return true
+    if (m.authorId === me) continue
     const replies = await ctx.db
       .query('replies')
       .withIndex('by_message', (q) => q.eq('messageId', m._id))
       .collect()
     const threadWm = wm.get(m._id as string)
-    if (replies.some((r) => r.authorId !== me && isNew(r.createdAt, threadWm))) return true
+    const msgNew = isNew(m.createdAt, containerWm)
+    const replyNew = replies.some((r) => r.authorId !== me && isNew(r.createdAt, threadWm))
+    if (m.urgent) {
+      // Urgent → the warning indicator, never the accent dot.
+      if (msgNew || replyNew) urgent = true
+    } else if (msgNew || replyNew) {
+      unread = true
+    }
   }
-  return false
+  return { unread, urgent }
 }
 
-/** Which topics / DMs currently show an unread dot. Keys are the client's ids. */
+/**
+ * Which topics / DMs show the accent unread dot (`topics`/`dms`) vs. the
+ * urgent indicator (`urgentTopics`/`urgentDms`). Keys are the client's ids.
+ */
 export const summary = query({
   args: {},
   handler: async (ctx) => {
     const me = await viewerId(ctx)
-    if (!me) return { topics: [] as string[], dms: [] as string[] }
+    const empty = { topics: [], dms: [], urgentTopics: [], urgentDms: [] }
+    if (!me) return empty as { topics: string[]; dms: string[]; urgentTopics: string[]; urgentDms: string[] }
     const wm = await watermarks(ctx, me)
 
     const topics: string[] = []
+    const urgentTopics: string[] = []
     for (const t of await ctx.db.query('topics').collect()) {
-      if (await containerHasUnread(ctx, me, wm, 'topic', t._id as string)) {
-        topics.push(t.seedKey ?? (t._id as string))
-      }
+      const { unread, urgent } = await containerFlags(ctx, me, wm, 'topic', t._id as string)
+      const key = t.seedKey ?? (t._id as string)
+      if (urgent) urgentTopics.push(key)
+      if (unread) topics.push(key)
     }
 
     const dms: string[] = []
+    const urgentDms: string[] = []
     for (const dm of await ctx.db.query('dmConversations').collect()) {
       if (dm.userLowId !== me && dm.userHighId !== me) continue
-      if (!(await containerHasUnread(ctx, me, wm, 'dm', dm._id as string))) continue
+      const { unread, urgent } = await containerFlags(ctx, me, wm, 'dm', dm._id as string)
+      if (!unread && !urgent) continue
       const partnerId = dm.userLowId === me ? dm.userHighId : dm.userLowId
       const partner: Doc<'users'> | null = await ctx.db.get(partnerId)
-      if (partner) dms.push(partner.seedKey ?? (partnerId as string))
+      if (!partner) continue
+      const key = partner.seedKey ?? (partnerId as string)
+      if (urgent) urgentDms.push(key)
+      if (unread) dms.push(key)
     }
 
-    return { topics, dms }
+    return { topics, dms, urgentTopics, urgentDms }
   },
 })

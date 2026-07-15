@@ -319,7 +319,7 @@ export function useTopicView({
                     showCreateTopic={false}
                     isSelected={threadConvId === c.id}
                     onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
-                    onReactionsChange={(next) => actions.setReactions(c.id, next, c.reactions)}
+                    onReactionsChange={(next) => actions.setReactions(c.id, next, c.reactions ?? [])}
                     onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
                     onBodyChange={(b) => actions.editBody(c.id, b)}
                     onClick={() => openThread(c.id)}
@@ -396,7 +396,7 @@ export function useTopicView({
                         showCreateTopic={false}
                         isSelected={threadConvId === c.id}
                         onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
-                        onReactionsChange={(next) => actions.setReactions(c.id, next, c.reactions)}
+                        onReactionsChange={(next) => actions.setReactions(c.id, next, c.reactions ?? [])}
                         onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
                         onBodyChange={(b) => actions.editBody(c.id, b)}
                         onClick={() => openThread(c.id)}
@@ -420,7 +420,7 @@ export function useTopicView({
                         showCreateTopic={false}
                         isSelected={threadConvId === m.id}
                         onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(m.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
-                        onReactionsChange={(next) => actions.setReactions(m.id, next, m.reactions)}
+                        onReactionsChange={(next) => actions.setReactions(m.id, next, m.reactions ?? [])}
                         onHighlightChange={(hl) => actions.setHighlight(m.id, hl)}
                         onBodyChange={(b) => actions.editBody(m.id, b)}
                         onClick={() => openThread(m.id)}
@@ -474,7 +474,7 @@ export function useTopicView({
                           showCreateTopic={false}
                           isSelected={threadConvId === c.id}
                           onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
-                          onReactionsChange={(next) => actions.setReactions(c.id, next, c.reactions)}
+                          onReactionsChange={(next) => actions.setReactions(c.id, next, c.reactions ?? [])}
                           onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
                           onBodyChange={(b) => actions.editBody(c.id, b)}
                           onClick={() => openThread(c.id)}
@@ -504,7 +504,7 @@ export function useTopicView({
                           showCreateTopic={false}
                           isSelected={threadConvId === m.id}
                           onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(m.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
-                          onReactionsChange={(next) => actions.setReactions(m.id, next, m.reactions)}
+                          onReactionsChange={(next) => actions.setReactions(m.id, next, m.reactions ?? [])}
                           onHighlightChange={(hl) => actions.setHighlight(m.id, hl)}
                           onBodyChange={(b) => actions.editBody(m.id, b)}
                           onClick={() => openThread(m.id)}
@@ -643,7 +643,7 @@ export function useTopicView({
       initialReactions={threadConv.reactions}
       onInitialReactionsChange={
         threadConvId
-          ? (next) => actions.setReactions(threadConvId, next, threadConv.reactions)
+          ? (next) => actions.setReactions(threadConvId, next, threadConv.reactions ?? [])
           : undefined
       }
       initialHighlightType={threadConv.highlightType}

@@ -10,6 +10,7 @@ export interface StarredItem {
   type?: TopicStateType
   topicStatus?: TopicStateStatus
   isUnread?: boolean
+  isUrgent?: boolean
   avatarSrc?: string
   memberCount?: number
 }
@@ -67,6 +68,7 @@ export function StarredSection({
                 type={item.type}
                 topicStatus={item.topicStatus}
                 isUnread={item.isUnread}
+                isUrgent={item.isUrgent}
                 isSelected={selectedId === item.id}
                 avatarSrc={item.avatarSrc}
                 memberCount={item.memberCount}

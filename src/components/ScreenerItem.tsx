@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { IconX } from '@tabler/icons-react'
 import { ScreenerPreviewCard } from './ScreenerPreviewCard'
+import { ScreenerLaterMenu } from './ScreenerLaterMenu'
 import { TopicState } from './ui/TopicState'
 import { Avatar } from './ui/Avatar'
 import { Button } from './ui/Button'
@@ -10,8 +11,10 @@ import type { ScreenerItem as ScreenerItemData } from '@/api'
 
 interface ScreenerItemProps {
   item: ScreenerItemData
+  /** "Open" → add to Open work. */
   onOpen?: (id: string) => void
-  onLater?: (id: string) => void
+  /** "Later" → snooze until the chosen absolute timestamp. */
+  onLater?: (id: string, untilMs: number) => void
   onDismiss?: (id: string) => void
 }
 
@@ -70,9 +73,7 @@ export function ScreenerItem({ item, onOpen, onLater, onDismiss }: ScreenerItemP
           <Button variant="primary" size="small" onClick={() => onOpen?.(item.id)}>
             Open
           </Button>
-          <Button variant="outlined" size="small" onClick={() => onLater?.(item.id)}>
-            Later
-          </Button>
+          <ScreenerLaterMenu onPick={(untilMs) => onLater?.(item.id, untilMs)} />
         </div>
         <IconButton
           variant="outlined"

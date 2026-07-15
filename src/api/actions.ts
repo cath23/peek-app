@@ -42,6 +42,7 @@ export function usePeekActions() {
   const removeHuddleRemote = useMutation(api.huddles.remove)
   const dismissScreenerRemote = useMutation(api.desk.dismissScreenerItem)
   const snoozeScreenerRemote = useMutation(api.desk.snoozeScreenerItem)
+  const addToOpenWorkRemote = useMutation(api.desk.addToOpenWork)
   const removeOpenWorkRemote = useMutation(api.desk.removeOpenWorkItem)
 
   const persistMessage = (
@@ -160,8 +161,10 @@ export function usePeekActions() {
      * the seam diffs it against `prev` to find the emoji the user toggled
      * and persists that as a per-user row. Only the current user's own
      * reaction can change client-side, so exactly one emoji flips its
-     * 'yours' flag per call. Without `prev` (reply reactions — not modeled
-     * server-side yet) the change stays session-local.
+     * 'yours' flag per call. `prev` is ALWAYS an array for messages (even
+     * `[]` for a message with no reactions yet — the common first-reaction
+     * case, which must still persist); `prev === undefined` marks a reply
+     * reaction, which stays session-local (§2.7 is message-keyed).
      */
     setReactions(id: string, reactions: ReactionData[], prev?: ReactionData[]) {
       m.setReactionOverrides((prevMap) => ({ ...prevMap, [id]: reactions }))
@@ -312,9 +315,14 @@ export function usePeekActions() {
     dismissScreenerItem(id: string) {
       if (hasConvex) void dismissScreenerRemote({ id })
     },
-    /** "Later" — the item reappears after the default snooze (24h). */
-    snoozeScreenerItem(id: string) {
-      if (hasConvex) void snoozeScreenerRemote({ id })
+    /** "Open" → move the item into Open work. */
+    addScreenerToOpenWork(id: string) {
+      if (hasConvex) void addToOpenWorkRemote({ screenerItemId: id })
+    },
+    /** "Later" — the item reappears after `untilMs` (an absolute timestamp);
+     *  defaults to +24h server-side when omitted. */
+    snoozeScreenerItem(id: string, untilMs?: number) {
+      if (hasConvex) void snoozeScreenerRemote({ id, until: untilMs })
     },
     removeOpenWorkItem(id: string) {
       if (hasConvex) void removeOpenWorkRemote({ id })

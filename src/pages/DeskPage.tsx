@@ -21,6 +21,7 @@ import {
   useCreateTopicFromDm,
   usePeekActions,
   useStarred,
+  type OpenWorkItem,
 } from '@/api'
 import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
@@ -35,7 +36,7 @@ type Selected =
   | { kind: 'topic'; topicId: string; topicTitle: string; topicResolved: boolean; section: SectionKey }
 
 export function DeskPage() {
-  const { topicHasUnread, dmHasUnread } = useUnread()
+  const { topicHasUnread, dmHasUnread, topicIsUrgent, dmIsUrgent } = useUnread()
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()
@@ -69,12 +70,14 @@ export function DeskPage() {
   const showTopicUnreads = debug.unreads.topics
   const showPeopleUnreads = debug.unreads.people
 
-  // Open Work is topics-only. Sort unread first when topic-unreads are visible.
-  // Filter out items the user has dismissed via the row's X button.
+  // Open work holds topics and (via Screener "Open") DMs. Sort unread first
+  // when unreads are visible. Filter out items dismissed via the row's X.
+  const openWorkUnread = (i: OpenWorkItem) =>
+    i.kind === 'dm' ? dmHasUnread(i.dmId) : topicHasUnread(i.topicId)
   const baseOpenWork = (debug.desk.openWorkHasData ? OPEN_WORK_ITEMS : [])
     .filter((i) => !dismissedOpenWorkIds.has(i.id))
   const openWorkItems = showTopicUnreads
-    ? [...baseOpenWork].sort((a, b) => Number(topicHasUnread(b.topicId)) - Number(topicHasUnread(a.topicId)))
+    ? [...baseOpenWork].sort((a, b) => Number(openWorkUnread(b)) - Number(openWorkUnread(a)))
     : baseOpenWork
 
   const dismissOpenWork = (id: string) => {
@@ -102,10 +105,16 @@ export function DeskPage() {
     actions.dismissScreenerItem(id)
   }
 
-  /** "Later" hides the item now; it reappears after the snooze window. */
-  const laterScreener = (id: string) => {
+  /** "Open" → move the item into Open work. */
+  const openScreener = (id: string) => {
     setDismissedScreenerIds((prev) => new Set([...prev, id]))
-    actions.snoozeScreenerItem(id)
+    actions.addScreenerToOpenWork(id)
+  }
+
+  /** "Later" hides the item now; it reappears after the chosen reminder time. */
+  const laterScreener = (id: string, untilMs: number) => {
+    setDismissedScreenerIds((prev) => new Set([...prev, id]))
+    actions.snoozeScreenerItem(id, untilMs)
   }
 
   const selectTopic = (topicId: string, section: SectionKey) => {
@@ -140,7 +149,7 @@ export function DeskPage() {
       })
       if (!wasStarred) return
       const inUrgent = urgentItems.some((u) => u.kind === 'topic' && u.topicId === selected.topicId)
-      const inOpenWork = openWorkItems.some((i) => i.topicId === selected.topicId)
+      const inOpenWork = openWorkItems.some((i) => i.kind !== 'dm' && i.topicId === selected.topicId)
       if (!inUrgent && !inOpenWork) setSelected(null)
       else if (selected.section === 'starred') {
         setSelected({ ...selected, section: inUrgent ? 'urgent' : 'openWork' })
@@ -198,6 +207,7 @@ export function DeskPage() {
               <>
                 <ScreenerSection
                   items={screenerItems}
+                  onOpen={openScreener}
                   onDismiss={dismissScreener}
                   onLater={laterScreener}
                 />
@@ -271,22 +281,39 @@ export function DeskPage() {
                 </p>
               ) : (
                 <div className="flex flex-col gap-0.5 mt-1">
-                  {openWorkItems.map((item) => (
-                    <PersonRow
-                      key={item.id}
-                      name={item.title}
-                      type="topic"
-                      topicStatus={isTopicResolved(item.topicId) ? 'resolved' : 'unresolved'}
-                      isUnread={(showTopicUnreads && topicHasUnread(item.topicId)) || item.isUnread}
-                      isSelected={
-                        selectionAnchor === 'openWork' &&
-                        selected?.kind === 'topic' &&
-                        selected.topicId === item.topicId
-                      }
-                      onClick={() => selectTopic(item.topicId, 'openWork')}
-                      onRemove={() => dismissOpenWork(item.id)}
-                    />
-                  ))}
+                  {openWorkItems.map((item) =>
+                    item.kind === 'dm' ? (
+                      <PersonRow
+                        key={item.id}
+                        name={item.name}
+                        type="DM"
+                        avatarSrc={item.avatarSrc}
+                        isUnread={(showPeopleUnreads && dmHasUnread(item.dmId)) || item.isUnread}
+                        isSelected={
+                          selectionAnchor === 'openWork' &&
+                          selected?.kind === 'dm' &&
+                          selected.dmId === item.dmId
+                        }
+                        onClick={() => selectDm(item.dmId, item.name, 'openWork')}
+                        onRemove={() => dismissOpenWork(item.id)}
+                      />
+                    ) : (
+                      <PersonRow
+                        key={item.id}
+                        name={item.title}
+                        type="topic"
+                        topicStatus={isTopicResolved(item.topicId) ? 'resolved' : 'unresolved'}
+                        isUnread={(showTopicUnreads && topicHasUnread(item.topicId)) || item.isUnread}
+                        isSelected={
+                          selectionAnchor === 'openWork' &&
+                          selected?.kind === 'topic' &&
+                          selected.topicId === item.topicId
+                        }
+                        onClick={() => selectTopic(item.topicId, 'openWork')}
+                        onRemove={() => dismissOpenWork(item.id)}
+                      />
+                    )
+                  )}
                 </div>
               )}
             </div>

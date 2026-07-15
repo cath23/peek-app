@@ -31,7 +31,7 @@ export function useDeskItems(): { openWork: OpenWorkItem[]; urgent: UrgentItem[]
   const urgent = useQuery(api.desk.urgentList, hasConvex ? {} : 'skip')
   if (!hasConvex) return { openWork: OPEN_WORK_ITEMS, urgent: URGENT_ITEMS }
   return {
-    openWork: openWork ?? [],
+    openWork: (openWork ?? []).map((w) => (w.kind === 'dm' ? { ...w, avatarSrc: avatarSrcFor(w.name) } : w)),
     urgent: (urgent ?? []).map((u) => (u.kind === 'dm' ? { ...u, avatarSrc: avatarSrcFor(u.name) } : u)),
   }
 }

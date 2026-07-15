@@ -11,9 +11,11 @@
 import { useEffect } from 'react'
 import { PEOPLE as MOCK_PEOPLE } from '@/data/peopleData'
 import { setMentionNames } from '@/lib/textParsing'
+import { useCurrentUser } from './currentUser'
 import { usePeople } from './people'
 import type { Person } from './types'
 
+/** Suggestion list — the other workspace people (you don't @mention yourself). */
 let directory: Person[] = MOCK_PEOPLE
 
 /** Read by the Tiptap suggestion plugins when a popup opens. */
@@ -24,11 +26,17 @@ export function mentionPeople(): Person[] {
 /** Seam-internal: mounted by PeekDataProvider. Renders nothing. */
 export function MentionDirectorySync() {
   const people = usePeople()
+  const me = useCurrentUser()
   useEffect(() => {
     directory = people ?? MOCK_PEOPLE
-    // The body renderer matches mentions by name, so it needs the same list —
-    // otherwise a real teammate's @mention renders as plain text.
-    setMentionNames(directory.map((p) => p.name))
-  }, [people])
+    // The body renderer matches mentions by name, so it needs the FULL cast —
+    // including the viewer's own name, or a mention OF you renders as plain
+    // text in your view while everyone else sees a chip (issue #10). The
+    // suggestion list stays "other people" (above); only the render names
+    // include you.
+    const names = directory.map((p) => p.name)
+    if (me?.name) names.push(me.name)
+    setMentionNames(names)
+  }, [people, me])
   return null
 }
