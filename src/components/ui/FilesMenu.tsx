@@ -81,9 +81,13 @@ function buildLevel1(items: FilesMenuItem[]): { entries: NavEntry[]; navCount: n
   const entries: NavEntry[] = []
   let idx = 0
 
-  entries.push({ type: 'header', label: 'Apps' })
-  for (const cat of APP_CATEGORIES) {
-    entries.push({ type: 'app-nav', category: cat, navIndex: idx++ })
+  // No app items (the real app: files aren't implemented) → no Apps section;
+  // never offer a drill-in that only leads to empty lists.
+  if (items.some((i) => i.kind === 'app')) {
+    entries.push({ type: 'header', label: 'Apps' })
+    for (const cat of APP_CATEGORIES) {
+      entries.push({ type: 'app-nav', category: cat, navIndex: idx++ })
+    }
   }
 
   if (topics.length > 0) {

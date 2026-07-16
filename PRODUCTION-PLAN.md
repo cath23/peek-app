@@ -486,6 +486,14 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       now judged against the THREAD watermark). Desk: removing the
       selected Open-work item clears the stale selection → empty state.
       All verified two-browser (.verify-qa2a.mjs, 13 checks).
+- [x] **QA batch #2, item 4 — `[` command (2026-07-16)**: the composer's
+      topic/file-reference popup now suggests REAL topics via a seam
+      directory snapshot (`mentionTopics` + `TopicDirectorySync`, same
+      pattern as @mentions; includes runtime-created topics). In Convex
+      mode the mock Apps/Documents entries are dropped — files aren't
+      implemented, and the app never offers a reference that can't
+      resolve; FilesMenu hides the Apps drill-in when no app items exist.
+      Mock mode (Storybook/demo) unchanged. Verified (.verify-qa4.mjs).
 - [ ] Manual two-browser QA pass (user)
 
 ### Phase 5 — Hardening *(coarse)*

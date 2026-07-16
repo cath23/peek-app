@@ -10,10 +10,12 @@
  */
 import { useEffect } from 'react'
 import { PEOPLE as MOCK_PEOPLE } from '@/data/peopleData'
+import { TOPICS as MOCK_TOPICS } from '@/data/topicData'
 import { setMentionNames } from '@/lib/textParsing'
 import { useCurrentUser } from './currentUser'
 import { usePeople } from './people'
-import type { Person } from './types'
+import { useTopics } from './topics'
+import type { Person, Topic } from './types'
 
 /** Suggestion list — the other workspace people (you don't @mention yourself). */
 let directory: Person[] = MOCK_PEOPLE
@@ -21,6 +23,24 @@ let directory: Person[] = MOCK_PEOPLE
 /** Read by the Tiptap suggestion plugins when a popup opens. */
 export function mentionPeople(): Person[] {
   return directory
+}
+
+/** Suggestion list for the `[` topic-reference command — same pattern. */
+let topicDirectory: Topic[] = MOCK_TOPICS
+
+/** Read by the `[` Tiptap suggestion plugin when its popup opens. */
+export function mentionTopics(): Topic[] {
+  return topicDirectory
+}
+
+/** Seam-internal: mounted by PeekDataProvider inside TopicStoreProvider
+ *  (useTopics needs the store). Renders nothing. */
+export function TopicDirectorySync() {
+  const topics = useTopics()
+  useEffect(() => {
+    topicDirectory = topics ?? MOCK_TOPICS
+  }, [topics])
+  return null
 }
 
 /** Seam-internal: mounted by PeekDataProvider. Renders nothing. */

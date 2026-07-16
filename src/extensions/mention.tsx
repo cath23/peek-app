@@ -4,9 +4,8 @@ import Mention from '@tiptap/extension-mention'
 import { type SuggestionOptions, type SuggestionProps } from '@tiptap/suggestion'
 import { type NodeViewProps } from '@tiptap/react'
 import { IconCircleDashed, IconCircleCheck, IconBrandGithub, IconFile, IconFileTypePdf, IconPhoto, IconTable, IconPresentation } from '@tabler/icons-react'
-import { mentionPeople, type Person } from '@/api'
-import { TOPICS } from '@/api'
-import { APP_FILES, DOCUMENT_FILES } from '@/api'
+import { mentionPeople, mentionTopics, type Person } from '@/api'
+import { APP_FILES, DOCUMENT_FILES, hasConvex } from '@/api'
 import { useIsTopicResolved } from '@/api'
 import { MentionMenu } from '@/components/ui/MentionMenu'
 import { FilesMenu, type FilesMenuItem, type FilesMenuRef } from '@/components/ui/FilesMenu'
@@ -367,7 +366,11 @@ export const TopicMention = Mention.extend({
   suggestion: {
     char: '[',
     items: (): FilesMenuItem[] => {
-      const topics: FilesMenuItem[] = TOPICS.map((t) => ({ kind: 'topic', data: t }))
+      // Real topics via the seam directory (kept in sync like @mentions).
+      // Files exist only as mocks, so they suggest only in mock mode — the
+      // real app never offers a reference that can't resolve (locked rule).
+      const topics: FilesMenuItem[] = mentionTopics().map((t) => ({ kind: 'topic', data: t }))
+      if (hasConvex) return topics
       const apps: FilesMenuItem[] = APP_FILES.map((f) => ({ kind: 'app', data: f }))
       const docs: FilesMenuItem[] = DOCUMENT_FILES.map((f) => ({ kind: 'document', data: f }))
       return [...topics, ...apps, ...docs]
