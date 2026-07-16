@@ -461,6 +461,18 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
 - [x] **@mentions** suggest real workspace people (were a static mock list);
       the seam feeds the Tiptap plugins a directory snapshot and rebuilds
       the render-time regex.
+- [x] **Reaction cross-user sync (QA batch #2 pre-work, 2026-07-16)** —
+      reactions are server-driven in Convex mode. The seam used to set a
+      permanent full-array `reactionOverrides[id]`, which masked the server
+      aggregate forever: after your first reaction you never saw anyone
+      else's, and 2nd-emoji / join-existing / remove toggles diffed against
+      the stale override. Now the cards pass the toggled emoji through
+      `onReactionsChange`, and the seam records a per-emoji pending toggle
+      (the optimistic window, applied idempotently on top of the server
+      aggregate) that clears when `toggleReaction` settles. Mock mode and
+      reply reactions keep the full-array override. Verified two-browser:
+      2nd emoji, joining another user's reaction, removing your own
+      (including pill removal at count 0).
 - [ ] Manual two-browser QA pass (user)
 
 ### Phase 5 — Hardening *(coarse)*

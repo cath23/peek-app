@@ -157,27 +157,47 @@ export function usePeekActions() {
     },
 
     /**
-     * Cards keep computing the next aggregate array (instant, pixel-exact);
-     * the seam diffs it against `prev` to find the emoji the user toggled
-     * and persists that as a per-user row. Only the current user's own
-     * reaction can change client-side, so exactly one emoji flips its
-     * 'yours' flag per call. `prev` is ALWAYS an array for messages (even
-     * `[]` for a message with no reactions yet — the common first-reaction
-     * case, which must still persist); `prev === undefined` marks a reply
-     * reaction, which stays session-local (§2.7 is message-keyed).
+     * Cards keep computing the next aggregate array (instant, pixel-exact)
+     * and pass the emoji the user toggled. `prev` is ALWAYS an array for
+     * messages (even `[]` — the first-reaction case must still persist);
+     * `prev === undefined` marks a reply reaction, which stays session-local
+     * (§2.7 is message-keyed).
+     *
+     * Mock mode + replies: the full array is the override (source of truth).
+     * Convex mode messages: the server aggregate stays the source of truth —
+     * we record a per-emoji pending toggle (the optimistic window) and clear
+     * it when the mutation settles, by which point the reactive query
+     * reflects it. Never masking the whole array keeps OTHER users' reactions
+     * flowing through (the old full-array override hid them forever).
      */
-    setReactions(id: string, reactions: ReactionData[], prev?: ReactionData[]) {
-      m.setReactionOverrides((prevMap) => ({ ...prevMap, [id]: reactions }))
-      if (!hasConvex || prev === undefined) return
-      const emojis = new Set([...prev.map((r) => r.emoji), ...reactions.map((r) => r.emoji)])
-      for (const emoji of emojis) {
-        const wasYours = prev.find((r) => r.emoji === emoji)?.owner === 'yours'
-        const isYours = reactions.find((r) => r.emoji === emoji)?.owner === 'yours'
-        if (wasYours !== isYours) {
-          void toggleReactionRemote({ key: id, emoji })
-          return
-        }
+    setReactions(id: string, reactions: ReactionData[], prev?: ReactionData[], emoji?: string) {
+      if (!hasConvex || prev === undefined) {
+        m.setReactionOverrides((prevMap) => ({ ...prevMap, [id]: reactions }))
+        return
       }
+      // Fallback for a caller that didn't pass the emoji: find the one whose
+      // 'yours' flag flipped (only the current user's own reaction can change
+      // client-side, so exactly one flips per call).
+      const toggled =
+        emoji ??
+        [...new Set([...prev.map((r) => r.emoji), ...reactions.map((r) => r.emoji)])].find((e) => {
+          const wasYours = prev.find((r) => r.emoji === e)?.owner === 'yours'
+          const isYours = reactions.find((r) => r.emoji === e)?.owner === 'yours'
+          return wasYours !== isYours
+        })
+      if (!toggled) return
+      const wasYours = prev.find((r) => r.emoji === toggled)?.owner === 'yours'
+      m.setPendingReactions((p) => ({ ...p, [id]: { ...p[id], [toggled]: wasYours ? 'remove' : 'add' } }))
+      const clearPending = () =>
+        m.setPendingReactions((p) => {
+          const forId = { ...p[id] }
+          delete forId[toggled]
+          const next = { ...p }
+          if (Object.keys(forId).length > 0) next[id] = forId
+          else delete next[id]
+          return next
+        })
+      toggleReactionRemote({ key: id, emoji: toggled }).then(clearPending, clearPending)
     },
 
     // ── Resolution ──

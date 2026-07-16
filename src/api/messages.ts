@@ -157,6 +157,32 @@ export interface ThreadData {
 type Overrides = ReturnType<typeof useTopicMutations>
 
 /**
+ * Convex-mode optimistic window for message reactions: layer the user's
+ * in-flight per-emoji toggles on top of the server aggregate. Idempotent —
+ * once the reactive query reflects a toggle, applying it again is a no-op,
+ * so there's no flicker while the pending entry clears.
+ */
+function applyPendingReactions(
+  base: ReactionData[] | undefined,
+  pending: Record<string, 'add' | 'remove'> | undefined,
+): ReactionData[] | undefined {
+  if (!pending) return base
+  let next = [...(base ?? [])]
+  for (const [emoji, dir] of Object.entries(pending)) {
+    const i = next.findIndex((r) => r.emoji === emoji)
+    if (dir === 'add') {
+      if (i === -1) next.push({ emoji, count: 1, owner: 'yours' })
+      else if (next[i].owner !== 'yours') next[i] = { ...next[i], count: next[i].count + 1, owner: 'yours' }
+    } else if (i !== -1 && next[i].owner === 'yours') {
+      next = next[i].count <= 1
+        ? next.filter((_, j) => j !== i)
+        : next.map((r, j) => (j === i ? { ...r, count: r.count - 1, owner: 'others' as const } : r))
+    }
+  }
+  return next.length > 0 ? next : undefined
+}
+
+/**
  * `recountReplies` distinguishes the two read paths: the mock path derives
  * the count from the static REPLIES map + session-sent replies; the Convex
  * path trusts the server count already on the row (the reactive query
@@ -168,7 +194,7 @@ function mergeConv(c: ConversationData, o: Overrides, recountReplies = true): Co
     ...c,
     body: o.bodyOverrides[c.id] ?? c.body,
     highlightType: c.id in o.highlightOverrides ? o.highlightOverrides[c.id] : c.highlightType,
-    reactions: o.reactionOverrides[c.id] ?? c.reactions,
+    reactions: applyPendingReactions(o.reactionOverrides[c.id] ?? c.reactions, o.pendingReactions[c.id]),
     isResolved: resolution?.resolved ?? c.isResolved,
     resolvedBy: resolution?.resolvedBy ?? c.resolvedBy,
     resolutionMessage: resolution?.message ?? c.resolutionMessage,

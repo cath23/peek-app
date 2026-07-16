@@ -49,6 +49,16 @@ interface TopicMutationsValue {
   reactionOverrides: Record<string, ReactionData[]>
   setReactionOverrides: Dispatch<SetStateAction<Record<string, ReactionData[]>>>
   /**
+   * Convex-mode optimistic window for MESSAGE reactions, keyed by message id →
+   * emoji → the direction the user toggled. Applied on top of the server
+   * aggregate (never masking it wholesale) and cleared when the toggle
+   * mutation settles — by then the reactive query reflects it, so others'
+   * reactions keep flowing through. Mock mode and reply reactions use
+   * `reactionOverrides` (full arrays) instead.
+   */
+  pendingReactions: Record<string, Record<string, 'add' | 'remove'>>
+  setPendingReactions: Dispatch<SetStateAction<Record<string, Record<string, 'add' | 'remove'>>>>
+  /**
    * Derived: a topic is resolved when every non-deleted conversation in it is resolved
    * AND it has at least one such conversation. Single source of truth for the
    * dashed-circle vs checkmark icon shown across the app (topic list, topic header,
@@ -71,6 +81,7 @@ export function TopicMutationsProvider({ children }: { children: ReactNode }) {
   const [huddleBodyOverrides, setHuddleBodyOverrides] = useState<Record<string, string>>({})
   const [huddleSentMessages, setHuddleSentMessages] = useState<Record<string, ConversationData[]>>({})
   const [reactionOverrides, setReactionOverrides] = useState<Record<string, ReactionData[]>>({})
+  const [pendingReactions, setPendingReactions] = useState<Record<string, Record<string, 'add' | 'remove'>>>({})
 
   const isTopicResolved = useCallback(
     (topicId: string): boolean => {
@@ -107,9 +118,11 @@ export function TopicMutationsProvider({ children }: { children: ReactNode }) {
       setHuddleSentMessages,
       reactionOverrides,
       setReactionOverrides,
+      pendingReactions,
+      setPendingReactions,
       isTopicResolved,
     }),
-    [sentMessages, deletedIds, resolvedOverrides, sentReplies, bodyOverrides, highlightOverrides, createdHuddles, deletedHuddleIds, huddleBodyOverrides, huddleSentMessages, reactionOverrides, isTopicResolved],
+    [sentMessages, deletedIds, resolvedOverrides, sentReplies, bodyOverrides, highlightOverrides, createdHuddles, deletedHuddleIds, huddleBodyOverrides, huddleSentMessages, reactionOverrides, pendingReactions, isTopicResolved],
   )
 
   return <TopicMutationsContext.Provider value={value}>{children}</TopicMutationsContext.Provider>

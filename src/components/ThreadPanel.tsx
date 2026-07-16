@@ -30,7 +30,7 @@ interface ThreadPanelProps {
   /** Reactions on the initial (pinned) message — needed when the panel renders the initial as a
    *  ThreadReplyCard (huddle case) so reactions added on this side persist & mirror to the DM side. */
   initialReactions?: ReactionData[]
-  onInitialReactionsChange?: (reactions: ReactionData[]) => void
+  onInitialReactionsChange?: (reactions: ReactionData[], emoji: string) => void
   /** Highlight on the initial message — same purpose as reactions: mirror across DM and huddle. */
   initialHighlightType?: HighlightType
   onInitialHighlightChange?: (highlightType: HighlightType | undefined) => void

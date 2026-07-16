@@ -69,7 +69,7 @@ interface ConversationCardProps {
   /** Called when user confirms Start topic from a DM context. When provided, supersedes the in-place isTopic flip. */
   onStartTopicFromDm?: (data: StartTopicResult) => void
   onResolvedChange?: (resolved: boolean, resolvedBy?: string, message?: string) => void
-  onReactionsChange?: (reactions: ReactionData[]) => void
+  onReactionsChange?: (reactions: ReactionData[], emoji: string) => void
   onDelete?: () => void
   isSelected?: boolean
   onReply?: () => void
@@ -443,7 +443,7 @@ export function ConversationCard({
           ? prev.map((r) => (r === othersExisting ? { ...r, count: r.count + 1, owner: 'yours' as const } : r))
           : [...prev, { emoji, count: 1, owner: 'yours' as const }]
       }
-      onReactionsChange?.(next)
+      onReactionsChange?.(next, emoji)
       return next
     })
     setShowReactionPicker(false)

@@ -159,7 +159,7 @@ interface ThreadReplyCardProps {
   onHighlightChange?: (type: HighlightType | undefined) => void
   onDelete?: () => void
   onBodyChange?: (newBody: string) => void
-  onReactionsChange?: (reactions: ReactionData[]) => void
+  onReactionsChange?: (reactions: ReactionData[], emoji: string) => void
   /** True when this reply triggered the parent conv's resolution (compose `→ msg` in the
    *  thread panel). When set, edit mode surfaces the resolution as a resolutionBlock so
    *  the user can update or remove it inline. */
@@ -439,7 +439,7 @@ export function ThreadReplyCard({
           ? prev.map((r) => (r === othersExisting ? { ...r, count: r.count + 1, owner: 'yours' as const } : r))
           : [...prev, { emoji, count: 1, owner: 'yours' as const }]
       }
-      onReactionsChange?.(next)
+      onReactionsChange?.(next, emoji)
       return next
     })
     setShowReactionPicker(false)
