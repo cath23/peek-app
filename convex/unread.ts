@@ -21,7 +21,7 @@ async function containerFlags(
   ctx: Parameters<typeof watermarks>[0],
   me: Id<'users'>,
   wm: Map<string, number>,
-  kind: 'topic' | 'dm',
+  kind: 'topic' | 'dm' | 'huddle',
   containerId: string,
 ): Promise<{ unread: boolean; urgent: boolean }> {
   const msgs = await ctx.db
@@ -33,22 +33,36 @@ async function containerFlags(
   let unread = false
   let urgent = false
   for (const m of msgs) {
-    if (m.authorId === me) continue
     const replies = await ctx.db
       .query('replies')
       .withIndex('by_message', (q) => q.eq('messageId', m._id))
       .collect()
     const threadWm = wm.get(m._id as string)
-    const msgNew = isNew(m.createdAt, containerWm)
-    const replyNew = replies.some((r) => r.authorId !== me && isNew(r.createdAt, threadWm))
-    if (m.urgent) {
-      // Urgent → the warning indicator, never the accent dot.
-      if (msgNew || replyNew) urgent = true
-    } else if (msgNew || replyNew) {
-      unread = true
-    }
+    // Your own message is never new to you — but replies OTHERS leave on it
+    // are (QA #2.1: the most common "new reply, no sidebar dot" case).
+    const msgNew = m.authorId !== me && isNew(m.createdAt, containerWm)
+    const newReplies = replies.filter((r) => r.authorId !== me && isNew(r.createdAt, threadWm))
+    // Urgency belongs to the individual message/reply (ruling 2026-07-16):
+    // a non-urgent reply on an urgent thread raises the ordinary accent dot,
+    // not the urgent indicator — the sender must `!@` again to re-urge.
+    if ((m.urgent && msgNew) || newReplies.some((r) => r.urgent)) urgent = true
+    if ((!m.urgent && msgNew) || newReplies.some((r) => !r.urgent)) unread = true
   }
   return { unread, urgent }
+}
+
+/** Is the viewer a member of this huddle? Huddles are private — only members'
+ *  sidebars react to their activity. */
+async function isHuddleMember(
+  ctx: Parameters<typeof watermarks>[0],
+  huddleId: Id<'huddles'>,
+  me: Id<'users'>,
+): Promise<boolean> {
+  const rows = await ctx.db
+    .query('huddleMembers')
+    .withIndex('by_huddle', (q) => q.eq('huddleId', huddleId))
+    .collect()
+  return rows.some((r) => r.userId === me)
 }
 
 /**
@@ -66,7 +80,21 @@ export const summary = query({
     const topics: string[] = []
     const urgentTopics: string[] = []
     for (const t of await ctx.db.query('topics').collect()) {
-      const { unread, urgent } = await containerFlags(ctx, me, wm, 'topic', t._id as string)
+      let { unread, urgent } = await containerFlags(ctx, me, wm, 'topic', t._id as string)
+      // Huddle activity rolls up to the parent topic's sidebar dot — a new
+      // huddle message/reply otherwise only badged the card, never the
+      // sidebar (QA #2.1). Member-gated: huddles are private.
+      const huddles = await ctx.db
+        .query('huddles')
+        .withIndex('by_topic', (q) => q.eq('topicId', t._id))
+        .collect()
+      for (const h of huddles) {
+        if (unread && urgent) break
+        if (!(await isHuddleMember(ctx, h._id, me))) continue
+        const f = await containerFlags(ctx, me, wm, 'huddle', h._id as string)
+        unread = unread || f.unread
+        urgent = urgent || f.urgent
+      }
       const key = t.seedKey ?? (t._id as string)
       if (urgent) urgentTopics.push(key)
       if (unread) topics.push(key)

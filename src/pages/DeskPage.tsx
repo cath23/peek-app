@@ -81,6 +81,16 @@ export function DeskPage() {
     : baseOpenWork
 
   const dismissOpenWork = (id: string) => {
+    // Removing the conversation you're looking at clears the stale selection —
+    // the right panel falls back to "No conversation selected" (QA #2.2).
+    const item = openWorkItems.find((i) => i.id === id)
+    const wasSelected =
+      item != null &&
+      selected != null &&
+      (item.kind === 'dm'
+        ? selected.kind === 'dm' && selected.dmId === item.dmId
+        : selected.kind === 'topic' && selected.topicId === item.topicId)
+    if (wasSelected) setSelected(null)
     setDismissedOpenWorkIds((prev) => new Set([...prev, id]))
     actions.removeOpenWorkItem(id)
   }

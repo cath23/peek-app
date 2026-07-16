@@ -137,9 +137,15 @@ export async function screenMessage(ctx: MutationCtx, m: Doc<'messages'>) {
 }
 
 /**
- * Replies don't screen on their own — except a mention. But a reply DOES
- * refresh an item you already have for that conversation, so "new replies in
- * a thread you were mentioned in show up in the Screener".
+ * A reply screens to you when (ruling 2026-07-16, extending 2026-07-09):
+ *
+ *   - you are @mentioned in it; or
+ *   - you PARTICIPATED in that thread — you wrote the parent message or an
+ *     earlier reply in it; or
+ *   - you already have a Screener item for the conversation (the reply
+ *     refreshes it — "new replies in a thread you were mentioned in").
+ *
+ * Ordinary replies in threads you never touched still don't screen.
  */
 export async function screenReply(ctx: MutationCtx, reply: Doc<'replies'>) {
   if (reply.urgent) return
@@ -149,12 +155,20 @@ export async function screenReply(ctx: MutationCtx, reply: Doc<'replies'>) {
   if (!target) return
 
   const members = new Set(await recipients(ctx, parent.parentKind, parent.parentId, reply.authorId))
+  const priorReplies = await ctx.db
+    .query('replies')
+    .withIndex('by_message', (q) => q.eq('messageId', parent._id))
+    .collect()
+  const participants = new Set<string>([
+    parent.authorId as string,
+    ...priorReplies.filter((r) => r._id !== reply._id).map((r) => r.authorId as string),
+  ])
   for (const user of await ctx.db.query('users').collect()) {
     if (user._id === reply.authorId) continue
     const mentioned = mentionsUser(reply.body, user.name)
     if (!mentioned && !members.has(user._id)) continue
     const existing = await findItem(ctx, user._id, target.kind, target.targetId)
-    if (mentioned || existing) {
+    if (mentioned || existing || participants.has(user._id as string)) {
       await upsert(ctx, user._id, target.kind, target.targetId, snippet(reply.body), parent._id)
     }
   }

@@ -473,12 +473,34 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       reply reactions keep the full-array override. Verified two-browser:
       2nd emoji, joining another user's reaction, removing your own
       (including pill removal at count 0).
+- [x] **QA batch #2, items 1–3 (2026-07-16)** — (1) *Sidebar dots for
+      replies*: `unread.summary` no longer skips your own messages wholesale
+      (a reply to YOUR message now dots the sidebar), and huddle
+      messages/replies roll up to the parent topic's dot and urgent
+      indicator (member-gated — huddles are private). (2) *Screener*: a
+      reply also screens to thread PARTICIPANTS (you wrote the parent
+      message or an earlier reply), extending the mention-only rule.
+      (3) *Urgent is per-item*: a non-urgent reply on an urgent thread
+      raises the ordinary dot, not the urgent flag — the sender must `!@`
+      again (`desk.urgentList` + `unread.containerFlags`; urgent replies
+      now judged against the THREAD watermark). Desk: removing the
+      selected Open-work item clears the stale selection → empty state.
+      All verified two-browser (.verify-qa2a.mjs, 13 checks).
 - [ ] Manual two-browser QA pass (user)
 
 ### Phase 5 — Hardening *(coarse)*
 - [ ] Prod deploy + env wiring · pagination · uploads · error boundaries
 
 ### Decision log
+- 2026-07-16 — **QA batch #2 rulings (user)**. (1) Screener: new replies in
+  threads you STARTED or PARTICIPATED IN create/refresh a Screener item, in
+  addition to the mention rule. (2) Urgency belongs to the individual
+  message/reply: a non-urgent reply on an urgent thread must NOT keep it
+  urgent — it raises the normal unread dot; re-urging requires a fresh `!@`.
+  (3) Topic access: no content gating — the Topics list splits into two
+  sections (topics you're a member of / the rest); opening a non-member
+  topic shows its content plus a join banner (empty-topic banner style) at
+  the bottom.
 - 2026-07-08 — Plan written; auth choice Convex Auth (password + Google),
   Clerk only as fallback; Files/Figma/Linear stay mocked behind the seam.
 - 2026-07-08 — Storybook is **not a gate** for this plan: Phase 1 is verified

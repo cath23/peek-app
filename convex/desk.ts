@@ -258,24 +258,29 @@ export const urgentList = query({
     const watermark = new Map(
       readRows.filter((r) => r.userId === you._id).map((r) => [r.containerId, r.lastReadAt]),
     )
-    const hasUnreadUrgent = async (kind: 'topic' | 'dm', containerId: string) => {
+    const hasUnreadUrgent = async (kind: 'topic' | 'dm' | 'huddle', containerId: string) => {
       const last = watermark.get(containerId)
       // No watermark = never opened = everything in it is new (§4.3). The old
       // rule said "fully read", which silently swallowed an urgent message in a
       // conversation you'd never opened — e.g. the first DM from a new person.
-      const isNew = (at: number) => last === undefined || at > last
+      const isNew = (at: number, mark = last) => mark === undefined || at > mark
       const msgs = await ctx.db
         .query('messages')
         .withIndex('by_parent', (q) => q.eq('parentKind', kind).eq('parentId', containerId))
         .collect()
-      for (const m of msgs.filter((m) => m.urgent === true && m.authorId !== you._id)) {
-        if (isNew(m.createdAt)) return true
-        // An unread reply on an urgent thread keeps it urgent (dm3 case).
+      // Urgency belongs to the individual message/reply (ruling 2026-07-16):
+      // only an unread URGENT message or an unread URGENT reply lands here.
+      // A non-urgent reply on an urgent thread no longer keeps it urgent —
+      // it raises the ordinary unread dot instead; the sender must `!@` again.
+      for (const m of msgs) {
+        if (m.urgent === true && m.authorId !== you._id && isNew(m.createdAt)) return true
         const replies = await ctx.db
           .query('replies')
           .withIndex('by_message', (q) => q.eq('messageId', m._id))
           .collect()
-        if (replies.some((r) => r.authorId !== you._id && isNew(r.createdAt))) return true
+        const threadWm = watermark.get(m._id as string)
+        if (replies.some((r) => r.urgent === true && r.authorId !== you._id && isNew(r.createdAt, threadWm)))
+          return true
       }
       return false
     }
@@ -289,7 +294,27 @@ export const urgentList = query({
       out.push({ id: `urg_dm_${key}`, kind: 'dm' as const, dmId: key, name: partner.name })
     }
     for (const topic of await ctx.db.query('topics').collect()) {
-      if (!(await hasUnreadUrgent('topic', topic._id as string))) continue
+      let urgentHere = await hasUnreadUrgent('topic', topic._id as string)
+      if (!urgentHere) {
+        // Urgent huddle traffic surfaces on the parent topic (member-gated),
+        // matching the sidebar's urgent-indicator rollup in unread.summary.
+        const huddles = await ctx.db
+          .query('huddles')
+          .withIndex('by_topic', (q) => q.eq('topicId', topic._id))
+          .collect()
+        for (const h of huddles) {
+          const members = await ctx.db
+            .query('huddleMembers')
+            .withIndex('by_huddle', (q) => q.eq('huddleId', h._id))
+            .collect()
+          if (!members.some((r) => r.userId === you._id)) continue
+          if (await hasUnreadUrgent('huddle', h._id as string)) {
+            urgentHere = true
+            break
+          }
+        }
+      }
+      if (!urgentHere) continue
       out.push({
         id: `urg_topic_${topic.seedKey ?? topic._id}`,
         kind: 'topic' as const,
