@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ThemeProvider } from '@/lib/theme'
 import { DebugProvider } from '@/lib/debug'
+import { PeekDataProvider } from '@/api'
 import { TopBar } from './TopBar'
 
 const meta = {
@@ -9,12 +10,15 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   decorators: [
     Story => (
-      // TopBar reads useTheme (avatar menu) and its debug (?) opens a DebugMenu (useDebug).
+      // TopBar reads useTheme (avatar menu), useDebug (? menu), and useAuthActions
+      // (sign-out) — the last needs PeekDataProvider's Convex-Auth context.
       <ThemeProvider>
         <DebugProvider>
-          <div className="relative h-[160px] bg-bg-base">
-            <Story />
-          </div>
+          <PeekDataProvider>
+            <div className="relative h-[160px] bg-bg-base">
+              <Story />
+            </div>
+          </PeekDataProvider>
         </DebugProvider>
       </ThemeProvider>
     ),

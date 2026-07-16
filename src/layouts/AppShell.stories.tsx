@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider } from '@/lib/theme'
 import { DebugProvider } from '@/lib/debug'
+import { PeekDataProvider } from '@/api'
 import { LastSelectionProvider } from '@/lib/lastSelection'
 import { AppShell } from './AppShell'
 
@@ -22,9 +23,11 @@ const meta = {
       <MemoryRouter initialEntries={['/people']}>
         <ThemeProvider>
           <DebugProvider>
-            <LastSelectionProvider>
-              <Story />
-            </LastSelectionProvider>
+            <PeekDataProvider>
+              <LastSelectionProvider>
+                <Story />
+              </LastSelectionProvider>
+            </PeekDataProvider>
           </DebugProvider>
         </ThemeProvider>
       </MemoryRouter>

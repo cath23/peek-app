@@ -62,6 +62,7 @@ const preview: Preview = {
           ['Introduction', 'Design Tokens'],
           'Flows',
           'Layouts',
+          'Auth',
           'Primitives',
           'Feedback',
           'Inputs',
