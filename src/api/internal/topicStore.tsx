@@ -47,6 +47,8 @@ interface TopicStoreValue {
    *  window over the Convex list otherwise (QA #2.8). */
   deletedTopicIds: Set<string>
   deleteTopicLocal: (topicId: string) => void
+  /** Add invitee names to a runtime topic (mock-mode Invite members). */
+  addInviteesLocal: (topicId: string, names: string[]) => void
 }
 
 const TopicStoreContext = createContext<TopicStoreValue | null>(null)
@@ -104,6 +106,16 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
 
   const deleteTopicLocal = useCallback((topicId: string) => {
     setDeletedTopicIds((prev) => new Set([...prev, topicId]))
+  }, [])
+
+  const addInviteesLocal = useCallback((topicId: string, names: string[]) => {
+    setExtraTopics((prev) =>
+      prev.map((t) =>
+        t.id === topicId
+          ? { ...t, invitees: [...new Set([...(t.invitees ?? []), ...names])] }
+          : t,
+      ),
+    )
   }, [])
 
   const findTopic = useCallback(
@@ -217,8 +229,8 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<TopicStoreValue>(
-    () => ({ topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic, deletedTopicIds, deleteTopicLocal }),
-    [topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic, deletedTopicIds, deleteTopicLocal],
+    () => ({ topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic, deletedTopicIds, deleteTopicLocal, addInviteesLocal }),
+    [topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic, deletedTopicIds, deleteTopicLocal, addInviteesLocal],
   )
 
   return <TopicStoreContext.Provider value={value}>{children}</TopicStoreContext.Provider>

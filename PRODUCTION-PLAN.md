@@ -527,7 +527,31 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
 - [ ] Manual two-browser QA pass (user)
 
 ### Phase 5 — Hardening *(coarse)*
-- [ ] Prod deploy + env wiring · pagination · uploads · error boundaries
+- [x] **Prod deploy + env wiring** (2026-07-17) — QA batch #2 live: `git
+      push` (Vercel peek-demo + peek-develop) + `npx convex deploy -y`
+      (prod patient-grouse-611).
+- [x] **Error boundaries** (2026-07-17) — `ErrorBoundary` (class) wraps the
+      root (last-resort, in main.tsx) and each AppShell slot (list /
+      conversation / thread), so a crashing card or panel degrades to an
+      inline "Something went wrong — try again" fallback instead of
+      white-screening. "Try again" re-mounts just that subtree. Unit-tested
+      (ErrorBoundary.test.tsx, 3 cases).
+- [x] **Message pagination** (2026-07-17) — `messages.list` takes an
+      optional `limit` and returns `{ rows, hasMore }`, slicing to the
+      NEWEST N BEFORE the per-message shaping (the expensive part). The seam
+      (`useTopicMessages`/`useDmMessages`) starts at 100 and grows a page at
+      a time; both views render a "Show earlier messages" button and keep
+      the viewport anchored on the same message as older content extends
+      upward (distance-from-bottom invariant; holds across Convex's
+      load-time query collapse). Dev fixture `dev/bulk:bulkMessages` seeds
+      bulk rows. Verified (.verify-p5.mjs, 12 checks).
+- [x] **Invite members** (2026-07-17) — closes the empty-topic banner TODO:
+      the banner's "Invite members" button opens `InviteMembersDialog`
+      (PersonChipInput, StartHuddleDialog shell) → `topics.addMembers`
+      (`ensureTopicMember` per name); optimistic `addInviteesLocal` in the
+      topic store. Verified in .verify-p5.mjs.
+- [ ] Uploads · email verification (deferred from Phase 3) · DM-row menu
+      (left inert by ruling 2026-07-17)
 
 ### Decision log
 - 2026-07-16 — **QA batch #2 rulings (user)**. (1) Screener: new replies in

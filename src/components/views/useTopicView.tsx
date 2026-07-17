@@ -4,6 +4,7 @@ import { IconPlus } from '@tabler/icons-react'
 import { ConversationHeader } from '@/components/ConversationHeader'
 import { NewTopicBanner } from '@/components/NewTopicBanner'
 import { JoinTopicBanner } from '@/components/JoinTopicBanner'
+import { InviteMembersDialog } from '@/components/InviteMembersDialog'
 import { HuddleCreator } from '@/components/HuddleCreator'
 import { ConversationCard } from '@/components/ConversationCard'
 import { ThreadPanel } from '@/components/ThreadPanel'
@@ -11,6 +12,7 @@ import { HuddleCard } from '@/components/HuddleCard'
 import { StartHuddleDialog, type StartHuddleResult } from '@/components/StartHuddleDialog'
 import { DateDivider } from '@/components/ui/DateDivider'
 import { SkeletonConversationList, SkeletonHuddleGrid } from '@/components/ui/Skeleton'
+import { Button } from '@/components/ui/Button'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopicTabs, type TopicTab } from '@/components/ui/TopicTabs'
@@ -27,6 +29,7 @@ import {
   useIsTopicResolved,
   useIsTopicMember,
   useJoinTopic,
+  useInviteToTopic,
   usePeekActions,
   useStarred,
   type ConversationData,
@@ -71,6 +74,7 @@ export function useTopicView({
   const isTopicResolved = useIsTopicResolved()
   const isTopicMember = useIsTopicMember()
   const joinTopic = useJoinTopic()
+  const inviteToTopic = useInviteToTopic()
   const actions = usePeekActions()
   const { state: debug } = useDebug()
   const huddleVariant = debug.huddles.variant
@@ -90,6 +94,7 @@ export function useTopicView({
   useMarkRead('topic', topicId, threadConvId)
   const [selectedHuddleId, setSelectedHuddleId] = useState<string | null>(null)
   const [isCreatingHuddle, setIsCreatingHuddle] = useState(false)
+  const [isInvitingMembers, setIsInvitingMembers] = useState(false)
 
   // All data arrives merged from the seam — overrides applied, deletions
   // filtered, replyCount final. Nothing below touches override maps.
@@ -101,6 +106,8 @@ export function useTopicView({
     members: topicMembers,
     hasAnyPublicMessages,
     isLoading,
+    hasEarlier,
+    showEarlier,
   } = useTopicMessages(topicId)
   const currentHuddles = topicId != null ? huddleLookup(topicId) : []
 
@@ -226,6 +233,7 @@ export function useTopicView({
     setThreadConvId(null)
     setActiveTab('conversations')
     setSelectedHuddleId(null)
+    setIsInvitingMembers(false)
     cancelHuddleCreation()
   }, [topicId])
 
@@ -244,6 +252,27 @@ export function useTopicView({
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [currentSent.length])
+
+  // "Show earlier messages": keep the viewport anchored on the same message
+  // while older content extends the timeline upward (distance from the
+  // BOTTOM is invariant across the expansion). Convex briefly returns the
+  // query as undefined while the wider page loads, collapsing the timeline —
+  // so we hold the anchor until scrollHeight has actually GROWN past the
+  // captured baseline, then restore once and clear.
+  const earlierAnchorRef = useRef<{ fromBottom: number; height: number } | null>(null)
+  const handleShowEarlier = () => {
+    const el = scrollRef.current
+    earlierAnchorRef.current = el ? { fromBottom: el.scrollHeight - el.scrollTop, height: el.scrollHeight } : null
+    showEarlier()
+  }
+  useEffect(() => {
+    const el = scrollRef.current
+    const anchor = earlierAnchorRef.current
+    if (el && anchor && el.scrollHeight > anchor.height) {
+      el.scrollTop = el.scrollHeight - anchor.fromBottom
+      earlierAnchorRef.current = null
+    }
+  }, [currentGroups])
 
   if (topicId == null || !topicTitle) {
     return {
@@ -422,6 +451,13 @@ export function useTopicView({
             <div className="flex-1 min-h-0" />
             <div className="shrink-0 flex flex-col px-4 py-4 gap-2">
               {isLoading && <SkeletonConversationList />}
+              {hasEarlier && (
+                <div className="flex justify-center py-1">
+                  <Button variant="muted" size="small" onClick={handleShowEarlier}>
+                    Show earlier messages
+                  </Button>
+                </div>
+              )}
               {huddleVariant === 3 ? (
                 v3Groups.map((group) => (
                   <div key={group.dateLabel} className="flex flex-col gap-2">
@@ -554,8 +590,7 @@ export function useTopicView({
           )}
           {!isLoading && isMemberHere && !hasAnyPublicMessages && (
             <div className="px-3 pt-2">
-              {/* TODO: wire onInviteMembers to the invite-members dialog */}
-              <NewTopicBanner title={topicTitle} />
+              <NewTopicBanner title={topicTitle} onInviteMembers={() => setIsInvitingMembers(true)} />
             </div>
           )}
           {/* V3 only: the topic-header "+ Start huddle" button toggles isCreatingHuddle and
@@ -650,6 +685,18 @@ export function useTopicView({
         <StartHuddleDialog
           onConfirm={handleStartHuddleFromDialog}
           onCancel={() => setIsCreatingHuddle(false)}
+        />
+      )}
+
+      {/* Empty-topic banner's Invite members flow (portalled). */}
+      {isInvitingMembers && topicId != null && (
+        <InviteMembersDialog
+          memberNames={topicMembers}
+          onConfirm={(invitees) => {
+            inviteToTopic(topicId, invitees)
+            setIsInvitingMembers(false)
+          }}
+          onCancel={() => setIsInvitingMembers(false)}
         />
       )}
     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { TopBar } from '@/components/TopBar'
 import { NavRail } from '@/components/NavRail'
 import { CommandLauncher } from '@/components/CommandLauncher'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { captureLauncherContext, type LauncherContext } from '@/lib/launcherContext'
 
 interface AppShellProps {
@@ -57,19 +58,19 @@ export function AppShell({ leftPanel, rightPanel, threadPanel }: AppShellProps) 
               className="shrink-0 border-r border-border-subtle flex flex-col overflow-hidden transition-[width,opacity] duration-300 ease-in-out"
               style={{ width: collapsed ? 0 : 290, opacity: collapsed ? 0 : 1, borderRightWidth: collapsed ? 0 : 1 }}
             >
-              {leftPanel}
+              <ErrorBoundary label="list panel">{leftPanel}</ErrorBoundary>
             </div>
           )}
 
           {/* Right panel (conversation area) */}
           <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-            {rightPanel}
+            <ErrorBoundary label="conversation">{rightPanel}</ErrorBoundary>
           </div>
 
           {/* Thread panel */}
           {threadPanel && (
             <div className="shrink-0 w-[380px] border-l border-border-subtle flex flex-col overflow-hidden">
-              {threadPanel}
+              <ErrorBoundary label="thread panel">{threadPanel}</ErrorBoundary>
             </div>
           )}
         </div>

@@ -7,24 +7,29 @@ import { PeekDataProvider } from './api'
 import { AuthGate } from './auth/AuthGate'
 import { LastSelectionProvider } from './lib/lastSelection'
 import { ToastProvider } from './lib/toast'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import './index.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
-    <ThemeProvider>
-      <DebugProvider>
-        <PeekDataProvider>
-          <AuthGate>
-            <LastSelectionProvider>
-              <ToastProvider>
-                <App />
-                <Analytics />
-              </ToastProvider>
-            </LastSelectionProvider>
-          </AuthGate>
-        </PeekDataProvider>
-      </DebugProvider>
-    </ThemeProvider>
+    {/* Root boundary: the last line of defense — providers or a whole page
+        crashing degrades to the fallback instead of a white screen. */}
+    <ErrorBoundary label="app" fallbackClassName="h-screen flex items-center justify-center bg-bg-base">
+      <ThemeProvider>
+        <DebugProvider>
+          <PeekDataProvider>
+            <AuthGate>
+              <LastSelectionProvider>
+                <ToastProvider>
+                  <App />
+                  <Analytics />
+                </ToastProvider>
+              </LastSelectionProvider>
+            </AuthGate>
+          </PeekDataProvider>
+        </DebugProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   </BrowserRouter>,
 )

@@ -5,6 +5,7 @@ import { NewTopicBanner } from '@/components/NewTopicBanner'
 import { ConversationCard } from '@/components/ConversationCard'
 import { ThreadPanel } from '@/components/ThreadPanel'
 import { DateDivider } from '@/components/ui/DateDivider'
+import { Button } from '@/components/ui/Button'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SkeletonConversationList } from '@/components/ui/Skeleton'
@@ -55,7 +56,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
   // Merged data from the seam — overrides applied, deletions filtered,
   // replyCount final. DM sends live in the seam store, so they survive
   // navigating away and back (same as topic sends).
-  const { groups: dmGroups, sent: currentSent, isLoading } = useDmMessages(dmId)
+  const { groups: dmGroups, sent: currentSent, isLoading, hasEarlier, showEarlier } = useDmMessages(dmId)
 
   const people = usePeople()
   const dmPartner = dmName ? people?.find((p) => p.name === dmName) : undefined
@@ -148,6 +149,27 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [currentSent.length])
 
+  // "Show earlier messages": keep the viewport anchored on the same message
+  // while older content extends the timeline upward (distance from the
+  // BOTTOM is invariant across the expansion). Convex briefly returns the
+  // query as undefined while the wider page loads, collapsing the timeline —
+  // so we hold the anchor until scrollHeight has actually GROWN past the
+  // captured baseline, then restore once and clear.
+  const earlierAnchorRef = useRef<{ fromBottom: number; height: number } | null>(null)
+  const handleShowEarlier = () => {
+    const el = scrollRef.current
+    earlierAnchorRef.current = el ? { fromBottom: el.scrollHeight - el.scrollTop, height: el.scrollHeight } : null
+    showEarlier()
+  }
+  useEffect(() => {
+    const el = scrollRef.current
+    const anchor = earlierAnchorRef.current
+    if (el && anchor && el.scrollHeight > anchor.height) {
+      el.scrollTop = el.scrollHeight - anchor.fromBottom
+      earlierAnchorRef.current = null
+    }
+  }, [dmGroups])
+
   if (dmId == null || !dmName) {
     return {
       rightPanel: (
@@ -173,6 +195,13 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
         <div className="flex-1 min-h-0" />
         <div className="shrink-0 flex flex-col px-4 py-4 gap-2">
           {isLoading && <SkeletonConversationList />}
+          {hasEarlier && (
+            <div className="flex justify-center py-1">
+              <Button variant="muted" size="small" onClick={handleShowEarlier}>
+                Show earlier messages
+              </Button>
+            </div>
+          )}
           {dmGroups.map((group) => (
             <div key={group.dateLabel} className="flex flex-col gap-2">
               <DateDivider label={group.dateLabel} className="sticky top-0 z-10 bg-bg-surface" />

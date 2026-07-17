@@ -191,6 +191,21 @@ export const remove = mutation({
   },
 })
 
+/** Add people to a topic's membership (the empty-topic "Invite members" flow). */
+export const addMembers = mutation({
+  args: { topicKey: v.string(), memberNames: v.array(v.string()) },
+  handler: async (ctx, { topicKey, memberNames }) => {
+    await viewerOrThrow(ctx)
+    const topic = await findTopicByKey(ctx, topicKey)
+    if (!topic) throw new Error(`Unknown topic '${topicKey}'`)
+    const users = await ctx.db.query('users').collect()
+    for (const name of memberNames) {
+      const user = users.find((u) => u.name === name)
+      if (user) await ensureTopicMember(ctx, topic._id, user._id)
+    }
+  },
+})
+
 /** Join a topic you're not a member of (the topic-list Join banner, §QA #2.7). */
 export const join = mutation({
   args: { topicKey: v.string() },

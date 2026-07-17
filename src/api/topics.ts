@@ -97,6 +97,20 @@ export function useDeleteTopic(): (topicId: string) => void {
   )
 }
 
+/** Add people to a topic (the empty-topic banner's Invite members flow). */
+export function useInviteToTopic(): (topicId: string, invitees: Person[]) => void {
+  const addLocal = useTopicStore().addInviteesLocal
+  const addRemote = useMutation(api.topics.addMembers)
+  return useCallback(
+    (topicId: string, invitees: Person[]) => {
+      const names = invitees.map((p) => p.name)
+      addLocal(topicId, names) // mock source of truth; inert overlay in Convex mode
+      if (hasConvex) void addRemote({ topicKey: topicId, memberNames: names })
+    },
+    [addLocal, addRemote],
+  )
+}
+
 /** Join a topic you're not a member of (the Join banner, QA #2.7). */
 export function useJoinTopic(): (topicId: string) => void {
   const joinRemote = useMutation(api.topics.join)

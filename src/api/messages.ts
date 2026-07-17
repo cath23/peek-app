@@ -6,6 +6,7 @@
  * the override layers otherwise (tests, Storybook, checkouts without a
  * deployment). Components receive final values and never see override maps.
  */
+import { useEffect, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { TOPIC_CONVERSATIONS } from '@/data/topicData'
@@ -127,6 +128,10 @@ export interface ThreadReply extends ReplyData {
   reactions?: ReactionData[]
 }
 
+/** Messages fetched per page (Phase 5): the newest N render immediately;
+ *  "Show earlier messages" grows the window by another page. */
+const MESSAGE_PAGE = 100
+
 export interface TopicMessages {
   /** Persisted conversation groups — deletions filtered, overrides merged. */
   groups: ConvGroup[]
@@ -141,6 +146,10 @@ export interface TopicMessages {
   hasAnyPublicMessages: boolean
   /** True while the Convex query is in flight — render a skeleton, not an empty state. */
   isLoading: boolean
+  /** True when messages older than the current window exist on the server. */
+  hasEarlier: boolean
+  /** Widen the window by another page of earlier messages. */
+  showEarlier: () => void
 }
 
 export interface ThreadData {
@@ -215,6 +224,8 @@ function mergeReply(r: ReplyData, o: Overrides): ThreadReply {
   }
 }
 
+const NOOP = () => {}
+
 const EMPTY_TOPIC: TopicMessages = {
   groups: [],
   sent: [],
@@ -224,6 +235,8 @@ const EMPTY_TOPIC: TopicMessages = {
   members: [],
   hasAnyPublicMessages: false,
   isLoading: false,
+  hasEarlier: false,
+  showEarlier: NOOP,
 }
 
 export function useTopicMessages(topicId: string | null): TopicMessages {
@@ -233,9 +246,11 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
   // knows static + this session's topics.
   const findTopic = useTopicLookup()
   const me = useCurrentUser()
+  const [limit, setLimit] = useState(MESSAGE_PAGE)
+  useEffect(() => setLimit(MESSAGE_PAGE), [topicId])
   const remote = useQuery(
     api.messages.list,
-    hasConvex && topicId != null ? { parentKind: 'topic', parentKey: topicId } : 'skip',
+    hasConvex && topicId != null ? { parentKind: 'topic', parentKey: topicId, limit } : 'skip',
   )
   if (topicId == null) return EMPTY_TOPIC
 
@@ -243,15 +258,17 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
   const sentLocal = o.sentMessages[topicId] ?? []
   let groups: ConvGroup[]
   let sent: ConversationData[]
+  let hasEarlier = false
   if (hasConvex) {
     if (remote === undefined || me === undefined) return { ...EMPTY_TOPIC, isLoading: true }
     const mockById = mockMessagesById(TOPIC_CONVERSATIONS[topicId])
-    const rows = remote.filter((r) => !o.deletedIds.has(r.id))
+    const rows = remote.rows.filter((r) => !o.deletedIds.has(r.id))
     groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, me.id), o, false))
     // The confirmed copy renders from the query; the local copy covers the
     // optimistic window only.
-    const remoteIds = new Set(remote.map((r) => r.id))
+    const remoteIds = new Set(remote.rows.map((r) => r.id))
     sent = sentLocal.filter((c) => !remoteIds.has(c.id)).map((c) => mergeConv(c, o))
+    hasEarlier = remote.hasMore
   } else {
     groups = (TOPIC_CONVERSATIONS[topicId] ?? [])
       .map((g) => ({
@@ -271,7 +288,18 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
   )
   const hasAnyPublicMessages = all.length > 0
 
-  return { groups, sent, all, openCount, resolvedCount, members, hasAnyPublicMessages, isLoading: false }
+  return {
+    groups,
+    sent,
+    all,
+    openCount,
+    resolvedCount,
+    members,
+    hasAnyPublicMessages,
+    isLoading: false,
+    hasEarlier,
+    showEarlier: () => setLimit((l) => l + MESSAGE_PAGE),
+  }
 }
 
 export interface DmMessages {
@@ -279,17 +307,24 @@ export interface DmMessages {
   sent: ConversationData[]
   /** True while the Convex query is in flight — render a skeleton, not an empty state. */
   isLoading: boolean
+  /** True when messages older than the current window exist on the server. */
+  hasEarlier: boolean
+  /** Widen the window by another page of earlier messages. */
+  showEarlier: () => void
 }
 
 export function useDmMessages(dmId: string | null): DmMessages {
   const o = useTopicMutations()
   const { sentDmMessages } = useDmRuntime()
   const me = useCurrentUser()
+  const [limit, setLimit] = useState(MESSAGE_PAGE)
+  useEffect(() => setLimit(MESSAGE_PAGE), [dmId])
   const remote = useQuery(
     api.messages.list,
-    hasConvex && dmId != null ? { parentKind: 'dm', parentKey: String(dmId) } : 'skip',
+    hasConvex && dmId != null ? { parentKind: 'dm', parentKey: String(dmId), limit } : 'skip',
   )
-  if (dmId == null) return { groups: [], sent: [], isLoading: false }
+  const showEarlier = () => setLimit((l) => l + MESSAGE_PAGE)
+  if (dmId == null) return { groups: [], sent: [], isLoading: false, hasEarlier: false, showEarlier: NOOP }
 
   const sentLocal = sentDmMessages[dmId] ?? []
   // The mock fixture stores DMs under legacy conversation numbers; the seam
@@ -298,13 +333,17 @@ export function useDmMessages(dmId: string | null): DmMessages {
   const mockGroups = mockConvId === undefined ? undefined : DM_CONVERSATIONS[mockConvId]
   let groups: ConvGroup[]
   let sent: ConversationData[]
+  let hasEarlier = false
   if (hasConvex) {
-    if (remote === undefined || me === undefined) return { groups: [], sent: [], isLoading: true }
+    if (remote === undefined || me === undefined) {
+      return { groups: [], sent: [], isLoading: true, hasEarlier: false, showEarlier: NOOP }
+    }
     const mockById = mockMessagesById(mockGroups)
-    const rows = remote.filter((r) => !o.deletedIds.has(r.id))
+    const rows = remote.rows.filter((r) => !o.deletedIds.has(r.id))
     groups = groupRemoteByDay(rows, (r) => mergeConv(toConversationData(r, me.id), o, false))
-    const remoteIds = new Set(remote.map((r) => r.id))
+    const remoteIds = new Set(remote.rows.map((r) => r.id))
     sent = sentLocal.filter((c) => !remoteIds.has(c.id)).map((c) => mergeConv(c, o))
+    hasEarlier = remote.hasMore
   } else {
     groups = (mockGroups ?? [])
       .map((g) => ({
@@ -314,7 +353,7 @@ export function useDmMessages(dmId: string | null): DmMessages {
       .filter((g) => g.convs.length > 0)
     sent = sentLocal.map((c) => mergeConv(c, o))
   }
-  return { groups, sent, isLoading: false }
+  return { groups, sent, isLoading: false, hasEarlier, showEarlier }
 }
 
 /**

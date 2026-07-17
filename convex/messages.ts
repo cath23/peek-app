@@ -147,21 +147,30 @@ export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, nam
   }
 }
 
-/** All messages of a topic or DM, oldest first. `parentKey` is a seedKey or _id. */
+/**
+ * Messages of a topic or DM, oldest first. `parentKey` is a seedKey or _id.
+ * With `limit` set, returns only the NEWEST `limit` messages (still oldest
+ * first) and flags whether earlier ones exist — the client's "Show earlier
+ * messages" grows the limit (Phase 5 pagination; shaping per message is the
+ * expensive part, so the slice happens before it).
+ */
 export const list = query({
-  args: { parentKind: parentKindArg, parentKey: v.string() },
-  handler: async (ctx, { parentKind, parentKey }) => {
+  args: { parentKind: parentKindArg, parentKey: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, { parentKind, parentKey, limit }) => {
     const me = await viewerId(ctx)
     const parentId = await resolveParentId(ctx, parentKind, parentKey, me)
-    if (!parentId) return []
-    const rows = await ctx.db
-      .query('messages')
-      .withIndex('by_parent', (q) => q.eq('parentKind', parentKind).eq('parentId', parentId))
-      .collect()
+    if (!parentId) return { rows: [], hasMore: false }
+    const all = (
+      await ctx.db
+        .query('messages')
+        .withIndex('by_parent', (q) => q.eq('parentKind', parentKind).eq('parentId', parentId))
+        .collect()
+    ).sort((a, b) => a.createdAt - b.createdAt)
+    const rows = limit !== undefined && all.length > limit ? all.slice(all.length - limit) : all
     const names = await userNames(ctx)
     const wm = me ? await watermarks(ctx, me) : new Map<string, number>()
     const shaped = []
-    for (const m of rows.sort((a, b) => a.createdAt - b.createdAt)) {
+    for (const m of rows) {
       const replies = await ctx.db
         .query('replies')
         .withIndex('by_message', (q) => q.eq('messageId', m._id))
@@ -173,7 +182,7 @@ export const list = query({
         ...(await unreadFlags(ctx, m, me, wm, replies)),
       })
     }
-    return shaped
+    return { rows: shaped, hasMore: all.length > rows.length }
   },
 })
 
