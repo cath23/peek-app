@@ -100,12 +100,15 @@ export function FileAttachmentCard({ file, className }: FileAttachmentCardProps)
   const href = file.url ?? file.previewUrl
   const isImage = isImageAttachment(file.name, file.contentType)
 
-  /** Download control (shared IconButton) — only when the file has a URL. */
+  /** Download control (shared IconButton) — only when the file has a URL.
+   *  Fades in on card hover (or keyboard focus); it keeps its layout slot so
+   *  revealing it never shifts the row. */
   const downloadButton = href ? (
     <IconButton
       variant="muted"
       tooltip="Download"
       aria-label={`Download ${file.name}`}
+      className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity"
       onClick={(e) => {
         e.stopPropagation()
         void downloadFile(href, file.name)
@@ -166,7 +169,7 @@ export function FileAttachmentCard({ file, className }: FileAttachmentCardProps)
     <div
       data-interactive
       className={cn(
-        'flex items-center gap-2 w-[240px] rounded-lg border border-border-subtle bg-bg-inset p-1.5 pr-1 transition-colors',
+        'group flex items-center gap-2 w-[240px] rounded-lg border border-border-subtle bg-bg-inset p-1.5 pr-1 transition-colors',
         href ? 'hover:border-border-default' : 'opacity-70',
         className,
       )}
