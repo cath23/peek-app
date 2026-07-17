@@ -40,6 +40,7 @@ function toHuddle(r: RemoteHuddle, meId: string | undefined): Huddle {
     members: r.members.map((n, i) => (r.memberIds[i] === meId ? CURRENT_USER_NAME : n)),
     state: r.state,
     lastActivity: formatDateLabel(r.lastActivityMs),
+    lastActivityMs: r.lastActivityMs,
     conversation: r.conversation ? toConversationData(r.conversation, meId) : undefined,
     extraConvs: r.extraConvs.map((c) => toConversationData(c, meId)),
     originDmId: r.originDmKey,

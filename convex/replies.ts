@@ -11,6 +11,7 @@ import { highlightType } from './schema'
 import { viewerId, viewerOrThrow } from './users'
 import { watermarks } from './readState'
 import { isUrgentBody, screenReply } from './screener'
+import { ensureTopicMember } from './topics'
 import type { Doc, Id } from './_generated/dataModel'
 
 async function findMessageByKey(ctx: QueryCtx | MutationCtx, key: string): Promise<Doc<'messages'> | null> {
@@ -85,6 +86,11 @@ export const send = mutation({
       attachments,
       seedKey,
     })
+    // Replying in a topic thread makes you a member too (QA #2.6).
+    if (message.parentKind === 'topic') {
+      const topicId = ctx.db.normalizeId('topics', message.parentId)
+      if (topicId) await ensureTopicMember(ctx, topicId, you._id)
+    }
     const inserted = await ctx.db.get(id)
     if (inserted) await screenReply(ctx, inserted)
     return id

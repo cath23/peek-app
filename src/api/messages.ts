@@ -14,6 +14,7 @@ import { mockConvIdFor } from './directory'
 import { REPLIES } from '@/data/replyData'
 import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useTopicStore } from '@/api/internal/topicStore'
+import { useTopicLookup } from './topics'
 import { formatDateLabel, formatTimestamp, dayKey } from './format'
 import { CURRENT_USER_NAME, useCurrentUser } from './currentUser'
 import { hasConvex, useDmRuntime } from './store'
@@ -96,6 +97,7 @@ export function toConversationData(r: RemoteMessage, meId: string | undefined): 
     hasNewMessage: r.hasNewMessage,
     hasNewReply: r.hasNewReply,
     replyCount: r.replyCount,
+    createdAtMs: r.createdAt,
   }
 }
 
@@ -226,7 +228,10 @@ const EMPTY_TOPIC: TopicMessages = {
 
 export function useTopicMessages(topicId: string | null): TopicMessages {
   const o = useTopicMutations()
-  const { findTopic } = useTopicStore()
+  // Convex-aware lookup: the members pill must reflect server topicMembers
+  // for topics created by OTHER users too (QA #2.6) — the mock store only
+  // knows static + this session's topics.
+  const findTopic = useTopicLookup()
   const me = useCurrentUser()
   const remote = useQuery(
     api.messages.list,

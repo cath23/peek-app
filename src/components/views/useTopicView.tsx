@@ -338,34 +338,68 @@ export function useTopicView({
 
       {/* Conversations tab — also the only body in V2/V3 (no tabs). Suppressed when a V2 huddle is open. */}
       {!isV2HuddleView && (huddleVariant !== 1 || activeTab === 'conversations') && (() => {
-        // V3 unified stream: build date-keyed groups containing both convs and huddles
-        // (only "your" huddles, only ones with a conversation seed). Existing V1/V2
-        // rendering preserved unchanged below.
-        type V3Group = { dateLabel: string; convs: ConversationData[]; sent: ConversationData[]; huddles: Huddle[] }
+        // V3 unified stream: date-keyed groups holding convs, sent messages, and
+        // huddles INTERLEAVED chronologically (QA #2.5 — huddles used to render
+        // as a block at the end of their group, and huddle-only dates were
+        // appended after "Today"). Timestamps come from the seam (Convex rows +
+        // runtime sends); static mocks without them keep the old ordering.
+        type V3Entry =
+          | { kind: 'conv'; conv: ConversationData }
+          | { kind: 'sent'; conv: ConversationData }
+          | { kind: 'huddle'; huddle: Huddle }
+        type V3Group = { dateLabel: string; entries: V3Entry[] }
         const v3Groups: V3Group[] = []
         if (huddleVariant === 3) {
           const map = new Map<string, V3Group>()
           for (const group of currentGroups) {
-            map.set(group.dateLabel, { dateLabel: group.dateLabel, convs: group.convs, sent: [], huddles: [] })
+            map.set(group.dateLabel, {
+              dateLabel: group.dateLabel,
+              entries: group.convs.map((c) => ({ kind: 'conv' as const, conv: c })),
+            })
+          }
+          // Sent messages always live under "Today".
+          if (currentSent.length > 0) {
+            let today = map.get('Today')
+            if (!today) {
+              today = { dateLabel: 'Today', entries: [] }
+              map.set('Today', today)
+            }
+            today.entries.push(...currentSent.map((m) => ({ kind: 'sent' as const, conv: m })))
           }
           // Member-of huddles with a seed; empty huddles can't exist in V3 anyway.
+          // Each slots into its date group at its chronological position.
           const v3Huddles = currentHuddles.filter(
             (h) => h.conversation != null && h.members.includes(CURRENT_USER_NAME)
           )
           for (const h of v3Huddles) {
-            const date = h.lastActivity
-            const existing = map.get(date)
-            if (existing) existing.huddles.push(h)
-            else map.set(date, { dateLabel: date, convs: [], sent: [], huddles: [h] })
-          }
-          // Sent messages always live under "Today".
-          if (currentSent.length > 0) {
-            const todayLabel = 'Today'
-            const existing = map.get(todayLabel)
-            if (existing) existing.sent.push(...currentSent)
-            else map.set(todayLabel, { dateLabel: todayLabel, convs: [], sent: [...currentSent], huddles: [] })
+            const at = h.lastActivityMs ?? h.promotedAtMs
+            let group = map.get(h.lastActivity)
+            if (!group) {
+              group = { dateLabel: h.lastActivity, entries: [] }
+              map.set(h.lastActivity, group)
+            }
+            let idx = group.entries.length
+            if (at !== undefined) {
+              const later = group.entries.findIndex(
+                (e) => e.kind !== 'huddle' && e.conv.createdAtMs !== undefined && e.conv.createdAtMs > at,
+              )
+              if (later !== -1) idx = later
+            }
+            group.entries.splice(idx, 0, { kind: 'huddle', huddle: h })
           }
           v3Groups.push(...map.values())
+          // Order the DAY groups chronologically when every group carries a
+          // timestamp (Convex); mock groups without one keep insertion order.
+          const groupAt = (g: V3Group): number | undefined => {
+            for (const e of g.entries) {
+              const at = e.kind === 'huddle' ? (e.huddle.lastActivityMs ?? e.huddle.promotedAtMs) : e.conv.createdAtMs
+              if (at !== undefined) return at
+            }
+            return undefined
+          }
+          if (v3Groups.every((g) => groupAt(g) !== undefined)) {
+            v3Groups.sort((a, b) => groupAt(a)! - groupAt(b)!)
+          }
         }
         return (
         <>
@@ -377,74 +411,54 @@ export function useTopicView({
                 v3Groups.map((group) => (
                   <div key={group.dateLabel} className="flex flex-col gap-2">
                     <DateDivider label={group.dateLabel} className="sticky top-0 z-10 bg-bg-surface" />
-                    {group.convs.map((c) => (
-                      <ConversationCard
-                        key={`${topicId}_${c.id}`}
-                        authorName={c.authorName}
-                        timestamp={c.timestamp}
-                        body={c.body}
-                        attachments={c.attachments}
-                        reactions={c.reactions}
-                        highlightType={c.highlightType}
-                        replyCount={c.replyCount}
-                        hasNewMessage={c.hasNewMessage && (c.isUrgent || showUnreads)}
-                        hasNewReply={c.hasNewReply && (c.isUrgent || showUnreads)}
-                        isUrgent={c.isUrgent}
-                        isResolved={c.isResolved}
-                        resolvedBy={c.resolvedBy}
-                        resolutionMessage={c.resolutionMessage}
-                        showCreateTopic={false}
-                        isSelected={threadConvId === c.id}
-                        onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
-                        onReactionsChange={(next, emoji) => actions.setReactions(c.id, next, c.reactions ?? [], emoji)}
-                        onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
-                        onBodyChange={(b) => actions.editBody(c.id, b)}
-                        onClick={() => openThread(c.id)}
-                        onReply={() => openThread(c.id)}
-                        onDelete={() => handleDelete(c.id)}
-                      />
-                    ))}
-                    {group.sent.map((m) => (
-                      <ConversationCard
-                        key={m.id}
-                        authorName={m.authorName}
-                        timestamp={m.timestamp}
-                        body={m.body}
-                        attachments={m.attachments}
-                        reactions={m.reactions}
-                        highlightType={m.highlightType}
-                        replyCount={m.replyCount}
-                        isResolved={m.isResolved}
-                        resolvedBy={m.resolvedBy}
-                        resolutionMessage={m.resolutionMessage}
-                        showCreateTopic={false}
-                        isSelected={threadConvId === m.id}
-                        onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(m.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
-                        onReactionsChange={(next, emoji) => actions.setReactions(m.id, next, m.reactions ?? [], emoji)}
-                        onHighlightChange={(hl) => actions.setHighlight(m.id, hl)}
-                        onBodyChange={(b) => actions.editBody(m.id, b)}
-                        onClick={() => openThread(m.id)}
-                        onReply={() => openThread(m.id)}
-                        onDelete={() => handleDelete(m.id)}
-                      />
-                    ))}
-                    {group.huddles.map((huddle) => {
-                      // safe to access .id — we filtered to conversation != null above
-                      const threadId = huddle.seedMessageId ?? huddle.conversation!.id
-                      const openHuddle = () => {
-                        setSelectedHuddleId(huddle.id)
-                        setThreadConvId(threadId)
-                        cancelHuddleCreation()
+                    {group.entries.map((entry) => {
+                      if (entry.kind === 'huddle') {
+                        const huddle = entry.huddle
+                        // safe to access .id — we filtered to conversation != null above
+                        const threadId = huddle.seedMessageId ?? huddle.conversation!.id
+                        const openHuddle = () => {
+                          setSelectedHuddleId(huddle.id)
+                          setThreadConvId(threadId)
+                          cancelHuddleCreation()
+                        }
+                        return (
+                          <HuddleCard
+                            key={huddle.id}
+                            huddle={huddle}
+                            variant="inStream"
+                            isSelected={selectedHuddleId === huddle.id}
+                            onClick={openHuddle}
+                            onReply={openHuddle}
+                            onDelete={() => handleDeleteHuddle(huddle.id)}
+                          />
+                        )
                       }
+                      const c = entry.conv
                       return (
-                        <HuddleCard
-                          key={huddle.id}
-                          huddle={huddle}
-                          variant="inStream"
-                          isSelected={selectedHuddleId === huddle.id}
-                          onClick={openHuddle}
-                          onReply={openHuddle}
-                          onDelete={() => handleDeleteHuddle(huddle.id)}
+                        <ConversationCard
+                          key={`${topicId}_${c.id}`}
+                          authorName={c.authorName}
+                          timestamp={c.timestamp}
+                          body={c.body}
+                          attachments={c.attachments}
+                          reactions={c.reactions}
+                          highlightType={c.highlightType}
+                          replyCount={c.replyCount}
+                          hasNewMessage={entry.kind === 'conv' && c.hasNewMessage && (c.isUrgent || showUnreads)}
+                          hasNewReply={entry.kind === 'conv' && c.hasNewReply && (c.isUrgent || showUnreads)}
+                          isUrgent={entry.kind === 'conv' ? c.isUrgent : undefined}
+                          isResolved={c.isResolved}
+                          resolvedBy={c.resolvedBy}
+                          resolutionMessage={c.resolutionMessage}
+                          showCreateTopic={false}
+                          isSelected={threadConvId === c.id}
+                          onResolvedChange={(resolved, resolvedBy, message) => actions.setResolution(c.id, resolved, resolved ? (resolvedBy ?? CURRENT_USER_NAME) : undefined, message)}
+                          onReactionsChange={(next, emoji) => actions.setReactions(c.id, next, c.reactions ?? [], emoji)}
+                          onHighlightChange={(hl) => actions.setHighlight(c.id, hl)}
+                          onBodyChange={(b) => actions.editBody(c.id, b)}
+                          onClick={() => openThread(c.id)}
+                          onReply={() => openThread(c.id)}
+                          onDelete={() => handleDelete(c.id)}
                         />
                       )
                     })}

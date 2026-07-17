@@ -494,6 +494,19 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       implemented, and the app never offers a reference that can't
       resolve; FilesMenu hides the Apps drill-in when no app items exist.
       Mock mode (Storybook/demo) unchanged. Verified (.verify-qa4.mjs).
+- [x] **QA batch #2, items 5–6 (2026-07-17)** — (5) *V3 unified stream
+      interleaves huddles by date*: huddle cards slot into their day group
+      at their chronological position (`lastActivityMs ?? promotedAtMs` vs
+      message `createdAtMs`, both newly carried through the seam), and day
+      groups sort chronologically — huddle-only dates no longer trail
+      after "Today". Mocks without timestamps keep the old ordering
+      (Storybook parity). (6) *Members pill is real*: `useTopicMessages`
+      resolves the topic through the Convex-aware lookup, so topics
+      created by OTHER users show their true member count + avatar stack;
+      posting a message or reply into a topic now inserts a `topicMembers`
+      row server-side (`ensureTopicMember`), keeping membership consistent
+      for every user. `topics.join` mutation added (used by item 7's Join
+      banner). Verified two-browser (.verify-qa56.mjs, 9 checks).
 - [ ] Manual two-browser QA pass (user)
 
 ### Phase 5 — Hardening *(coarse)*

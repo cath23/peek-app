@@ -13,6 +13,7 @@ import { highlightType } from './schema'
 import { viewerId, viewerOrThrow } from './users'
 import { watermarks } from './readState'
 import { isUrgentBody, screenMessage } from './screener'
+import { ensureTopicMember } from './topics'
 import type { Doc, Id } from './_generated/dataModel'
 
 const parentKindArg = v.union(v.literal('topic'), v.literal('dm'), v.literal('huddle'))
@@ -268,6 +269,12 @@ export const send = mutation({
       attachments,
       seedKey,
     })
+    // Posting into a topic makes you a member (QA #2.6 — keeps the member
+    // pill consistent for every user; also the implicit join for QA #2.7).
+    if (parentKind === 'topic') {
+      const topicId = ctx.db.normalizeId('topics', parentId)
+      if (topicId) await ensureTopicMember(ctx, topicId, you._id)
+    }
     const inserted = await ctx.db.get(id)
     if (inserted) await screenMessage(ctx, inserted)
     return id

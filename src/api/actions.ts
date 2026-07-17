@@ -67,6 +67,7 @@ export function usePeekActions() {
     id: `sent_${Date.now()}`,
     authorName: CURRENT_USER_NAME,
     timestamp: nowTimestamp(),
+    createdAtMs: Date.now(),
     body: text,
     highlightType,
     isResolved: resolution ? true : undefined,

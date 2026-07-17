@@ -50,6 +50,9 @@ export interface ConversationData {
   resolutionMessage?: string
   /** Figma frame ids attached to the message (see figmaData.ts). */
   attachments?: string[]
+  /** Numeric send time (ms). Convex rows + runtime sends carry it; static
+   *  mocks don't — consumers must treat it as a sort hint, not a given. */
+  createdAtMs?: number
 }
 
 export interface ConvGroup {

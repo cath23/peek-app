@@ -6,6 +6,9 @@ export interface Huddle {
   members: string[]           // author names (matches ConversationData.authorName)
   state: 'active' | 'resolved'
   lastActivity: string        // display timestamp
+  /** Numeric last-activity time (ms). Convex-provided; static mocks don't
+   *  carry it. Drives date interleaving in the V3 unified topic stream. */
+  lastActivityMs?: number
   /** The opening message - same shape as a conversation. Used as the card preview.
    *  Optional: huddles started via the V2 dialog (members-only, no first message) have no seed. */
   conversation?: ConversationData
