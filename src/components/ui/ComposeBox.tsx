@@ -5,7 +5,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { PeekMention, UrgentMention, TopicMention, FileMention, isSuggestionActive } from '@/extensions/mention'
 import { ResolutionBlock, extractResolution } from '@/extensions/resolution'
 import { HighlightTag, extractHighlightType } from '@/extensions/highlight'
-import { IconPaperclip, IconSquareForbid2, IconArrowUp, IconHighlight, IconX, IconLoader2, IconAlertCircle, IconDownload } from '@tabler/icons-react'
+import { IconPaperclip, IconSquareForbid2, IconArrowUp, IconHighlight, IconX, IconLoader2, IconAlertCircle } from '@tabler/icons-react'
 import { IconButton } from './IconButton'
 import { HighlightSwatch } from './HighlightPill'
 import { FrameArt } from './FrameArt'
@@ -34,10 +34,6 @@ interface PendingUpload {
   status: 'uploading' | 'done' | 'error'
   error?: string
   uploaded?: UploadedFile
-  /** Local object URL for the picked blob — drives the composer thumbnail
-   *  and the "download" affordance (works for every file type). Revoked when
-   *  the chip is removed or the composer clears. */
-  localUrl?: string
 }
 
 let uploadSeq = 0
@@ -162,8 +158,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
         setPendingFiles((prev) => [...prev, { localId, name: file.name, size: file.size, contentType: file.type, status: 'error', error: err }])
         continue
       }
-      const localUrl = URL.createObjectURL(file)
-      setPendingFiles((prev) => [...prev, { localId, name: file.name, size: file.size, contentType: file.type, status: 'uploading', localUrl }])
+      setPendingFiles((prev) => [...prev, { localId, name: file.name, size: file.size, contentType: file.type, status: 'uploading' }])
       uploadFile(file).then(
         (uploaded) =>
           setPendingFiles((prev) => prev.map((f) => (f.localId === localId ? { ...f, status: 'done', uploaded } : f))),
@@ -175,16 +170,9 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
     }
   }
 
-  /** Revoke every pending file's local object URL and clear the list. */
-  const clearPendingFiles = () => {
-    for (const f of pendingFilesRef.current) if (f.localUrl) URL.revokeObjectURL(f.localUrl)
-    setPendingFiles([])
-  }
-
   const removePendingFile = (localId: string) => {
     setPendingFiles((prev) => {
       const slot = prev.find((f) => f.localId === localId)
-      if (slot?.localUrl) URL.revokeObjectURL(slot.localUrl)
       // A successfully-uploaded blob that never got sent must be cleaned up.
       if (slot?.uploaded) deleteUpload(slot.uploaded.storageId)
       return prev.filter((f) => f.localId !== localId)
@@ -233,7 +221,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
             })
             ed.commands.clearContent(true)
             setAttachedFrameIds([])
-            clearPendingFiles()
+            setPendingFiles([])
           }
           return true
         }
@@ -473,7 +461,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
     setHasUrgent(false)
     setHasHighlight(false)
     setAttachedFrameIds([])
-    clearPendingFiles()
+    setPendingFiles([])
   }
 
   // Split filtered items into sections for rendering
@@ -642,12 +630,13 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
         {pendingFiles.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {pendingFiles.map((f) => {
+              const thumb = f.uploaded?.previewUrl
               const isImage = isImageAttachment(f.name, f.contentType)
               return (
                 <div
                   key={f.localId}
                   className={cn(
-                    'group relative flex items-center gap-2 w-[220px] rounded-lg border bg-bg-elevated p-1.5 pr-2',
+                    'group relative flex items-center gap-2 w-[200px] rounded-lg border bg-bg-elevated p-1.5 pr-3',
                     f.status === 'error' ? 'border-error-default' : 'border-border-default',
                   )}
                 >
@@ -656,32 +645,18 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
                       <IconLoader2 size={16} stroke={1.5} className="animate-spin" />
                     ) : f.status === 'error' ? (
                       <IconAlertCircle size={16} stroke={1.5} className="text-error-default" />
-                    ) : isImage && f.localUrl ? (
-                      <img src={f.localUrl} alt={f.name} className="size-full object-cover" />
+                    ) : isImage && thumb ? (
+                      <img src={thumb} alt={f.name} className="size-full object-cover" />
                     ) : (
                       <span className="text-[9px] font-semibold">{fileTypeLabel(f.name)}</span>
                     )}
                   </div>
-                  <div className="flex flex-col gap-[1px] min-w-0 flex-1">
+                  <div className="flex flex-col gap-[1px] min-w-0">
                     <span className="text-[12px] font-medium leading-[1.3] text-text-primary truncate">{f.name}</span>
                     <span className={cn('text-[10px] leading-[1.2] truncate', f.status === 'error' ? 'text-error-default' : 'text-text-secondary')}>
                       {f.status === 'error' ? f.error : f.status === 'uploading' ? 'Uploading…' : formatBytes(f.size)}
                     </span>
                   </div>
-                  {/* Download the attached file to check it before sending. */}
-                  {f.status === 'done' && f.localUrl && (
-                    <a
-                      href={f.localUrl}
-                      download={f.name}
-                      data-interactive
-                      aria-label={`Download ${f.name}`}
-                      title="Download"
-                      className="shrink-0 size-6 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <IconDownload size={15} stroke={1.5} />
-                    </a>
-                  )}
                   <button
                     type="button"
                     aria-label={`Remove ${f.name}`}

@@ -12,10 +12,33 @@ import {
   IconJson,
   IconMarkdown,
   IconX,
+  IconDownload,
 } from '@tabler/icons-react'
 import { fileExtension, isImageAttachment, formatBytes, fileTypeLabel } from '@/lib/fileAttachments'
 import type { FileAttachment } from '@/api'
+import { IconButton } from './IconButton'
 import { cn } from '@/lib/utils'
+
+/** Force a real save of a (possibly cross-origin) storage file: fetch the
+ *  blob, hand it to a temporary <a download>, revoke. Falls back to opening
+ *  in a new tab if the fetch is blocked (e.g. CORS). */
+async function downloadFile(url: string, name: string) {
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(String(res.status))
+    const blob = await res.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(objectUrl)
+  } catch {
+    window.open(url, '_blank', 'noopener')
+  }
+}
 
 const ICON_BY_EXT: Record<string, React.FC<{ size?: number; stroke?: number; className?: string }>> = {
   pdf: IconFileTypePdf,
@@ -77,38 +100,60 @@ export function FileAttachmentCard({ file, className }: FileAttachmentCardProps)
   const href = file.url ?? file.previewUrl
   const isImage = isImageAttachment(file.name, file.contentType)
 
+  /** Download control (shared IconButton) — only when the file has a URL. */
+  const downloadButton = href ? (
+    <IconButton
+      variant="muted"
+      tooltip="Download"
+      aria-label={`Download ${file.name}`}
+      onClick={(e) => {
+        e.stopPropagation()
+        void downloadFile(href, file.name)
+      }}
+    >
+      <IconDownload size={16} stroke={1.5} />
+    </IconButton>
+  ) : null
+
   if (isImage && href) {
     return (
       <>
-        <button
-          type="button"
+        <div
           data-interactive
           className={cn(
-            'group relative block w-[180px] rounded-lg border border-border-subtle overflow-hidden bg-bg-inset hover:border-border-default transition-colors',
+            'group relative flex flex-col w-[180px] rounded-lg border border-border-subtle overflow-hidden bg-bg-inset hover:border-border-default transition-colors',
             className,
           )}
-          onClick={(e) => {
-            e.stopPropagation()
-            setLightbox(true)
-          }}
         >
-          <img src={href} alt={file.name} className="w-full h-28 object-cover" />
-          <div className="flex items-center gap-1.5 px-2 py-1.5 min-w-0">
-            <span className="text-[12px] leading-[1.3] text-text-primary truncate">{file.name}</span>
+          <button
+            type="button"
+            className="block w-full"
+            aria-label={`Preview ${file.name}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setLightbox(true)
+            }}
+          >
+            <img src={href} alt={file.name} className="w-full h-28 object-cover" />
+          </button>
+          <div className="flex items-center gap-1 pl-2 pr-1 py-1 min-w-0">
+            <span className="flex-1 text-[12px] leading-[1.3] text-text-primary truncate">{file.name}</span>
+            {downloadButton}
           </div>
-        </button>
+        </div>
         {lightbox && <ImageLightbox src={href} alt={file.name} onClose={() => setLightbox(false)} />}
       </>
     )
   }
 
-  // Non-image (or image without a URL yet): a compact file row.
+  // Non-image (or image without a URL yet): a compact file row. The body opens
+  // the file in a new tab (preview); the trailing IconButton downloads it.
   const body = (
     <>
       <div className="size-9 rounded-md bg-bg-active flex items-center justify-center shrink-0 text-text-secondary">
         <FileIcon name={file.name} />
       </div>
-      <div className="flex flex-col gap-[1px] min-w-0">
+      <div className="flex flex-col gap-[1px] min-w-0 text-left">
         <span className="text-[12px] font-medium leading-[1.3] text-text-primary truncate">{file.name}</span>
         <span className="text-[10px] leading-[1.2] text-text-secondary truncate">
           {fileTypeLabel(file.name)} · {formatBytes(file.size)}
@@ -117,24 +162,29 @@ export function FileAttachmentCard({ file, className }: FileAttachmentCardProps)
     </>
   )
 
-  const shell = cn(
-    'flex items-center gap-2 w-[220px] rounded-lg border border-border-subtle bg-bg-inset p-1.5 pr-3 transition-colors',
-    href ? 'hover:border-border-default cursor-pointer' : 'opacity-70',
-    className,
-  )
-
-  return href ? (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+  return (
+    <div
       data-interactive
-      className={shell}
-      onClick={(e) => e.stopPropagation()}
+      className={cn(
+        'flex items-center gap-2 w-[240px] rounded-lg border border-border-subtle bg-bg-inset p-1.5 pr-1 transition-colors',
+        href ? 'hover:border-border-default' : 'opacity-70',
+        className,
+      )}
     >
-      {body}
-    </a>
-  ) : (
-    <div className={shell}>{body}</div>
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {body}
+        </a>
+      ) : (
+        <div className="flex items-center gap-2 min-w-0 flex-1">{body}</div>
+      )}
+      {downloadButton}
+    </div>
   )
 }
