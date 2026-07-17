@@ -347,6 +347,7 @@ export function useTopicView({
                     timestamp={c.timestamp}
                     body={c.body}
                     attachments={c.attachments}
+                    files={c.files}
                     reactions={c.reactions}
                     highlightType={c.highlightType}
                     replyCount={c.replyCount}
@@ -492,6 +493,7 @@ export function useTopicView({
                           timestamp={c.timestamp}
                           body={c.body}
                           attachments={c.attachments}
+                          files={c.files}
                           reactions={c.reactions}
                           highlightType={c.highlightType}
                           replyCount={c.replyCount}
@@ -527,6 +529,7 @@ export function useTopicView({
                           timestamp={c.timestamp}
                           body={c.body}
                           attachments={c.attachments}
+                          files={c.files}
                           reactions={c.reactions}
                           highlightType={c.highlightType}
                           replyCount={c.replyCount}
@@ -560,6 +563,7 @@ export function useTopicView({
                           timestamp={m.timestamp}
                           body={m.body}
                           attachments={m.attachments}
+                          files={m.files}
                           reactions={m.reactions}
                           highlightType={m.highlightType}
                           replyCount={m.replyCount}

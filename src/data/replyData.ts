@@ -1,4 +1,4 @@
-import type { HighlightType } from './topicData'
+import type { HighlightType, FileAttachment } from './topicData'
 
 export interface ReplyData {
   id: string
@@ -10,6 +10,8 @@ export interface ReplyData {
   highlightType?: HighlightType
   /** Figma frame ids attached to the reply (see figmaData.ts). */
   attachments?: string[]
+  /** Real uploaded files (Phase 5) — separate lane from Figma `attachments`. */
+  files?: FileAttachment[]
   /**
    * Numeric creation time (ms since epoch). Used to chronologically partition replies
    * around a topic-promotion divider. Static mock replies omit this (treated as

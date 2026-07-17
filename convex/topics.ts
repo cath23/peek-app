@@ -9,6 +9,7 @@
 import { v } from 'convex/values'
 import { mutation, query, type MutationCtx } from './_generated/server'
 import { viewerOrThrow } from './users'
+import { deleteAttachmentBlobs } from './messages'
 import type { Doc, Id } from './_generated/dataModel'
 
 /** Posting into (or joining) a topic makes you a member — one row, no dupes.
@@ -107,13 +108,16 @@ export const create = mutation({
 })
 
 /** Delete a message row plus everything hanging off it (replies, reactions,
- *  thread watermarks). */
+ *  thread watermarks, and every uploaded-file blob). */
 async function cascadeDeleteMessage(ctx: MutationCtx, messageId: Id<'messages'>) {
   const replies = await ctx.db
     .query('replies')
     .withIndex('by_message', (q) => q.eq('messageId', messageId))
     .collect()
-  for (const r of replies) await ctx.db.delete(r._id)
+  for (const r of replies) {
+    await deleteAttachmentBlobs(ctx, r.fileAttachments)
+    await ctx.db.delete(r._id)
+  }
   const reactions = await ctx.db
     .query('reactions')
     .withIndex('by_message', (q) => q.eq('messageId', messageId))
@@ -123,6 +127,8 @@ async function cascadeDeleteMessage(ctx: MutationCtx, messageId: Id<'messages'>)
     (w) => w.containerId === (messageId as string),
   )
   for (const w of watermarks) await ctx.db.delete(w._id)
+  const msg = await ctx.db.get(messageId)
+  await deleteAttachmentBlobs(ctx, msg?.fileAttachments)
   await ctx.db.delete(messageId)
 }
 

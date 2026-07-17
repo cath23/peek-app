@@ -20,7 +20,7 @@ import { formatDateLabel, formatTimestamp, dayKey } from './format'
 import { CURRENT_USER_NAME, useCurrentUser } from './currentUser'
 import { hasConvex, useDmRuntime } from './store'
 import { useHuddleLookup } from './huddles'
-import type { ConversationData, ConvGroup, Huddle, ReactionData, ReplyData } from './types'
+import type { ConversationData, ConvGroup, FileAttachment, Huddle, ReactionData, ReplyData } from './types'
 
 /** Row shape returned by convex/messages.ts list/get. Seam-internal. */
 export interface RemoteMessage {
@@ -40,6 +40,8 @@ export interface RemoteMessage {
   resolutionMessage?: string
   resolvedByReplyId?: string
   attachments?: string[]
+  /** Resolved uploaded files (storage blob → URL), server-side (§Phase 5). */
+  files?: FileAttachment[]
   /** Derived server-side (list only). */
   replyCount?: number
   /** Aggregated server-side from per-user rows (§4.6). */
@@ -58,6 +60,7 @@ interface RemoteReply {
   isUrgent?: boolean
   highlightType?: ConversationData['highlightType']
   attachments?: string[]
+  files?: FileAttachment[]
 }
 
 /** Remote reply → presentation shape; the viewer's own rows render as 'You'
@@ -73,6 +76,7 @@ function toReplyData(r: RemoteReply, meId: string | undefined): ReplyData {
     isUrgent: r.isUrgent,
     highlightType: r.highlightType,
     attachments: r.attachments,
+    files: r.files,
     createdAtMs: r.createdAt,
   }
 }
@@ -94,6 +98,7 @@ export function toConversationData(r: RemoteMessage, meId: string | undefined): 
     resolvedBy: r.resolvedById && r.resolvedById === meId ? CURRENT_USER_NAME : r.resolvedBy,
     resolutionMessage: r.resolutionMessage,
     attachments: r.attachments,
+    files: r.files,
     reactions: r.reactions,
     hasNewMessage: r.hasNewMessage,
     hasNewReply: r.hasNewReply,

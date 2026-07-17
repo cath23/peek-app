@@ -32,8 +32,9 @@ import ReactionPicker from './ReactionPicker'
 import { ResolveDialog } from './ResolveDialog'
 import { CreateTopicDialog, type StartTopicResult } from './CreateTopicDialog'
 import { PEOPLE, type Person } from '@/api'
-import { type ReactionData, type HighlightType } from '@/api'
+import { type ReactionData, type HighlightType, type FileAttachment } from '@/api'
 import { useIsTopicResolved } from '@/api'
+import { FileAttachmentCard } from './ui/FileAttachmentCard'
 import { HighlightPill } from './ui/HighlightPill'
 import { MessageBody } from './ui/MessageBody'
 import { cn } from '@/lib/utils'
@@ -49,6 +50,8 @@ interface ConversationCardProps {
   replyCount?: number
   /** Figma frame ids attached to the message (rendered as preview cards). */
   attachments?: string[]
+  /** Real uploaded files (rendered as file chips / image thumbnails). */
+  files?: FileAttachment[]
   hasNewReply?: boolean
   hasNewMessage?: boolean
   isUrgent?: boolean
@@ -86,6 +89,7 @@ export function ConversationCard({
   reactions,
   replyCount,
   attachments,
+  files,
   hasNewReply = false,
   hasNewMessage = false,
   isUrgent = false,
@@ -644,6 +648,15 @@ export function ConversationCard({
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {/* Uploaded files - image thumbnails / file chips */}
+          {!isEditing && files && files.length > 0 && (
+            <div className="flex flex-wrap gap-2 pl-8 pr-2 pb-2 w-full">
+              {files.map((f, i) => (
+                <FileAttachmentCard key={f.storageId ?? `${f.name}_${i}`} file={f} />
+              ))}
             </div>
           )}
 

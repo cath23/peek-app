@@ -5,14 +5,15 @@ import StarterKit from '@tiptap/starter-kit'
 import { PeekMention, UrgentMention, TopicMention, FileMention, isSuggestionActive } from '@/extensions/mention'
 import { ResolutionBlock, extractResolution } from '@/extensions/resolution'
 import { HighlightTag, extractHighlightType } from '@/extensions/highlight'
-import { IconPaperclip, IconSquareForbid2, IconArrowUp, IconHighlight, IconX } from '@tabler/icons-react'
+import { IconPaperclip, IconSquareForbid2, IconArrowUp, IconHighlight, IconX, IconLoader2, IconAlertCircle } from '@tabler/icons-react'
 import { IconButton } from './IconButton'
 import { HighlightSwatch } from './HighlightPill'
 import { FrameArt } from './FrameArt'
 import { FrameLightbox } from '../FrameLightbox'
 import { cn } from '@/lib/utils'
-import { HIGHLIGHT_META, type HighlightType } from '@/api'
+import { HIGHLIGHT_META, hasConvex, useUploadActions, type HighlightType, type UploadedFile } from '@/api'
 import { frameById, frameBreadcrumb, type FigmaFrame } from '@/api'
+import { FILE_ACCEPT_ATTR, validateFile, isImageAttachment, formatBytes, fileTypeLabel } from '@/lib/fileAttachments'
 
 export interface SendPayload {
   text: string
@@ -20,7 +21,22 @@ export interface SendPayload {
   highlightType?: HighlightType
   /** Figma frame ids attached via the command launcher's find flow. */
   attachments?: string[]
+  /** Real uploaded files (already in Convex storage — Phase 5). */
+  files?: UploadedFile[]
 }
+
+/** One picked file's lifecycle in the composer. */
+interface PendingUpload {
+  localId: string
+  name: string
+  size: number
+  contentType: string
+  status: 'uploading' | 'done' | 'error'
+  error?: string
+  uploaded?: UploadedFile
+}
+
+let uploadSeq = 0
 
 interface ComposeBoxProps {
   onSend?: (payload: SendPayload) => void
@@ -113,15 +129,55 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
   const [slashHighlight, setSlashHighlight] = useState(0)
   const [attachedFrameIds, setAttachedFrameIds] = useState<string[]>([])
   const [previewFrame, setPreviewFrame] = useState<FigmaFrame | null>(null)
+  const [pendingFiles, setPendingFiles] = useState<PendingUpload[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { uploadFile, deleteUpload } = useUploadActions()
   const composeRef = useRef<HTMLDivElement>(null)
 
   const sendFnRef = useRef(onSend)
   sendFnRef.current = onSend
 
-  // Mirror attachments into a ref so the editorProps Enter handler (a stable
-  // closure) always sees the current list.
+  // Mirror attachments into refs so the editorProps Enter handler (a stable
+  // closure) always sees the current lists.
   const attachedFramesRef = useRef<string[]>([])
   attachedFramesRef.current = attachedFrameIds
+  const pendingFilesRef = useRef<PendingUpload[]>([])
+  pendingFilesRef.current = pendingFiles
+
+  /** Files that finished uploading and are ready to send. */
+  const readyFiles = (): UploadedFile[] =>
+    pendingFilesRef.current.filter((f) => f.status === 'done' && f.uploaded).map((f) => f.uploaded!)
+  const isUploading = pendingFiles.some((f) => f.status === 'uploading')
+
+  const handlePickFiles = (files: FileList | null) => {
+    if (!files) return
+    for (const file of Array.from(files)) {
+      const localId = `u_${++uploadSeq}`
+      const err = validateFile(file)
+      if (err) {
+        setPendingFiles((prev) => [...prev, { localId, name: file.name, size: file.size, contentType: file.type, status: 'error', error: err }])
+        continue
+      }
+      setPendingFiles((prev) => [...prev, { localId, name: file.name, size: file.size, contentType: file.type, status: 'uploading' }])
+      uploadFile(file).then(
+        (uploaded) =>
+          setPendingFiles((prev) => prev.map((f) => (f.localId === localId ? { ...f, status: 'done', uploaded } : f))),
+        (e: unknown) =>
+          setPendingFiles((prev) =>
+            prev.map((f) => (f.localId === localId ? { ...f, status: 'error', error: e instanceof Error ? e.message : 'Upload failed.' } : f)),
+          ),
+      )
+    }
+  }
+
+  const removePendingFile = (localId: string) => {
+    setPendingFiles((prev) => {
+      const slot = prev.find((f) => f.localId === localId)
+      // A successfully-uploaded blob that never got sent must be cleaned up.
+      if (slot?.uploaded) deleteUpload(slot.uploaded.storageId)
+      return prev.filter((f) => f.localId !== localId)
+    })
+  }
 
   const editorRef = useRef<ReturnType<typeof useEditor>>(null)
 
@@ -152,15 +208,20 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
           const resolution = extractResolution(ed)
           const hl = extractHighlightType(ed)
           const attachments = attachedFramesRef.current
-          if (text || resolution.hasResolution || attachments.length > 0) {
+          const files = readyFiles()
+          // Hold Enter until in-flight uploads settle, so files aren't dropped.
+          if (pendingFilesRef.current.some((f) => f.status === 'uploading')) return true
+          if (text || resolution.hasResolution || attachments.length > 0 || files.length > 0) {
             sendFnRef.current?.({
               text,
               resolution: resolution.hasResolution ? { message: resolution.resolutionMessage } : undefined,
               highlightType: hl,
               attachments: attachments.length > 0 ? [...attachments] : undefined,
+              files: files.length > 0 ? files : undefined,
             })
             ed.commands.clearContent(true)
             setAttachedFrameIds([])
+            setPendingFiles([])
           }
           return true
         }
@@ -381,15 +442,18 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
 
   const handleSend = () => {
     if (!editor) return
+    if (isUploading) return // wait for in-flight uploads
     const text = serializeToText(editor)
     const resolution = extractResolution(editor)
     const hl = extractHighlightType(editor)
-    if (!text && !resolution.hasResolution && attachedFrameIds.length === 0) return
+    const files = readyFiles()
+    if (!text && !resolution.hasResolution && attachedFrameIds.length === 0 && files.length === 0) return
     onSend?.({
       text,
       resolution: resolution.hasResolution ? { message: resolution.resolutionMessage } : undefined,
       highlightType: hl,
       attachments: attachedFrameIds.length > 0 ? attachedFrameIds : undefined,
+      files: files.length > 0 ? files : undefined,
     })
     editor.commands.clearContent(true)
     editor.commands.focus()
@@ -397,6 +461,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
     setHasUrgent(false)
     setHasHighlight(false)
     setAttachedFrameIds([])
+    setPendingFiles([])
   }
 
   // Split filtered items into sections for rendering
@@ -561,12 +626,77 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
           </div>
         )}
 
+        {/* Pending / uploaded files — removable chips below the text. */}
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {pendingFiles.map((f) => {
+              const thumb = f.uploaded?.previewUrl
+              const isImage = isImageAttachment(f.name, f.contentType)
+              return (
+                <div
+                  key={f.localId}
+                  className={cn(
+                    'group relative flex items-center gap-2 w-[200px] rounded-lg border bg-bg-elevated p-1.5 pr-3',
+                    f.status === 'error' ? 'border-error-default' : 'border-border-default',
+                  )}
+                >
+                  <div className="size-9 rounded-md bg-bg-active flex items-center justify-center shrink-0 overflow-hidden text-text-secondary">
+                    {f.status === 'uploading' ? (
+                      <IconLoader2 size={16} stroke={1.5} className="animate-spin" />
+                    ) : f.status === 'error' ? (
+                      <IconAlertCircle size={16} stroke={1.5} className="text-error-default" />
+                    ) : isImage && thumb ? (
+                      <img src={thumb} alt={f.name} className="size-full object-cover" />
+                    ) : (
+                      <span className="text-[9px] font-semibold">{fileTypeLabel(f.name)}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-[1px] min-w-0">
+                    <span className="text-[12px] font-medium leading-[1.3] text-text-primary truncate">{f.name}</span>
+                    <span className={cn('text-[10px] leading-[1.2] truncate', f.status === 'error' ? 'text-error-default' : 'text-text-secondary')}>
+                      {f.status === 'error' ? f.error : f.status === 'uploading' ? 'Uploading…' : formatBytes(f.size)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${f.name}`}
+                    className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-bg-elevated border border-border-strong flex items-center justify-center text-text-secondary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removePendingFile(f.localId)
+                    }}
+                  >
+                    <IconX size={11} stroke={1.75} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         {/* Toolbar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <IconButton tooltip="Attach file" aria-label="Attach file">
-              <IconPaperclip size={16} stroke={1.5} />
-            </IconButton>
+            {/* File upload needs storage — shown only against a live backend
+                (the demo build hides it; the action only appears where it works). */}
+            {hasConvex && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={FILE_ACCEPT_ATTR}
+                  className="hidden"
+                  onChange={(e) => {
+                    handlePickFiles(e.target.files)
+                    e.target.value = '' // let the same file be re-picked
+                  }}
+                />
+                <IconButton tooltip="Attach file" aria-label="Attach file" onClick={() => fileInputRef.current?.click()}>
+                  <IconPaperclip size={16} stroke={1.5} />
+                </IconButton>
+              </>
+            )}
             <IconButton tooltip="Snooze" aria-label="Snooze">
               <IconSquareForbid2 size={16} stroke={1.5} />
             </IconButton>
@@ -579,22 +709,28 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
             </IconButton>
           </div>
 
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault()
-              handleSend()
-            }}
-            disabled={isEmpty && attachedFrameIds.length === 0}
-            aria-label="Send"
-            className={cn(
-              'flex items-center justify-center p-1 rounded-lg transition-colors',
-              !isEmpty || attachedFrameIds.length > 0
-                ? 'bg-accent-primary hover:bg-accent-hover text-text-inverse cursor-pointer'
-                : 'bg-bg-disabled text-text-disabled pointer-events-none'
-            )}
-          >
-            <IconArrowUp size={16} stroke={1.5} />
-          </button>
+          {(() => {
+            const hasReadyFile = pendingFiles.some((f) => f.status === 'done')
+            const canSend = (!isEmpty || attachedFrameIds.length > 0 || hasReadyFile) && !isUploading
+            return (
+              <button
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  handleSend()
+                }}
+                disabled={!canSend}
+                aria-label="Send"
+                className={cn(
+                  'flex items-center justify-center p-1 rounded-lg transition-colors',
+                  canSend
+                    ? 'bg-accent-primary hover:bg-accent-hover text-text-inverse cursor-pointer'
+                    : 'bg-bg-disabled text-text-disabled pointer-events-none'
+                )}
+              >
+                <IconArrowUp size={16} stroke={1.5} />
+              </button>
+            )
+          })()}
         </div>
       </div>
 

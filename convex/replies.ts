@@ -7,10 +7,11 @@
  */
 import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'
-import { highlightType } from './schema'
+import { highlightType, fileAttachment } from './schema'
 import { viewerId, viewerOrThrow } from './users'
 import { watermarks } from './readState'
 import { isUrgentBody, screenReply } from './screener'
+import { resolveFileAttachments, deleteAttachmentBlobs } from './messages'
 import { ensureTopicMember } from './topics'
 import type { Doc, Id } from './_generated/dataModel'
 
@@ -44,9 +45,10 @@ export const list = query({
     // set when you open its thread panel, not when you open the container.
     const me = await viewerId(ctx)
     const threadWm = me ? (await watermarks(ctx, me)).get(message._id as string) : undefined
-    return rows
-      .sort((a, b) => a.createdAt - b.createdAt)
-      .map((r) => ({
+    const sorted = rows.sort((a, b) => a.createdAt - b.createdAt)
+    const out = []
+    for (const r of sorted) {
+      out.push({
         id: r.seedKey ?? (r._id as string),
         authorId: r.authorId as string,
         authorName: names.get(r.authorId) ?? 'Unknown',
@@ -55,11 +57,14 @@ export const list = query({
         isUrgent: r.urgent,
         highlightType: r.highlightType,
         attachments: r.attachments,
+        files: await resolveFileAttachments(ctx, r.fileAttachments),
         isNew:
           me && r.authorId !== me && (threadWm === undefined || r.createdAt > threadWm)
             ? true
             : undefined,
-      }))
+      })
+    }
+    return out
   },
 })
 
@@ -71,8 +76,9 @@ export const send = mutation({
     body: v.string(),
     highlightType: v.optional(highlightType),
     attachments: v.optional(v.array(v.string())),
+    fileAttachments: v.optional(v.array(fileAttachment)),
   },
-  handler: async (ctx, { messageKey, seedKey, body, highlightType, attachments }) => {
+  handler: async (ctx, { messageKey, seedKey, body, highlightType, attachments, fileAttachments }) => {
     const message = await findMessageByKey(ctx, messageKey)
     if (!message) throw new Error(`Unknown message '${messageKey}'`)
     const you = await viewerOrThrow(ctx)
@@ -84,6 +90,7 @@ export const send = mutation({
       urgent: isUrgentBody(body) || undefined,
       highlightType,
       attachments,
+      fileAttachments,
       seedKey,
     })
     // Replying in a topic thread makes you a member too (QA #2.6).
@@ -106,6 +113,9 @@ export const remove = mutation({
       .unique()
     const normalized = bySeed ? null : ctx.db.normalizeId('replies', key)
     const r = bySeed ?? (normalized ? await ctx.db.get(normalized) : null)
-    if (r) await ctx.db.delete(r._id)
+    if (r) {
+      await deleteAttachmentBlobs(ctx, r.fileAttachments)
+      await ctx.db.delete(r._id)
+    }
   },
 })

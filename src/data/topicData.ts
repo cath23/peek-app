@@ -34,6 +34,19 @@ export interface ReactionData {
   owner: 'yours' | 'others'
 }
 
+/** A real uploaded file attached to a message/reply (Phase 5). `url` is the
+ *  resolved storage URL; `previewUrl` is a local object URL used only during
+ *  the optimistic window before the server round-trips (images render
+ *  instantly). Distinct from `attachments` (Figma frame ids). */
+export interface FileAttachment {
+  storageId?: string
+  url?: string
+  previewUrl?: string
+  name: string
+  contentType: string
+  size: number
+}
+
 export interface ConversationData {
   id: string
   authorName: string
@@ -50,6 +63,8 @@ export interface ConversationData {
   resolutionMessage?: string
   /** Figma frame ids attached to the message (see figmaData.ts). */
   attachments?: string[]
+  /** Real uploaded files (Phase 5) — separate lane from Figma `attachments`. */
+  files?: FileAttachment[]
   /** Numeric send time (ms). Convex rows + runtime sends carry it; static
    *  mocks don't — consumers must treat it as a sort hint, not a given. */
   createdAtMs?: number

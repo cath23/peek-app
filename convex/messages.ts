@@ -9,7 +9,7 @@
  */
 import { v } from 'convex/values'
 import { mutation, query, type QueryCtx, type MutationCtx } from './_generated/server'
-import { highlightType } from './schema'
+import { highlightType, fileAttachment } from './schema'
 import { viewerId, viewerOrThrow } from './users'
 import { watermarks } from './readState'
 import { isUrgentBody, screenMessage } from './screener'
@@ -128,6 +128,21 @@ export async function unreadFlags(
   }
 }
 
+/** Resolve stored file records to browser-renderable rows (blob → URL). A
+ *  file whose blob has vanished is dropped rather than surfaced as broken. */
+export async function resolveFileAttachments(
+  ctx: QueryCtx | MutationCtx,
+  files: Doc<'messages'>['fileAttachments'],
+) {
+  if (!files || files.length === 0) return undefined
+  const out = []
+  for (const f of files) {
+    const url = await ctx.storage.getUrl(f.storageId)
+    if (url) out.push({ storageId: f.storageId as string, url, name: f.name, contentType: f.contentType, size: f.size })
+  }
+  return out.length > 0 ? out : undefined
+}
+
 export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
   const resolvedByReply = m.resolvedByReplyId ? await ctx.db.get(m.resolvedByReplyId) : null
   return {
@@ -144,6 +159,7 @@ export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, nam
     resolutionMessage: m.resolutionMessage,
     resolvedByReplyId: resolvedByReply ? resolvedByReply.seedKey ?? (resolvedByReply._id as string) : undefined,
     attachments: m.attachments,
+    files: await resolveFileAttachments(ctx, m.fileAttachments),
   }
 }
 
@@ -207,6 +223,31 @@ export const get = query({
   },
 })
 
+/** Short-lived upload URL for a message/reply file attachment (viewer-gated,
+ *  mirrors the avatar flow). The client POSTs the blob, then passes the
+ *  returned storageId into `send`/`replies.send`. */
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await viewerOrThrow(ctx)
+    return ctx.storage.generateUploadUrl()
+  },
+})
+
+/** Drop an uploaded blob that never got attached (the composer removes a
+ *  pending file before sending), so it doesn't orphan in storage. */
+export const deleteUpload = mutation({
+  args: { storageId: v.id('_storage') },
+  handler: async (ctx, { storageId }) => {
+    await viewerOrThrow(ctx)
+    try {
+      await ctx.storage.delete(storageId)
+    } catch {
+      // Already gone.
+    }
+  },
+})
+
 /** Add or remove the current user's reaction (per-user rows, §2.7). */
 export const toggleReaction = mutation({
   args: { key: v.string(), emoji: v.string() },
@@ -243,8 +284,9 @@ export const send = mutation({
     resolved: v.optional(v.boolean()),
     resolutionMessage: v.optional(v.string()),
     attachments: v.optional(v.array(v.string())),
+    fileAttachments: v.optional(v.array(fileAttachment)),
   },
-  handler: async (ctx, { parentKind, parentKey, seedKey, body, highlightType, resolved, resolutionMessage, attachments }) => {
+  handler: async (ctx, { parentKind, parentKey, seedKey, body, highlightType, resolved, resolutionMessage, attachments, fileAttachments }) => {
     const you = await viewerOrThrow(ctx)
     let parentId = await resolveParentId(ctx, parentKind, parentKey, you._id)
     // First DM to someone: create the pair's conversation on demand.
@@ -276,6 +318,7 @@ export const send = mutation({
       resolvedById: resolved ? you._id : undefined,
       resolutionMessage,
       attachments,
+      fileAttachments,
       seedKey,
     })
     // Posting into a topic makes you a member (QA #2.6 — keeps the member
@@ -385,6 +428,21 @@ export const setHighlight = mutation({
   },
 })
 
+/** Delete the storage blobs behind a message/reply's uploaded files, so
+ *  removing content doesn't leak files (Phase 5). Missing blobs are ignored. */
+export async function deleteAttachmentBlobs(
+  ctx: MutationCtx,
+  files: Doc<'messages'>['fileAttachments'],
+) {
+  for (const f of files ?? []) {
+    try {
+      await ctx.storage.delete(f.storageId)
+    } catch {
+      // Already gone — nothing to clean up.
+    }
+  }
+}
+
 export const remove = mutation({
   args: { key: v.string() },
   handler: async (ctx, { key }) => {
@@ -394,12 +452,16 @@ export const remove = mutation({
       .query('replies')
       .withIndex('by_message', (q) => q.eq('messageId', m._id))
       .collect()
-    for (const r of replies) await ctx.db.delete(r._id)
+    for (const r of replies) {
+      await deleteAttachmentBlobs(ctx, r.fileAttachments)
+      await ctx.db.delete(r._id)
+    }
     const reactions = await ctx.db
       .query('reactions')
       .withIndex('by_message', (q) => q.eq('messageId', m._id))
       .collect()
     for (const r of reactions) await ctx.db.delete(r._id)
+    await deleteAttachmentBlobs(ctx, m.fileAttachments)
     await ctx.db.delete(m._id)
   },
 })

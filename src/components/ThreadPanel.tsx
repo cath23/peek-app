@@ -172,6 +172,7 @@ export function ThreadPanel({
               timestamp={conversation.timestamp}
               body={conversation.body}
               attachments={conversation.attachments}
+              files={conversation.files}
               reactions={initialReactions}
               highlightType={initialHighlightType}
               onBodyChange={onInitialBodyChange}
@@ -203,6 +204,7 @@ export function ThreadPanel({
               timestamp={reply.timestamp}
               body={reply.body}
               attachments={reply.attachments}
+              files={reply.files}
               highlightType={reply.highlightType}
               reactions={reply.reactions}
               isNew={reply.isNew}
@@ -260,6 +262,7 @@ export function ThreadPanel({
               timestamp={reply.timestamp}
               body={reply.body}
               attachments={reply.attachments}
+              files={reply.files}
               highlightType={reply.highlightType}
               reactions={reply.reactions}
               isNew={reply.isNew}

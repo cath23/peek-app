@@ -550,7 +550,22 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       (PersonChipInput, StartHuddleDialog shell) → `topics.addMembers`
       (`ensureTopicMember` per name); optimistic `addInviteesLocal` in the
       topic store. Verified in .verify-p5.mjs.
-- [ ] Uploads · email verification (deferred from Phase 3) · DM-row menu
+- [x] **File uploads** (2026-07-17) — real attachments on messages AND
+      replies (main composer → message, reply composer → reply). A new
+      `fileAttachments` object-array on `messages`/`replies`
+      (`{storageId,name,contentType,size}`) sits alongside the Figma
+      `attachments` string[] (untouched). Upload mirrors the avatar flow:
+      `messages.generateUploadUrl` → client POSTs → id + metadata into
+      `send`/`replies.send`; reads resolve blob→URL. Composer paperclip
+      (shown only when `hasConvex`) uploads on pick with pending/spinner
+      chips (image thumbnail vs type icon + size), removable — removing a
+      pending file cleans its blob (`deleteUpload`). Cards render image
+      thumbnails (lightbox) / file chips (open in new tab). Blob cleanup
+      wired into `messages.remove`, reply `remove`, and the `topics.remove`
+      cascade. Policy (`lib/fileAttachments.ts`, unit-tested): extension
+      allowlist (images, docs, **md/json/zip**), executable blocklist,
+      25 MB cap. Verified two-browser (.verify-files.mjs, 11 checks).
+- [ ] Email verification (deferred from Phase 3) · DM-row menu
       (left inert by ruling 2026-07-17)
 
 ### Decision log

@@ -9,6 +9,7 @@ export type {
   Topic,
   HighlightType,
   ReactionData,
+  FileAttachment,
   ConversationData,
   ConvGroup,
 } from '@/data/topicData'

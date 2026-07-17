@@ -11,7 +11,8 @@ import { api } from '../../convex/_generated/api'
 import { useTopicMutations } from '@/api/internal/topicMutations'
 import { hasConvex, useDmRuntime } from './store'
 import { CURRENT_USER_NAME } from './currentUser'
-import type { ConversationData, HighlightType, Huddle, ReactionData, ReplyData } from './types'
+import type { UploadedFile } from './uploads'
+import type { ConversationData, FileAttachment, HighlightType, Huddle, ReactionData, ReplyData } from './types'
 
 export interface SendMessagePayload {
   text: string
@@ -19,6 +20,21 @@ export interface SendMessagePayload {
   highlightType?: HighlightType
   /** Figma frame ids attached via the launcher's find flow. */
   attachments?: string[]
+  /** Real uploaded files (already in Convex storage — Phase 5). */
+  files?: UploadedFile[]
+}
+
+/** Uploaded descriptor → optimistic-render shape (image previews show at once
+ *  via the local object URL until the server resolves the real storage URL). */
+function toFileAttachment(f: UploadedFile): FileAttachment {
+  return { storageId: f.storageId, previewUrl: f.previewUrl, name: f.name, contentType: f.contentType, size: f.size }
+}
+
+/** Descriptor → the mutation's `fileAttachments` arg shape. */
+function toRemoteFiles(files: UploadedFile[] | undefined) {
+  return files && files.length > 0
+    ? files.map((f) => ({ storageId: f.storageId as never, name: f.name, contentType: f.contentType, size: f.size }))
+    : undefined
 }
 
 const nowTimestamp = (now = Date.now()) =>
@@ -49,6 +65,7 @@ export function usePeekActions() {
     parentKind: 'topic' | 'dm' | 'huddle',
     parentKey: string,
     msg: ConversationData,
+    files?: UploadedFile[],
   ) => {
     if (!hasConvex) return
     void sendRemote({
@@ -60,10 +77,11 @@ export function usePeekActions() {
       resolved: msg.isResolved,
       resolutionMessage: msg.resolutionMessage,
       attachments: msg.attachments,
+      fileAttachments: toRemoteFiles(files),
     })
   }
 
-  const buildMessage = ({ text, resolution, highlightType, attachments }: SendMessagePayload): ConversationData => ({
+  const buildMessage = ({ text, resolution, highlightType, attachments, files }: SendMessagePayload): ConversationData => ({
     id: `sent_${Date.now()}`,
     authorName: CURRENT_USER_NAME,
     timestamp: nowTimestamp(),
@@ -74,6 +92,7 @@ export function usePeekActions() {
     resolvedBy: resolution ? CURRENT_USER_NAME : undefined,
     resolutionMessage: resolution?.message || undefined,
     attachments,
+    files: files && files.length > 0 ? files.map(toFileAttachment) : undefined,
   })
 
   /** Resolution sent with no text: resolve the last runtime-sent message. */
@@ -92,10 +111,10 @@ export function usePeekActions() {
   return {
     // ── Messages ──
     sendTopicMessage(topicId: string, payload: SendMessagePayload) {
-      if (payload.text || payload.attachments?.length) {
+      if (payload.text || payload.attachments?.length || payload.files?.length) {
         const newMsg = buildMessage(payload)
         m.setSentMessages((prev) => ({ ...prev, [topicId]: [...(prev[topicId] ?? []), newMsg] }))
-        persistMessage('topic', topicId, newMsg)
+        persistMessage('topic', topicId, newMsg, payload.files)
       } else if (payload.resolution) {
         const message = payload.resolution.message
         m.setSentMessages((prev) => ({ ...prev, [topicId]: resolveLastSent(prev[topicId] ?? [], message) }))
@@ -104,10 +123,10 @@ export function usePeekActions() {
 
     /** `dmId` is the partner's person key — the server resolves the pair (§2.4). */
     sendDmMessage(dmId: string, payload: SendMessagePayload) {
-      if (payload.text || payload.attachments?.length) {
+      if (payload.text || payload.attachments?.length || payload.files?.length) {
         const newMsg = buildMessage(payload)
         setSentDmMessages((prev) => ({ ...prev, [dmId]: [...(prev[dmId] ?? []), newMsg] }))
-        persistMessage('dm', dmId, newMsg)
+        persistMessage('dm', dmId, newMsg, payload.files)
       } else if (payload.resolution) {
         const message = payload.resolution.message
         setSentDmMessages((prev) => ({ ...prev, [dmId]: resolveLastSent(prev[dmId] ?? [], message) }))
@@ -230,9 +249,9 @@ export function usePeekActions() {
     /** Send a reply; a `→ msg` resolution stamps resolvedByReplyId so the
      *  reply card can surface the resolution inline later. */
     sendReply(messageId: string, payload: SendMessagePayload) {
-      const { text, resolution, highlightType, attachments } = payload
+      const { text, resolution, highlightType, attachments, files } = payload
       let newReplyId: string | undefined
-      if (text || attachments?.length) {
+      if (text || attachments?.length || files?.length) {
         const now = Date.now()
         newReplyId = `reply_${now}`
         const newReply: ReplyData = {
@@ -243,6 +262,7 @@ export function usePeekActions() {
           highlightType,
           createdAtMs: now,
           attachments,
+          files: files && files.length > 0 ? files.map(toFileAttachment) : undefined,
         }
         m.setSentReplies((prev) => ({ ...prev, [messageId]: [...(prev[messageId] ?? []), newReply] }))
         if (hasConvex) {
@@ -252,6 +272,7 @@ export function usePeekActions() {
             body: text,
             highlightType,
             attachments,
+            fileAttachments: toRemoteFiles(files),
           })
         }
       }

@@ -105,10 +105,10 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
   const openThread = (convId: string) => setThreadConvId(convId)
   const closeThread = () => setThreadConvId(null)
 
-  const handleSendReply = ({ text, resolution, attachments }: SendPayload) => {
+  const handleSendReply = ({ text, resolution, attachments, files }: SendPayload) => {
     if (!threadConvId) return
     // DM replies never carry a highlight (matches pre-seam behavior).
-    actions.sendReply(threadConvId, { text, resolution, attachments })
+    actions.sendReply(threadConvId, { text, resolution, attachments, files })
   }
 
   const handleDeleteReply = (replyId: string) => {
@@ -116,12 +116,12 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
     actions.deleteReply(threadConvId, replyId)
   }
 
-  const handleSend = ({ text, resolution, attachments }: SendPayload) => {
+  const handleSend = ({ text, resolution, attachments, files }: SendPayload) => {
     if (dmId == null) return
     // DM messages never carry a highlight (matches pre-seam behavior).
     // dmId is the partner's person key — the server resolves the pair and
     // creates the conversation on the first message (§2.4).
-    actions.sendDmMessage(dmId, { text, resolution, attachments })
+    actions.sendDmMessage(dmId, { text, resolution, attachments, files })
   }
 
   const handleDelete = (id: string) => {
@@ -212,6 +212,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
                   timestamp={c.timestamp}
                   body={c.body}
                   attachments={c.attachments}
+                  files={c.files}
                   reactions={c.reactions}
                   highlightType={c.highlightType}
                   replyCount={c.replyCount}
@@ -248,6 +249,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
                   timestamp={m.timestamp}
                   body={m.body}
                   attachments={m.attachments}
+                  files={m.files}
                   reactions={m.reactions}
                   highlightType={m.highlightType}
                   replyCount={m.replyCount}

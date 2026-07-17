@@ -24,8 +24,9 @@ import ReactionPicker from './ReactionPicker'
 import { Reaction as ReactionPill } from './ui/Reaction'
 import { Divider } from './ui/Divider'
 import { PEOPLE } from '@/api'
-import { type ReactionData } from '@/api'
+import { type ReactionData, type FileAttachment } from '@/api'
 import { useIsTopicResolved } from '@/api'
+import { FileAttachmentCard } from './ui/FileAttachmentCard'
 import { cn } from '@/lib/utils'
 import { HighlightPill, HighlightSwatch } from './ui/HighlightPill'
 import { HIGHLIGHT_META, type HighlightType } from '@/api'
@@ -154,6 +155,8 @@ interface ThreadReplyCardProps {
   highlightType?: HighlightType
   /** Figma frame ids attached to the reply (rendered as preview cards). */
   attachments?: string[]
+  /** Real uploaded files (rendered as file chips / image thumbnails). */
+  files?: FileAttachment[]
   isNew?: boolean
   isUrgent?: boolean
   onHighlightChange?: (type: HighlightType | undefined) => void
@@ -181,6 +184,7 @@ export function ThreadReplyCard({
   reactions,
   highlightType,
   attachments,
+  files,
   isNew = false,
   isUrgent = false,
   onHighlightChange,
@@ -549,6 +553,13 @@ export function ThreadReplyCard({
                     </div>
                   )
                 })}
+              </div>
+            )}
+            {files && files.length > 0 && (
+              <div className="flex flex-wrap gap-2 pl-8 pr-2 pb-2 w-full">
+                {files.map((f, i) => (
+                  <FileAttachmentCard key={f.storageId ?? `${f.name}_${i}`} file={f} />
+                ))}
               </div>
             )}
             {reactionsState.length > 0 && (

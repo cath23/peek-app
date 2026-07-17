@@ -21,6 +21,16 @@ export const highlightType = v.union(
 /** Polymorphic message parent — one messages table (domain model §3). */
 export const parentKind = v.union(v.literal('topic'), v.literal('dm'), v.literal('huddle'))
 
+/** A real uploaded file (Phase 5). The blob lives in Convex `_storage`; the
+ *  record carries the metadata a card needs to render its chip. Kept separate
+ *  from `attachments` (Figma frame ids), which stay a plain string[]. */
+export const fileAttachment = v.object({
+  storageId: v.id('_storage'),
+  name: v.string(),
+  contentType: v.string(),
+  size: v.number(),
+})
+
 /** Star / screener / desk targets. */
 export const containerKind = v.union(v.literal('topic'), v.literal('dm'))
 
@@ -103,8 +113,10 @@ export default defineSchema({
     /** Set when resolution came from a `→ msg` reply — drives inline editing. */
     resolvedByReplyId: v.optional(v.id('replies')),
     resolvedAt: v.optional(v.number()),
-    /** Figma frame ids (static integration mocks, §6). Real uploads: Phase 5. */
+    /** Figma frame ids (static integration mocks, §6). */
     attachments: v.optional(v.array(v.string())),
+    /** Real uploaded files (Phase 5) — separate lane from Figma `attachments`. */
+    fileAttachments: v.optional(v.array(fileAttachment)),
     /** Stable client key — mock or client-generated message id (see topics). */
     seedKey: v.optional(v.string()),
   })
@@ -120,6 +132,8 @@ export default defineSchema({
     urgent: v.optional(v.boolean()),
     highlightType: v.optional(highlightType),
     attachments: v.optional(v.array(v.string())),
+    /** Real uploaded files (Phase 5) — separate lane from Figma `attachments`. */
+    fileAttachments: v.optional(v.array(fileAttachment)),
     /** Stable client key — mock or client-generated reply id (see topics). */
     seedKey: v.optional(v.string()),
   })
