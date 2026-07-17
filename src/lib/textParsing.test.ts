@@ -3,6 +3,7 @@ import {
   MENTION_RE,
   INLINE_TOKEN_RE,
   matchReference,
+  matchUrl,
   parseInlineContent,
   parseBodySegments,
   serializeInline,
@@ -215,6 +216,39 @@ describe('INLINE_TOKEN_RE external references', () => {
 
   it('does NOT match a # without digits', () => {
     expect(tokenMatches('the #channel idea')).toEqual([])
+  })
+})
+
+describe('URL tokenization', () => {
+  it('matches an http(s) URL as one whole token', () => {
+    expect(tokenMatches('see https://linear.app/peek-app/document/x-49287455c230 now'))
+      .toEqual(['https://linear.app/peek-app/document/x-49287455c230'])
+  })
+
+  it('does not split a #fragment inside a URL as a reference', () => {
+    expect(tokenMatches('https://example.com/page#section-123'))
+      .toEqual(['https://example.com/page#section-123'])
+  })
+
+  it('keeps mentions and references working alongside a URL', () => {
+    expect(tokenMatches('@Alice Johnson posted https://x.com and PR #482'))
+      .toEqual(['@Alice Johnson', 'https://x.com', 'PR #482'])
+  })
+})
+
+describe('matchUrl', () => {
+  it('returns the href for a bare URL', () => {
+    expect(matchUrl('https://example.com/a')).toEqual({ href: 'https://example.com/a', trailing: '' })
+  })
+
+  it('peels trailing punctuation off the href', () => {
+    expect(matchUrl('https://example.com.')).toEqual({ href: 'https://example.com', trailing: '.' })
+    expect(matchUrl('https://example.com/x),')).toEqual({ href: 'https://example.com/x', trailing: '),' })
+  })
+
+  it('returns null for non-URLs', () => {
+    expect(matchUrl('@Alice Johnson')).toBeNull()
+    expect(matchUrl('just text')).toBeNull()
   })
 })
 

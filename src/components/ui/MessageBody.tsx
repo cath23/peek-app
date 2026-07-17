@@ -13,7 +13,7 @@ import figmaIcon from '@/assets/figma icon.svg'
 import linearIcon from '@/assets/linear icon.svg'
 import { TOPICS } from '@/api'
 import { APP_FILES, DOCUMENT_FILES } from '@/api'
-import { INLINE_TOKEN_RE, matchReference, parseBodySegments } from '@/lib/textParsing'
+import { INLINE_TOKEN_RE, matchReference, matchUrl, parseBodySegments } from '@/lib/textParsing'
 import { ReferenceChip } from './ReferenceChip'
 
 // Inline token renderer shared by ConversationCard and ThreadReplyCard: turns
@@ -25,6 +25,26 @@ function renderWithMentions(text: string, isTopicResolved: (id: string) => boole
   return (
     <>
       {parts.map((part, i) => {
+        // A user-typed URL → a real, clickable link. `break-all` lets long
+        // URLs wrap instead of forcing the card to overflow horizontally.
+        const url = matchUrl(part)
+        if (url) {
+          return (
+            <span key={i}>
+              <a
+                href={url.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-interactive
+                className="text-info-default underline underline-offset-2 break-all hover:opacity-80"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {url.href}
+              </a>
+              {url.trailing}
+            </span>
+          )
+        }
         if (part.startsWith('[') && part.endsWith(']') && part.length > 2) {
           const title = part.slice(1, -1)
           const topic = TOPICS.find((t) => t.title === title)
@@ -86,7 +106,7 @@ function renderWithMentions(text: string, isTopicResolved: (id: string) => boole
 export function MessageBody({ body, isTopicResolved }: { body: string; isTopicResolved: (id: string) => boolean }) {
   const segments = parseBodySegments(body)
   return (
-    <div data-message-body className="flex flex-col gap-1 text-sm text-text-secondary leading-[1.4]">
+    <div data-message-body className="flex flex-col gap-1 text-sm text-text-secondary leading-[1.4] break-words">
       {segments.map((seg, i) => {
         if (seg.type === 'bullet') {
           return (
@@ -94,7 +114,7 @@ export function MessageBody({ body, isTopicResolved }: { body: string; isTopicRe
               {seg.items.map((item, j) => (
                 <li key={j} className="flex gap-2">
                   <span className="shrink-0 mt-px">•</span>
-                  <span>{renderWithMentions(item, isTopicResolved)}</span>
+                  <span className="min-w-0 break-words">{renderWithMentions(item, isTopicResolved)}</span>
                 </li>
               ))}
             </ul>
@@ -106,7 +126,7 @@ export function MessageBody({ body, isTopicResolved }: { body: string; isTopicRe
               {seg.items.map((item, j) => (
                 <li key={j} className="flex gap-2">
                   <span className="shrink-0 text-text-muted">{j + 1}.</span>
-                  <span>{renderWithMentions(item, isTopicResolved)}</span>
+                  <span className="min-w-0 break-words">{renderWithMentions(item, isTopicResolved)}</span>
                 </li>
               ))}
             </ol>

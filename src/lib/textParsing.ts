@@ -71,17 +71,30 @@ const _referenceAlternation = [
   '#\\d+(?!\\d)',
 ].join('|')
 
-/** Tokenizer for read-only rendering: mentions, [refs], and external references.
- *  Single capture group so String.split() interleaves cleanly.
+/** Bare http(s) URL. Listed FIRST in the tokenizer so a URL is matched
+ *  whole (greedily to the next whitespace) before its inner `#123` etc. can
+ *  be mistaken for a reference. */
+const _urlPattern = 'https?:\\/\\/[^\\s]+'
+
+/** Tokenizer for read-only rendering: URLs, mentions, [refs], and external
+ *  references. Single capture group so String.split() interleaves cleanly.
  *  Rebuilt alongside MENTION_RE when the workspace directory changes. */
 function _buildInlineTokenRe(): RegExp {
   return new RegExp(
-    `((?:!@|@)(?:${_escapedNames()})|@[a-z][a-z0-9-]+(?![a-zA-Z/-])|\\[(?:${_escapedBracketTitles})\\]|${_referenceAlternation})`,
+    `(${_urlPattern}|(?:!@|@)(?:${_escapedNames()})|@[a-z][a-z0-9-]+(?![a-zA-Z/-])|\\[(?:${_escapedBracketTitles})\\]|${_referenceAlternation})`,
     'g'
   )
 }
 
 export let INLINE_TOKEN_RE = _buildInlineTokenRe()
+
+/** A plain http(s) URL token → its href plus any trailing punctuation peeled
+ *  off, so "see https://x.com." links only the URL and leaves the period as
+ *  text. Returns null for non-URL tokens. */
+export function matchUrl(part: string): { href: string; trailing: string } | null {
+  const m = part.match(/^(https?:\/\/\S+?)([.,;:!?)\]]*)$/)
+  return m ? { href: m[1], trailing: m[2] } : null
+}
 
 export type ReferenceKind = 'linear' | 'github' | 'build' | 'ticket'
 
