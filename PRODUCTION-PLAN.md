@@ -507,6 +507,23 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       row server-side (`ensureTopicMember`), keeping membership consistent
       for every user. `topics.join` mutation added (used by item 7's Join
       banner). Verified two-browser (.verify-qa56.mjs, 9 checks).
+- [x] **QA batch #2, items 7–8 (2026-07-17)** — (7) *Topic access, per the
+      2026-07-16 ruling*: the Topics sidebar splits into "Your topics" /
+      "Other topics" (collapsible headers, StarredSection style; flat list
+      when everything is yours — mock parity). Opening a non-member topic
+      shows its content as usual plus a JoinTopicBanner (NewTopicBanner
+      visual) above the composer; Join calls `topics.join`, the banner
+      clears and the topic moves sections reactively. (8) *Delete topic*:
+      the topic row's 3-dot opens a more-menu with a destructive "Delete
+      topic" item → `topics.remove` cascades messages, replies, reactions,
+      huddles + huddle members, topicMembers, screener/open-work/star rows,
+      and readState watermarks; optimistic local hide + selection/URL
+      cleanup. ALSO fixed per user report: a huddle's stream position now
+      anchors on when its SEED message was SENT (`conversation.createdAtMs`
+      → promotedAtMs → lastActivityMs), so a DM-promoted huddle sits above
+      later messages instead of sinking to the bottom (lastActivity was
+      promotion-time based). Verified two-browser (.verify-qa78.mjs, 11
+      checks).
 - [ ] Manual two-browser QA pass (user)
 
 ### Phase 5 — Hardening *(coarse)*

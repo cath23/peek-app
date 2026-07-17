@@ -21,7 +21,7 @@ import type { Person } from './types'
 
 /** All topics. `undefined` while the Convex query is loading. */
 export function useTopics(): Topic[] | undefined {
-  const { topics: localTopics, extraTopics } = useTopicStore()
+  const { topics: localTopics, extraTopics, deletedTopicIds } = useTopicStore()
   const me = useCurrentUser()
   const remote = useQuery(api.topics.list, hasConvex ? {} : 'skip')
   if (!hasConvex) return localTopics
@@ -35,7 +35,9 @@ export function useTopics(): Topic[] | undefined {
       : undefined,
   }))
   const ids = new Set(mapped.map((t) => t.id))
-  return [...mapped, ...extraTopics.filter((t) => !ids.has(t.id))]
+  return [...mapped, ...extraTopics.filter((t) => !ids.has(t.id))].filter(
+    (t) => !deletedTopicIds.has(t.id), // optimistic window until the remove lands
+  )
 }
 
 export function useTopicLookup(): (topicId: string) => Topic | undefined {
@@ -60,6 +62,49 @@ export function useIsTopicResolved(): (topicId: string) => boolean {
       return topics?.find((t) => t.id === topicId)?.isResolved ?? false
     },
     [localIsResolved, topics],
+  )
+}
+
+/**
+ * Is the viewer a member of this topic? Convex mode reads real topicMembers
+ * (surfaced through invitees — the viewer maps to CURRENT_USER_NAME). Mock
+ * data carries no membership, so everything counts as yours (demo parity).
+ * Returns true while the list is loading so non-member UI never flashes.
+ */
+export function useIsTopicMember(): (topicId: string) => boolean {
+  const topics = useTopics()
+  return useCallback(
+    (topicId: string) => {
+      if (!hasConvex || topics === undefined) return true
+      const t = topics.find((t) => t.id === topicId)
+      return t?.invitees?.includes(CURRENT_USER_NAME) ?? false
+    },
+    [topics],
+  )
+}
+
+/** Delete a topic with everything in it (messages, huddles, membership,
+ *  desk rows) — the topic-row more-menu action (QA #2.8). */
+export function useDeleteTopic(): (topicId: string) => void {
+  const deleteLocal = useTopicStore().deleteTopicLocal
+  const removeRemote = useMutation(api.topics.remove)
+  return useCallback(
+    (topicId: string) => {
+      deleteLocal(topicId)
+      if (hasConvex) void removeRemote({ topicKey: topicId })
+    },
+    [deleteLocal, removeRemote],
+  )
+}
+
+/** Join a topic you're not a member of (the Join banner, QA #2.7). */
+export function useJoinTopic(): (topicId: string) => void {
+  const joinRemote = useMutation(api.topics.join)
+  return useCallback(
+    (topicId: string) => {
+      if (hasConvex) void joinRemote({ topicKey: topicId })
+    },
+    [joinRemote],
   )
 }
 

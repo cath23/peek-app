@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { IconPlus } from '@tabler/icons-react'
 import { ConversationHeader } from '@/components/ConversationHeader'
 import { NewTopicBanner } from '@/components/NewTopicBanner'
+import { JoinTopicBanner } from '@/components/JoinTopicBanner'
 import { HuddleCreator } from '@/components/HuddleCreator'
 import { ConversationCard } from '@/components/ConversationCard'
 import { ThreadPanel } from '@/components/ThreadPanel'
@@ -16,6 +17,7 @@ import { TopicTabs, type TopicTab } from '@/components/ui/TopicTabs'
 import { IconButton } from '@/components/ui/IconButton'
 import {
   CURRENT_USER_NAME,
+  formatDateLabel,
   useTopicMessages,
   useHuddleMessages,
   useThread,
@@ -23,6 +25,8 @@ import {
   useHuddlesLoading,
   useTopicLookup,
   useIsTopicResolved,
+  useIsTopicMember,
+  useJoinTopic,
   usePeekActions,
   useStarred,
   type ConversationData,
@@ -65,6 +69,8 @@ export function useTopicView({
   const huddleLookup = useHuddleLookup()
   const huddlesLoading = useHuddlesLoading()
   const isTopicResolved = useIsTopicResolved()
+  const isTopicMember = useIsTopicMember()
+  const joinTopic = useJoinTopic()
   const actions = usePeekActions()
   const { state: debug } = useDebug()
   const huddleVariant = debug.huddles.variant
@@ -73,6 +79,8 @@ export function useTopicView({
   // Derived: a topic is "resolved" iff every non-deleted conv in it is resolved.
   // Single source of truth for the dashed-circle vs checkmark icon everywhere.
   const topicResolved = topicId != null ? isTopicResolved(topicId) : false
+  /** Non-members see the content plus a Join banner (QA #2.7 ruling). */
+  const isMemberHere = topicId != null ? isTopicMember(topicId) : true
 
   // Thread + huddle UI state stays local — it's transient view state, not data.
   const [threadConvId, setThreadConvId] = useState<string | null>(null)
@@ -367,16 +375,20 @@ export function useTopicView({
             today.entries.push(...currentSent.map((m) => ({ kind: 'sent' as const, conv: m })))
           }
           // Member-of huddles with a seed; empty huddles can't exist in V3 anyway.
-          // Each slots into its date group at its chronological position.
+          // Each slots into its date group at its chronological position. The
+          // anchor is when the huddle's seed message was SENT (what the card
+          // displays) — a DM-promoted huddle sits where its origin message
+          // belongs, not at its later promotion/last-activity time.
           const v3Huddles = currentHuddles.filter(
             (h) => h.conversation != null && h.members.includes(CURRENT_USER_NAME)
           )
           for (const h of v3Huddles) {
-            const at = h.lastActivityMs ?? h.promotedAtMs
-            let group = map.get(h.lastActivity)
+            const at = h.conversation?.createdAtMs ?? h.promotedAtMs ?? h.lastActivityMs
+            const label = at !== undefined ? formatDateLabel(at) : h.lastActivity
+            let group = map.get(label)
             if (!group) {
-              group = { dateLabel: h.lastActivity, entries: [] }
-              map.set(h.lastActivity, group)
+              group = { dateLabel: label, entries: [] }
+              map.set(label, group)
             }
             let idx = group.entries.length
             if (at !== undefined) {
@@ -392,7 +404,10 @@ export function useTopicView({
           // timestamp (Convex); mock groups without one keep insertion order.
           const groupAt = (g: V3Group): number | undefined => {
             for (const e of g.entries) {
-              const at = e.kind === 'huddle' ? (e.huddle.lastActivityMs ?? e.huddle.promotedAtMs) : e.conv.createdAtMs
+              const at =
+                e.kind === 'huddle'
+                  ? (e.huddle.conversation?.createdAtMs ?? e.huddle.promotedAtMs ?? e.huddle.lastActivityMs)
+                  : e.conv.createdAtMs
               if (at !== undefined) return at
             }
             return undefined
@@ -532,7 +547,12 @@ export function useTopicView({
               )}
             </div>
           </div>
-          {!isLoading && !hasAnyPublicMessages && (
+          {!isLoading && !isMemberHere && (
+            <div className="px-3 pt-2">
+              <JoinTopicBanner title={topicTitle} onJoin={() => topicId != null && joinTopic(topicId)} />
+            </div>
+          )}
+          {!isLoading && isMemberHere && !hasAnyPublicMessages && (
             <div className="px-3 pt-2">
               {/* TODO: wire onInviteMembers to the invite-members dialog */}
               <NewTopicBanner title={topicTitle} />

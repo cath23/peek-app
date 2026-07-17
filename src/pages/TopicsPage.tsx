@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { IconMessagePlus } from '@tabler/icons-react'
+import { IconMessagePlus, IconChevronRight } from '@tabler/icons-react'
+import { cn } from '@/lib/utils'
 import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
 import { CreateTopicDialog, type StartTopicResult } from '@/components/CreateTopicDialog'
@@ -8,10 +9,40 @@ import { PersonRow } from '@/components/ui/PersonRow'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useTopicView } from '@/components/views/useTopicView'
-import { CURRENT_USER_NAME, useUnread, useTopics, useCreateTopic, useIsTopicResolved, useHuddleLookup } from '@/api'
+import { CURRENT_USER_NAME, useUnread, useTopics, useCreateTopic, useDeleteTopic, useIsTopicResolved, useIsTopicMember, useHuddleLookup } from '@/api'
 import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
+
+/** Collapsible sidebar section header — same visual as StarredSection's. */
+function TopicSectionHeader({
+  label,
+  expanded,
+  onToggle,
+}: {
+  label: string
+  expanded: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div
+      className="group flex h-[32px] items-center justify-between px-2 rounded-lg cursor-pointer transition-colors hover:bg-bg-hover shrink-0"
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-1">
+        <IconChevronRight
+          size={12}
+          stroke={1.5}
+          className={cn(
+            'text-text-secondary transition-transform duration-150',
+            expanded && 'rotate-90'
+          )}
+        />
+        <span className="text-h5 text-text-primary">{label}</span>
+      </div>
+    </div>
+  )
+}
 
 export function TopicsPage() {
   const { topicHasUnread, topicIsUrgent } = useUnread()
@@ -22,7 +53,11 @@ export function TopicsPage() {
   const { state: debug } = useDebug()
   const TOPICS = useTopics()
   const createTopic = useCreateTopic()
+  const deleteTopic = useDeleteTopic()
   const isTopicResolved = useIsTopicResolved()
+  const isTopicMember = useIsTopicMember()
+  const [yourExpanded, setYourExpanded] = useState(true)
+  const [otherExpanded, setOtherExpanded] = useState(true)
   const huddleLookup = useHuddleLookup()
   const showUnreads = debug.unreads.topics
   const huddleVariant = debug.huddles.variant
@@ -53,6 +88,16 @@ export function TopicsPage() {
 
   const handleSelectHuddle = (topicId: string, huddleId: string) => {
     navigate(`/topics/${topicId}?huddle=${huddleId}`)
+  }
+
+  const handleDeleteTopic = (topicId: string) => {
+    deleteTopic(topicId)
+    // Deleting what you're looking at → back to the bare list, no stale URL
+    // (also drop the remembered selection or the redirect brings it back).
+    if (selectedId === topicId) {
+      setLastTopicId(null)
+      navigate('/topics', { replace: true })
+    }
   }
 
   const selectedTopic = TOPICS?.find((t) => t.id === selectedId) ?? null
@@ -118,7 +163,34 @@ export function TopicsPage() {
           />
           <div className="flex-1 overflow-y-auto pt-4 pb-3 px-3 flex flex-col gap-0.5">
             {TOPICS === undefined && <SkeletonSidebarList rows={9} />}
-            {orderedTopics.map((topic) => {
+            {renderTopicList()}
+          </div>
+        </div>
+      }
+      rightPanel={rightPanel}
+      threadPanel={view.threadPanel}
+    />
+    </>
+  )
+
+  /** The sidebar list body. With non-member topics present, splits into
+   *  "Your topics" / "Other topics" sections (QA #2.7 ruling); otherwise a
+   *  flat list, exactly as before (mock data carries no membership). */
+  function renderTopicList(): ReactNode {
+    const memberTopics = orderedTopics.filter((t) => isTopicMember(t.id))
+    const otherTopics = orderedTopics.filter((t) => !isTopicMember(t.id))
+    if (otherTopics.length === 0) return orderedTopics.map(renderTopicRow)
+    return (
+      <>
+        <TopicSectionHeader label="Your topics" expanded={yourExpanded} onToggle={() => setYourExpanded((v) => !v)} />
+        {yourExpanded && memberTopics.map(renderTopicRow)}
+        <TopicSectionHeader label="Other topics" expanded={otherExpanded} onToggle={() => setOtherExpanded((v) => !v)} />
+        {otherExpanded && otherTopics.map(renderTopicRow)}
+      </>
+    )
+  }
+
+  function renderTopicRow(topic: NonNullable<typeof TOPICS>[number]): ReactNode {
               const topicHuddles = huddleVariant === 2 ? huddlesForSidebar(topic.id) : []
               const topicSelected = selectedId === topic.id && !selectedHuddleId
               return (
@@ -131,6 +203,7 @@ export function TopicsPage() {
                     isUrgent={showUnreads && topicIsUrgent(topic.id)}
                     isSelected={topicSelected}
                     onClick={() => handleSelectTopic(topic.id)}
+                    onDeleteTopic={() => handleDeleteTopic(topic.id)}
                   />
                   {topicHuddles.length > 0 && (() => {
                     // Linear-style branch tree, drawn as a single SVG path:
@@ -205,13 +278,5 @@ export function TopicsPage() {
                   })()}
                 </div>
               )
-            })}
-          </div>
-        </div>
-      }
-      rightPanel={rightPanel}
-      threadPanel={view.threadPanel}
-    />
-    </>
-  )
+  }
 }

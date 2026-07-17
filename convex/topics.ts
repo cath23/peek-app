@@ -106,6 +106,91 @@ export const create = mutation({
   },
 })
 
+/** Delete a message row plus everything hanging off it (replies, reactions,
+ *  thread watermarks). */
+async function cascadeDeleteMessage(ctx: MutationCtx, messageId: Id<'messages'>) {
+  const replies = await ctx.db
+    .query('replies')
+    .withIndex('by_message', (q) => q.eq('messageId', messageId))
+    .collect()
+  for (const r of replies) await ctx.db.delete(r._id)
+  const reactions = await ctx.db
+    .query('reactions')
+    .withIndex('by_message', (q) => q.eq('messageId', messageId))
+    .collect()
+  for (const r of reactions) await ctx.db.delete(r._id)
+  const watermarks = (await ctx.db.query('readState').collect()).filter(
+    (w) => w.containerId === (messageId as string),
+  )
+  for (const w of watermarks) await ctx.db.delete(w._id)
+  await ctx.db.delete(messageId)
+}
+
+/** Delete every message under a container (topic or huddle). */
+async function cascadeDeleteContainerMessages(
+  ctx: MutationCtx,
+  kind: 'topic' | 'huddle',
+  containerId: string,
+) {
+  const msgs = await ctx.db
+    .query('messages')
+    .withIndex('by_parent', (q) => q.eq('parentKind', kind).eq('parentId', containerId))
+    .collect()
+  for (const m of msgs) await cascadeDeleteMessage(ctx, m._id)
+}
+
+/**
+ * Delete a topic and EVERYTHING in it: messages (+replies/reactions), its
+ * huddles (with their messages and members), membership rows, per-user desk
+ * rows (screener/open-work/stars), and readState watermarks (QA #2.8).
+ */
+export const remove = mutation({
+  args: { topicKey: v.string() },
+  handler: async (ctx, { topicKey }) => {
+    await viewerOrThrow(ctx)
+    const topic = await findTopicByKey(ctx, topicKey)
+    if (!topic) return
+    const topicId = topic._id as string
+
+    await cascadeDeleteContainerMessages(ctx, 'topic', topicId)
+
+    const huddles = await ctx.db
+      .query('huddles')
+      .withIndex('by_topic', (q) => q.eq('topicId', topic._id))
+      .collect()
+    const huddleIds = new Set(huddles.map((h) => h._id as string))
+    for (const h of huddles) {
+      await cascadeDeleteContainerMessages(ctx, 'huddle', h._id as string)
+      const hMembers = await ctx.db
+        .query('huddleMembers')
+        .withIndex('by_huddle', (q) => q.eq('huddleId', h._id))
+        .collect()
+      for (const m of hMembers) await ctx.db.delete(m._id)
+      await ctx.db.delete(h._id)
+    }
+
+    const members = await ctx.db
+      .query('topicMembers')
+      .withIndex('by_topic', (q) => q.eq('topicId', topic._id))
+      .collect()
+    for (const m of members) await ctx.db.delete(m._id)
+
+    for (const s of await ctx.db.query('screenerItems').collect()) {
+      if (s.kind === 'topic' && s.targetId === topicId) await ctx.db.delete(s._id)
+    }
+    for (const w of await ctx.db.query('deskOpenWork').collect()) {
+      if (w.kind === 'topic' && w.targetId === topicId) await ctx.db.delete(w._id)
+    }
+    for (const s of await ctx.db.query('stars').collect()) {
+      if (s.kind === 'topic' && s.targetId === topicId) await ctx.db.delete(s._id)
+    }
+    for (const w of await ctx.db.query('readState').collect()) {
+      if (w.containerId === topicId || huddleIds.has(w.containerId)) await ctx.db.delete(w._id)
+    }
+    await ctx.db.delete(topic._id)
+  },
+})
+
 /** Join a topic you're not a member of (the topic-list Join banner, §QA #2.7). */
 export const join = mutation({
   args: { topicKey: v.string() },

@@ -295,6 +295,7 @@ export function usePeekActions() {
           id: `hc_new_${Date.now()}`,
           authorName: CURRENT_USER_NAME,
           timestamp: nowTimestamp(),
+          createdAtMs: Date.now(),
           body: firstMessageText,
         },
       }

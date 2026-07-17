@@ -43,6 +43,10 @@ interface TopicStoreValue {
   createTopicFromDm: (input: CreateTopicFromDmInput) => CreateTopicFromDmResult
   /** Create a standalone empty topic (no huddle). Returns its id. */
   createTopic: (title: string, invitees: string[]) => string
+  /** Deleted topic ids — full source of truth in mock mode; the optimistic
+   *  window over the Convex list otherwise (QA #2.8). */
+  deletedTopicIds: Set<string>
+  deleteTopicLocal: (topicId: string) => void
 }
 
 const TopicStoreContext = createContext<TopicStoreValue | null>(null)
@@ -91,8 +95,16 @@ function findDmMessageById(dmId: string, messageId: string): ConversationData | 
 export function TopicStoreProvider({ children }: { children: ReactNode }) {
   const [extraTopics, setExtraTopics] = useState<Topic[]>([])
   const [extraHuddles, setExtraHuddles] = useState<Record<string, Huddle[]>>({})
+  const [deletedTopicIds, setDeletedTopicIds] = useState<Set<string>>(new Set())
 
-  const topics = useMemo(() => [...TOPICS, ...extraTopics], [extraTopics])
+  const topics = useMemo(
+    () => [...TOPICS, ...extraTopics].filter((t) => !deletedTopicIds.has(t.id)),
+    [extraTopics, deletedTopicIds],
+  )
+
+  const deleteTopicLocal = useCallback((topicId: string) => {
+    setDeletedTopicIds((prev) => new Set([...prev, topicId]))
+  }, [])
 
   const findTopic = useCallback(
     (topicId: string) => topics.find((t) => t.id === topicId),
@@ -205,8 +217,8 @@ export function TopicStoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<TopicStoreValue>(
-    () => ({ topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic }),
-    [topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic],
+    () => ({ topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic, deletedTopicIds, deleteTopicLocal }),
+    [topics, extraTopics, getHuddlesForTopic, getExtraHuddlesForTopic, findTopic, findHuddleByOriginDm, findAllHuddlesByOriginDm, findExtraHuddlesByOriginDm, createTopicFromDm, createTopic, deletedTopicIds, deleteTopicLocal],
   )
 
   return <TopicStoreContext.Provider value={value}>{children}</TopicStoreContext.Provider>
