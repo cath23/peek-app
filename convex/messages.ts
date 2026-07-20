@@ -78,26 +78,31 @@ export async function userNames(ctx: QueryCtx | MutationCtx): Promise<Map<Id<'us
 }
 
 /** Per-user rows → the aggregate array the cards render (§4.6): first-seen
- *  emoji order, count, owner 'yours' when the current user is among them. */
+ *  emoji order, count, owner 'yours' when the current user is among them.
+ *  `names` lists the reactors in reaction order (the viewer as 'You') —
+ *  the pill tooltip renders it. */
 export async function aggregateReactions(
   ctx: QueryCtx | MutationCtx,
   messageId: Id<'messages'>,
   youId: Id<'users'> | undefined,
-): Promise<{ emoji: string; count: number; owner: 'yours' | 'others' }[] | undefined> {
+  userNamesById: Map<Id<'users'>, string>,
+): Promise<{ emoji: string; count: number; owner: 'yours' | 'others'; names: string[] }[] | undefined> {
   const rows = await ctx.db
     .query('reactions')
     .withIndex('by_message', (q) => q.eq('messageId', messageId))
     .collect()
   if (rows.length === 0) return undefined
   rows.sort((a, b) => a._creationTime - b._creationTime)
-  const agg: { emoji: string; count: number; owner: 'yours' | 'others' }[] = []
+  const agg: { emoji: string; count: number; owner: 'yours' | 'others'; names: string[] }[] = []
   for (const r of rows) {
+    const who = r.userId === youId ? 'You' : userNamesById.get(r.userId) ?? 'Someone'
     const entry = agg.find((e) => e.emoji === r.emoji)
     if (entry) {
       entry.count++
+      entry.names.push(who)
       if (r.userId === youId) entry.owner = 'yours'
     } else {
-      agg.push({ emoji: r.emoji, count: 1, owner: r.userId === youId ? 'yours' : 'others' })
+      agg.push({ emoji: r.emoji, count: 1, owner: r.userId === youId ? 'yours' : 'others', names: [who] })
     }
   }
   return agg
@@ -194,7 +199,7 @@ export const list = query({
       shaped.push({
         ...(await shape(ctx, m, names)),
         replyCount: replies.length,
-        reactions: await aggregateReactions(ctx, m._id, me ?? undefined),
+        reactions: await aggregateReactions(ctx, m._id, me ?? undefined, names),
         ...(await unreadFlags(ctx, m, me, wm, replies)),
       })
     }
@@ -216,9 +221,10 @@ export const get = query({
     }
     if (!m) return null
     const me = await viewerId(ctx)
+    const names = await userNames(ctx)
     return {
-      ...(await shape(ctx, m, await userNames(ctx))),
-      reactions: await aggregateReactions(ctx, m._id, me ?? undefined),
+      ...(await shape(ctx, m, names)),
+      reactions: await aggregateReactions(ctx, m._id, me ?? undefined, names),
     }
   },
 })

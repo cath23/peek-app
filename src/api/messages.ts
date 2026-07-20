@@ -187,12 +187,15 @@ function applyPendingReactions(
   for (const [emoji, dir] of Object.entries(pending)) {
     const i = next.findIndex((r) => r.emoji === emoji)
     if (dir === 'add') {
-      if (i === -1) next.push({ emoji, count: 1, owner: 'yours' })
-      else if (next[i].owner !== 'yours') next[i] = { ...next[i], count: next[i].count + 1, owner: 'yours' }
+      if (i === -1) next.push({ emoji, count: 1, owner: 'yours', names: ['You'] })
+      else if (next[i].owner !== 'yours')
+        next[i] = { ...next[i], count: next[i].count + 1, owner: 'yours', names: next[i].names && [...next[i].names!, 'You'] }
     } else if (i !== -1 && next[i].owner === 'yours') {
       next = next[i].count <= 1
         ? next.filter((_, j) => j !== i)
-        : next.map((r, j) => (j === i ? { ...r, count: r.count - 1, owner: 'others' as const } : r))
+        : next.map((r, j) => (j === i
+            ? { ...r, count: r.count - 1, owner: 'others' as const, names: r.names?.filter((n) => n !== 'You') }
+            : r))
     }
   }
   return next.length > 0 ? next : undefined

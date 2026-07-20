@@ -1,4 +1,6 @@
 import { cn } from '@/lib/utils'
+import { REACTION_NAMES } from './ui/Reaction'
+import { WithTooltip } from './ui/WithTooltip'
 
 export const REACTION_EMOJIS = ['👍', '💯', '🙏', '🚀', '🎉']
 
@@ -17,14 +19,15 @@ export default function ReactionPicker({ onSelect, className }: ReactionPickerPr
       )}
     >
       {REACTION_EMOJIS.map((emoji) => (
-        <button
-          key={emoji}
-          type="button"
-          onClick={() => onSelect(emoji)}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-[18px] hover:bg-bg-hover"
-        >
-          {emoji}
-        </button>
+        <WithTooltip key={emoji} label={REACTION_NAMES[emoji] ?? emoji}>
+          <button
+            type="button"
+            onClick={() => onSelect(emoji)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[18px] hover:bg-bg-hover"
+          >
+            {emoji}
+          </button>
+        </WithTooltip>
       ))}
     </div>
   )

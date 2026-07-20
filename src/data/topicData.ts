@@ -32,6 +32,10 @@ export interface ReactionData {
   emoji: string
   count: number
   owner: 'yours' | 'others'
+  /** Reactors in reaction order, the viewer as 'You' (drives the pill
+   *  tooltip). Absent on static mock reactions — the tooltip then shows
+   *  just the reaction name. */
+  names?: string[]
 }
 
 /** A real uploaded file attached to a message/reply (Phase 5). `url` is the

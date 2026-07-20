@@ -54,7 +54,7 @@ export const list = query({
         return {
           ...(await shape(ctx, m, names)),
           replyCount: replies.length,
-          reactions: await aggregateReactions(ctx, m._id, me ?? undefined),
+          reactions: await aggregateReactions(ctx, m._id, me ?? undefined, names),
           ...(await unreadFlags(ctx, m, me, wm, replies)),
         }
       }

@@ -440,12 +440,16 @@ export function ConversationCard({
       if (existing) {
         next = existing.count <= 1
           ? prev.filter((r) => r !== existing)
-          : prev.map((r) => (r === existing ? { ...r, count: r.count - 1 } : r))
+          : prev.map((r) => (r === existing
+              ? { ...r, count: r.count - 1, owner: 'others' as const, names: r.names?.filter((n) => n !== 'You') }
+              : r))
       } else {
         const othersExisting = prev.find((r) => r.emoji === emoji && r.owner === 'others')
         next = othersExisting
-          ? prev.map((r) => (r === othersExisting ? { ...r, count: r.count + 1, owner: 'yours' as const } : r))
-          : [...prev, { emoji, count: 1, owner: 'yours' as const }]
+          ? prev.map((r) => (r === othersExisting
+              ? { ...r, count: r.count + 1, owner: 'yours' as const, names: r.names && [...r.names, 'You'] }
+              : r))
+          : [...prev, { emoji, count: 1, owner: 'yours' as const, names: ['You'] }]
       }
       onReactionsChange?.(next, emoji)
       return next
@@ -664,7 +668,7 @@ export function ConversationCard({
           {!isEditing && reactionsState.length > 0 && (
             <div className="flex items-center gap-2 pl-8 pt-1 pb-2 w-full">
               {reactionsState.map((r, i) => (
-                <ReactionPill key={i} emoji={r.emoji} count={r.count} owner={r.owner} onClick={() => handleReact(r.emoji)} />
+                <ReactionPill key={i} emoji={r.emoji} count={r.count} owner={r.owner} names={r.names} onClick={() => handleReact(r.emoji)} />
               ))}
             </div>
           )}

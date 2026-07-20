@@ -565,6 +565,17 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       cascade. Policy (`lib/fileAttachments.ts`, unit-tested): extension
       allowlist (images, docs, **md/json/zip**), executable blocklist,
       25 MB cap. Verified two-browser (.verify-files.mjs, 11 checks).
+- [x] **Reaction tooltips** (2026-07-20) — the picker's emojis explain
+      themselves on hover (👍 Makes sense · 💯 Agree · 🙏 Thank you ·
+      🚀 Let's go! · 🎉 Congrats — `REACTION_NAMES` in `ui/Reaction.tsx`)
+      and reaction pills show WHO reacted, Slack-style: "Ana, Ben and You
+      reacted with Thank you" via the shared `WithTooltip` portal.
+      `aggregateReactions` now returns `names[]` in reaction order (viewer
+      as 'You'); `ReactionData.names?` flows through the seam, and both
+      optimistic layers (per-emoji pending toggles + card-local aggregates)
+      keep names — and the owner flag on removal — in sync mid-flight.
+      Static mock reactions (no names) degrade to the reaction name alone.
+      Verified two-browser (.verify-reaction-tooltips.mjs, 8 checks).
 - [ ] Email verification (deferred from Phase 3) · DM-row menu
       (left inert by ruling 2026-07-17)
 
