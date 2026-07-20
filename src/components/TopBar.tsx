@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { IconMenu2, IconHelpCircle, IconSun, IconMoon, IconDeviceDesktop, IconCheck, IconLogout, IconUser } from '@tabler/icons-react'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { optOutOfDevAutoLogin } from '@/auth/devAutoLogin'
 import { IconButton } from './ui/IconButton'
 import { Avatar } from './ui/Avatar'
 import { SearchInput } from './ui/SearchInput'
@@ -157,6 +158,8 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
                 onMouseDown={(e) => {
                   e.preventDefault()
                   setMenuOpen(false)
+                  // Signing out must stick, even with dev auto-login on.
+                  optOutOfDevAutoLogin()
                   void signOut()
                 }}
               >
