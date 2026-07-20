@@ -576,6 +576,15 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       keep names — and the owner flag on removal — in sync mid-flight.
       Static mock reactions (no names) degrade to the reaction name alone.
       Verified two-browser (.verify-reaction-tooltips.mjs, 8 checks).
+- [x] **Hover states inside cards** (2026-07-20) — interactive children of a
+      hovered card now respond themselves: reaction pills lift on hover
+      (others: `bg-inset→bg-active` + `border-default→border-strong`; yours:
+      `border-accent-primary→accent-hover`); the reply-count row's icon+text
+      lift `text-secondary→text-primary` (user ruling: subtle color shift
+      only — NO "View thread" label). Applied to ConversationCard and
+      HuddleCard's inStream footer (documented exact-parity twin). File /
+      Figma chips already had hover treatment — untouched. Verified computed
+      styles in the live app (.verify-hover-states.mjs).
 - [ ] Email verification (deferred from Phase 3) · DM-row menu
       (left inert by ruling 2026-07-17)
 

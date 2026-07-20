@@ -284,9 +284,9 @@ export function HuddleCard({
         )}
         {inStream && replyCount > 0 && (
           <div className="flex items-center gap-2 pl-8 pr-2 pb-1.5 w-full">
-            <div className="flex items-center gap-2 py-1.5 shrink-0">
-              <IconMessage2 size={16} stroke={1.5} className="text-text-secondary shrink-0" />
-              <span className="text-chip text-text-secondary">
+            <div className="group/replies flex items-center gap-2 py-1.5 shrink-0">
+              <IconMessage2 size={16} stroke={1.5} className="text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0" />
+              <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors">
                 {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
               </span>
             </div>

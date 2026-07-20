@@ -49,8 +49,8 @@ export function Reaction({
         className={cn(
           'inline-flex items-center justify-center gap-1.5 rounded-full min-w-[16px] px-2 py-1 border cursor-pointer transition-colors',
           owner === 'yours'
-            ? 'bg-accent-muted border-accent-primary'
-            : 'bg-bg-inset border-border-default',
+            ? 'bg-accent-muted border-accent-primary hover:border-accent-hover'
+            : 'bg-bg-inset border-border-default hover:bg-bg-active hover:border-border-strong',
           className
         )}
       >
