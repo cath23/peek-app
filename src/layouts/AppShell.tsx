@@ -35,7 +35,7 @@ export function AppShell({ leftPanel, rightPanel, threadPanel }: AppShellProps) 
   }, [])
 
   return (
-    <div className="h-screen overflow-hidden bg-bg-base relative">
+    <div className="h-screen overflow-hidden bg-bg-base relative signal-canvas">
       <TopBar onMenuToggle={() => setCollapsed((c) => !c)} onSearchClick={() => openLauncher()} />
 
       {/* Main area - offset below TopBar */}

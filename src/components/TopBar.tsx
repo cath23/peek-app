@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { IconMenu2, IconHelpCircle, IconSun, IconMoon, IconDeviceDesktop, IconCheck, IconLogout, IconUser } from '@tabler/icons-react'
+import { IconMenu2, IconHelpCircle, IconSun, IconMoon, IconBroadcast, IconDeviceDesktop, IconCheck, IconLogout, IconUser } from '@tabler/icons-react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { optOutOfDevAutoLogin } from '@/auth/devAutoLogin'
 import { IconButton } from './ui/IconButton'
@@ -20,6 +20,7 @@ interface TopBarProps {
 const THEME_OPTIONS: { value: Theme; label: string; icon: React.FC<{ size: number; stroke: number; className?: string }> }[] = [
   { value: 'light', label: 'Light', icon: IconSun },
   { value: 'dark', label: 'Dark', icon: IconMoon },
+  { value: 'signal', label: 'Signal', icon: IconBroadcast },
   { value: 'system', label: 'System', icon: IconDeviceDesktop },
 ]
 

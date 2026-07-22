@@ -1,17 +1,25 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
-export type Theme = 'light' | 'dark' | 'system'
+export type Theme = 'light' | 'dark' | 'signal' | 'system'
+type ResolvedTheme = 'light' | 'dark' | 'signal'
 
-function resolveTheme(theme: Theme): 'light' | 'dark' {
+function resolveTheme(theme: Theme): ResolvedTheme {
   if (theme === 'system') {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   }
   return theme
 }
 
+/** Signal is a dark-based theme: `.dark` stays on so every dark: variant
+ *  applies, and `.signal` layers the palette + signal: variants on top. */
+function applyThemeClasses(resolved: ResolvedTheme) {
+  document.documentElement.classList.toggle('dark', resolved === 'dark' || resolved === 'signal')
+  document.documentElement.classList.toggle('signal', resolved === 'signal')
+}
+
 const ThemeContext = createContext<{
   theme: Theme
-  resolved: 'light' | 'dark'
+  resolved: ResolvedTheme
   setTheme: (t: Theme) => void
   toggleTheme: () => void
 }>({ theme: 'dark', resolved: 'dark', setTheme: () => {}, toggleTheme: () => {} })
@@ -20,14 +28,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     return (localStorage.getItem('theme') as Theme) ?? 'dark'
   })
-  const [resolved, setResolved] = useState<'light' | 'dark'>(() => resolveTheme(
+  const [resolved, setResolved] = useState<ResolvedTheme>(() => resolveTheme(
     (localStorage.getItem('theme') as Theme) ?? 'dark'
   ))
 
   useEffect(() => {
     const r = resolveTheme(theme)
     setResolved(r)
-    document.documentElement.classList.toggle('dark', r === 'dark')
+    applyThemeClasses(r)
     localStorage.setItem('theme', theme)
   }, [theme])
 
@@ -38,14 +46,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const handler = () => {
       const r = resolveTheme('system')
       setResolved(r)
-      document.documentElement.classList.toggle('dark', r === 'dark')
+      applyThemeClasses(r)
     }
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [theme])
 
   const setTheme = (t: Theme) => setThemeState(t)
-  const toggleTheme = () => setThemeState(t => (t === 'dark' ? 'light' : 'dark'))
+  // Signal counts as the dark family: toggling from it goes to light.
+  const toggleTheme = () => setThemeState(t => (t === 'light' ? 'dark' : 'light'))
 
   return (
     <ThemeContext.Provider value={{ theme, resolved, setTheme, toggleTheme }}>
