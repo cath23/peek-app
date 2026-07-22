@@ -515,12 +515,12 @@ export function ThreadReplyCard({
               </div>
               {isNew && !isUrgent && (
                 <div className="w-6 h-6 flex items-center justify-center shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-accent-primary signal:shadow-[shadow:0_0_6px_rgba(86,200,255,0.7)]" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent-primary" />
                 </div>
               )}
               {isNew && isUrgent && (
                 <div className="w-6 h-6 flex items-center justify-center shrink-0">
-                  <div className="flex items-center p-0.5 rounded-full bg-warning-muted signal:shadow-[shadow:var(--glow-warning)]">
+                  <div className="flex items-center p-0.5 rounded-full bg-warning-muted signal:shadow-[shadow:0_0_5px_rgba(255,176,32,0.4)]">
                     <IconAlertSquareRounded size={12} stroke={2.5} className="text-warning-default" />
                   </div>
                 </div>

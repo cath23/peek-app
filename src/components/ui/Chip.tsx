@@ -15,7 +15,7 @@ const typeStyles: Record<ChipType, string> = {
   neutral: 'bg-bg-inset text-text-primary',
   brand: 'bg-accent-muted text-accent-primary signal:border signal:border-[rgba(86,200,255,0.3)]',
   info: 'bg-info-muted text-info-default signal:border signal:border-[rgba(86,200,255,0.3)]',
-  warning: 'bg-warning-muted text-warning-default signal:border signal:border-[rgba(255,176,32,0.3)] signal:shadow-[shadow:0_0_7px_rgba(255,176,32,0.4)]',
+  warning: 'bg-warning-muted text-warning-default signal:border signal:border-[rgba(255,176,32,0.3)] signal:shadow-[shadow:0_0_5px_rgba(255,176,32,0.4)]',
   success: 'bg-success-muted text-success-default signal:border signal:border-[rgba(63,222,140,0.3)]',
   error: 'bg-error-muted text-error-default signal:border signal:border-[rgba(255,107,107,0.3)]',
 }

@@ -31,7 +31,7 @@ export function Button({
         size === 'default' && (hasLeadingIcon ? 'pl-2 pr-3' : 'px-2'),
         size === 'small'   && (hasLeadingIcon ? 'pl-1 pr-2' : 'px-1'),
         // Active variants
-        !disabled && variant === 'primary'  && 'bg-accent-primary hover:bg-accent-hover text-accent-muted cursor-pointer signal:text-[color:var(--text-inverse)] signal:font-semibold signal:shadow-[shadow:var(--glow-accent)]',
+        !disabled && variant === 'primary'  && 'bg-accent-primary hover:bg-accent-hover text-accent-muted cursor-pointer signal:text-[color:var(--text-inverse)] signal:font-semibold',
         !disabled && variant === 'outlined' && 'border border-border-default hover:bg-bg-hover text-text-primary cursor-pointer',
         !disabled && variant === 'muted'    && 'hover:bg-bg-hover text-text-primary cursor-pointer',
         // Disabled - shared base; outlined keeps its border
