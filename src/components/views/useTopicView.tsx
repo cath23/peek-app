@@ -4,7 +4,7 @@ import { IconPlus } from '@tabler/icons-react'
 import { ConversationHeader } from '@/components/ConversationHeader'
 import { NewTopicBanner } from '@/components/NewTopicBanner'
 import { JoinTopicBanner } from '@/components/JoinTopicBanner'
-import { InviteMembersDialog } from '@/components/InviteMembersDialog'
+import { MembersDialog, type MembersDialogView } from '@/components/MembersDialog'
 import { HuddleCreator } from '@/components/HuddleCreator'
 import { ConversationCard } from '@/components/ConversationCard'
 import { ThreadPanel } from '@/components/ThreadPanel'
@@ -94,7 +94,8 @@ export function useTopicView({
   useMarkRead('topic', topicId, threadConvId)
   const [selectedHuddleId, setSelectedHuddleId] = useState<string | null>(null)
   const [isCreatingHuddle, setIsCreatingHuddle] = useState(false)
-  const [isInvitingMembers, setIsInvitingMembers] = useState(false)
+  /** Members dialog: 'list' from the pill, 'add' from the empty-topic banner. */
+  const [membersView, setMembersView] = useState<MembersDialogView | null>(null)
 
   // All data arrives merged from the seam — overrides applied, deletions
   // filtered, replyCount final. Nothing below touches override maps.
@@ -233,7 +234,7 @@ export function useTopicView({
     setThreadConvId(null)
     setActiveTab('conversations')
     setSelectedHuddleId(null)
-    setIsInvitingMembers(false)
+    setMembersView(null)
     cancelHuddleCreation()
   }, [topicId])
 
@@ -310,12 +311,8 @@ export function useTopicView({
         onStartHuddle={
           huddleVariant === 1 || isV2HuddleView ? undefined : () => setIsCreatingHuddle(true)
         }
-        onAddMembers={
-          // Members-only, like the empty-topic banner (non-members get the
-          // Join banner as their path in).
-          !isV2HuddleView && isMemberHere && topicId != null
-            ? () => setIsInvitingMembers(true)
-            : undefined
+        onShowMembers={
+          !isV2HuddleView && topicId != null ? () => setMembersView('list') : undefined
         }
         tabs={
           huddleVariant === 1 ? (
@@ -601,7 +598,7 @@ export function useTopicView({
           )}
           {!isLoading && isMemberHere && !hasAnyPublicMessages && (
             <div className="px-3 pt-2">
-              <NewTopicBanner title={topicTitle} onInviteMembers={() => setIsInvitingMembers(true)} />
+              <NewTopicBanner title={topicTitle} onInviteMembers={() => setMembersView('add')} />
             </div>
           )}
           {/* V3 only: the topic-header "+ Start huddle" button toggles isCreatingHuddle and
@@ -699,15 +696,16 @@ export function useTopicView({
         />
       )}
 
-      {/* Empty-topic banner's Invite members flow (portalled). */}
-      {isInvitingMembers && topicId != null && (
-        <InviteMembersDialog
+      {/* Members dialog (portalled): roster layer + add layer. Opened at the
+          roster by the members pill, or straight at the add layer by the
+          empty-topic banner. Inviting returns to the roster. */}
+      {membersView != null && topicId != null && (
+        <MembersDialog
           memberNames={topicMembers}
-          onConfirm={(invitees) => {
-            inviteToTopic(topicId, invitees)
-            setIsInvitingMembers(false)
-          }}
-          onCancel={() => setIsInvitingMembers(false)}
+          canAdd={isMemberHere}
+          initialView={membersView}
+          onInvite={(invitees) => inviteToTopic(topicId, invitees)}
+          onClose={() => setMembersView(null)}
         />
       )}
     </div>

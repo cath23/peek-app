@@ -23,7 +23,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 /** Topic header: status icon + title, open/resolved counts, members pill, start-huddle, star, more.
- *  Clicking the members pill opens the members popover (with Add members — the viewer is a member). */
+ *  Clicking the members pill opens the MembersDialog (wired by the topic view). */
 export const Topic: Story = {
   args: {
     name: 'Feedback on mobile onboarding flow',
@@ -32,7 +32,7 @@ export const Topic: Story = {
     resolvedCount: 0,
     members,
     onStartHuddle: () => {},
-    onAddMembers: () => {},
+    onShowMembers: () => {},
   },
 }
 

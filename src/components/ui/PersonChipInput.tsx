@@ -45,7 +45,9 @@ export function PersonChipInput({
     setHighlight(0)
   }, [query, matches.length])
 
-  const showDropdown = isFocused && matches.length > 0
+  // Suggestions appear only once the user types — focusing (or auto-focus on
+  // dialog open) must not drop the full people directory over the dialog.
+  const showDropdown = isFocused && query.trim().length > 0 && matches.length > 0
 
   useLayoutEffect(() => {
     if (!showDropdown) return

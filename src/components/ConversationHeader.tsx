@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { IconStar, IconStarFilled, IconDotsVertical, IconLockPlus, IconLock } from '@tabler/icons-react'
 import { TopicState } from './ui/TopicState'
 import { Avatar } from './ui/Avatar'
 import { AvatarGroup } from './ui/AvatarGroup'
 import { IconButton } from './ui/IconButton'
-import { MembersMenu } from './MembersMenu'
 import { cn } from '@/lib/utils'
 
 interface ConversationHeaderProps {
@@ -26,9 +25,9 @@ interface ConversationHeaderProps {
   onToggleStarred?: () => void
   /** When provided, renders a "Start a huddle" icon button next to the members pill. */
   onStartHuddle?: () => void
-  /** When provided (viewer is a member, topic mode), the members popover gets
-   *  an "Add members" row that opens the invite flow. */
-  onAddMembers?: () => void
+  /** When provided (topic mode), clicking the members pill opens the members
+   *  dialog (rendered by the view that owns the data). */
+  onShowMembers?: () => void
   tabs?: ReactNode
   className?: string
 }
@@ -46,30 +45,10 @@ export function ConversationHeader({
   isStarred = false,
   onToggleStarred,
   onStartHuddle,
-  onAddMembers,
+  onShowMembers,
   tabs,
   className,
 }: ConversationHeaderProps) {
-  // Members popover (topic mode only). Menu rules: outside click, Escape,
-  // and leaving the pill+popover region all close it.
-  const [showMembers, setShowMembers] = useState(false)
-  const membersRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!showMembers) return
-    const onDown = (e: MouseEvent) => {
-      if (membersRef.current && !membersRef.current.contains(e.target as Node)) setShowMembers(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowMembers(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [showMembers])
-
   return (
     <div className={cn('shrink-0 border-b border-border-subtle', className)}>
       {/* Row 1: title + actions */}
@@ -110,43 +89,22 @@ export function ConversationHeader({
           )}
 
           {/* Members pill — shown for both topic mode and huddle mode. In topic
-              mode it opens the members popover (huddle membership is set at
+              mode it opens the members dialog (huddle membership is set at
               creation, so the huddle pill stays inert). */}
           {(topicMode || huddleMode) && !hideTopicMeta && members.length > 0 && (
-            <div
-              ref={topicMode ? membersRef : undefined}
-              className="relative"
-              onMouseLeave={() => setShowMembers(false)}
-            >
-              <button
-                type="button"
-                aria-label={`${members.length} members`}
-                disabled={!topicMode}
-                onClick={() => setShowMembers((v) => !v)}
-                className={cn(
-                  'bg-bg-elevated border border-border-default rounded-sm flex gap-2 items-center pl-[2px] pr-2 py-[2px]',
-                  topicMode && 'cursor-pointer hover:border-border-strong transition-colors',
-                )}
-              >
-                <AvatarGroup members={members} />
-                <span className="text-caption text-text-secondary">{members.length}</span>
-              </button>
-              {topicMode && showMembers && (
-                <div className="absolute right-0 top-full pt-1 z-50">
-                  <MembersMenu
-                    members={members}
-                    onAddMembers={
-                      onAddMembers
-                        ? () => {
-                            setShowMembers(false)
-                            onAddMembers()
-                          }
-                        : undefined
-                    }
-                  />
-                </div>
+            <button
+              type="button"
+              aria-label={`${members.length} members`}
+              disabled={!onShowMembers}
+              onClick={onShowMembers}
+              className={cn(
+                'bg-bg-elevated border border-border-default rounded-sm flex gap-2 items-center pl-[2px] pr-2 py-[2px]',
+                onShowMembers && 'cursor-pointer hover:border-border-strong transition-colors',
               )}
-            </div>
+            >
+              <AvatarGroup members={members} />
+              <span className="text-caption text-text-secondary">{members.length}</span>
+            </button>
           )}
 
           {/* Start huddle (V2 / V3 only — driven by onStartHuddle prop). Hidden inside a huddle. */}

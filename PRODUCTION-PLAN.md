@@ -601,6 +601,18 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       popover. Verified live incl. fresh-signup non-member
       (.verify-add-members.mjs, 10 checks; dev auto-login opt-out via
       sessionStorage init script).
+      **v2 same day (user feedback)**: popover → **dialog** matching Slack's
+      members panel. `MembersDialog` replaces BOTH `MembersMenu` and
+      `InviteMembersDialog` (deleted): roster layer (avatar + name + role,
+      member-gated "Add members" row on top) ⇄ add layer **in the same
+      dialog** with a back arrow; inviting returns to the roster so the new
+      members are visible. Pill → roster; empty-topic banner → add layer
+      directly. Also `PersonChipInput` now shows suggestions **only after
+      typing** (focus/auto-focus no longer drops the whole directory over
+      the dialog — this applies to Create-topic/Start-huddle pickers too, and
+      incidentally kills the dropdown-overlaps-footer e2e gotcha since
+      picking clears the query and closes the list). 13 checks in the
+      updated .verify-add-members.mjs.
 - [ ] Email verification (deferred from Phase 3) · DM-row menu
       (left inert by ruling 2026-07-17)
 
