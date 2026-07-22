@@ -389,4 +389,33 @@ export const REPLIES: Record<string, ReplyData[]> = {
     { id: 'r_h9_1_2', authorName: 'Alice Johnson', timestamp: '11:52 AM', body: "Agreed. The contextual overlay feels like we're not confident the product is self-explanatory. 'Go to dashboard' is a clean exit." },
     { id: 'r_h9_1_3', authorName: 'Jake Walter', timestamp: '12:00 PM', body: "The 'Take a tour' secondary is smart though. Catches users who do want more guidance without forcing everyone through it." },
   ],
+
+  // ── Topic 10: Payment integration (Peek x Stripe) ──
+  t10_c1: [
+    { id: 'r_t10c1_1', authorName: 'Greg Bothman', timestamp: '11:40 AM', body: "Thanks for the recap. From the support side the thing I care about most is that failed payments give the customer a clear next step. A lot of our tickets are really just confused checkout." },
+  ],
+  t10_c2: [
+    { id: 'r_t10c2_1', authorName: 'Juan Foley', timestamp: '2:52 PM', body: "Makes sense. I'll wire up Checkout on the frontend and keep our order record as the source of truth rather than trusting the redirect." },
+    { id: 'r_t10c2_2', authorName: 'Amie Miles', timestamp: '3:10 PM', body: "Agreed on Checkout for v1. Let's make sure we're not blocked on their test mode keys. Can someone confirm we have them?" },
+  ],
+  t10_c3: [
+    { id: 'r_t10c3_1', authorName: 'You', timestamp: '10:35 AM', body: "This looks great. The processing state especially, the spinner plus the short reassurance line is exactly right." },
+    { id: 'r_t10c3_2', authorName: 'Daniel Stanton', timestamp: '10:48 AM', body: "One ask: can we show the last four of the card on the failure screen? Helps the customer tell which card was declined before they retry." },
+  ],
+  t10_c4: [
+    { id: 'r_t10c4_1', authorName: 'Bob Chen', timestamp: '12:12 PM', body: "Replying in the thread so it stays in one place. Short answer, you get a decline code you can map to a friendly message, plus the raw issuer text when it's presentable." },
+    { id: 'r_t10c4_2', authorName: 'You', timestamp: '12:20 PM', body: "Perfect, that's what I needed. I'll have Alice add a retry and a change-card option right on that screen." },
+    { id: 'r_t10c4_3', authorName: 'Alice Johnson', timestamp: '12:31 PM', body: "On it. I'll add the last four that Daniel asked for while I'm in there." },
+  ],
+  t10_c6: [
+    { id: 'r_t10c6_1', authorName: 'Daniel Stanton', timestamp: '3:18 PM', body: "Fully agree. I'll make the webhook handler idempotent by event id and add the reconciliation job alongside it." },
+    { id: 'r_t10c6_2', authorName: 'You', timestamp: '3:26 PM', body: "Good call flagging it as blocking. Let's not launch without the reconciliation job actually running." },
+  ],
+  t10_c7: [
+    { id: 'r_t10c7_1', authorName: 'Amie Miles', timestamp: '9:44 AM', body: "Nice. Please add a metric for how often the reconciliation job actually corrects something. I want to watch that number after launch." },
+    { id: 'r_t10c7_2', authorName: 'Juan Foley', timestamp: '9:52 AM', body: "Will do. I'll add a small dashboard panel for pending-to-resolved counts." },
+  ],
+  t10_c8: [
+    { id: 'r_t10c8_1', authorName: 'Bob Chen', timestamp: '11:10 AM', body: "Seen it. Point the Checkout return URL at a lightweight page that re-checks the payment status on load instead of assuming success. That covers the backgrounded-tab case cleanly." },
+  ],
 }

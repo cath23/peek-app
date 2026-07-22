@@ -16,6 +16,7 @@ export const TOPICS: Topic[] = [
   { id: '7', title: 'Updates on the new office layout',              isResolved: false },
   { id: '8', title: 'Quick fix needed for staging deployment issue', isResolved: false },
   { id: '9', title: 'Feedback on mobile onboarding flow',            isResolved: false },
+  { id: '10', title: 'Payment integration',                          isResolved: false },
 ]
 
 export type HighlightType = 'insight' | 'concern' | 'conclusion' | 'question' | 'summary'
@@ -72,6 +73,11 @@ export interface ConversationData {
   /** Numeric send time (ms). Convex rows + runtime sends carry it; static
    *  mocks don't — consumers must treat it as a sort hint, not a given. */
   createdAtMs?: number
+  /** Distinct reply authors in first-reply order — the reply row's facepile
+   *  (signal theme). Server rows carry it; mock rows derive it from REPLIES. */
+  replyAuthors?: { name: string; avatarSrc?: string }[]
+  /** Formatted time of the newest reply, shown next to the reply count. */
+  lastReplyTime?: string
 }
 
 export interface ConvGroup {
@@ -567,6 +573,95 @@ export const TOPIC_CONVERSATIONS: Record<string, ConvGroup[]> = {
           authorName: 'Zack Bright',
           timestamp: '2:30 PM',
           body: "Keyboard overlap is fixed. Using `adjustResize` with a scroll wrapper around the form so the button stays reachable regardless of keyboard state. PR up.\n\n@Alice Johnson if you prefer the floating button from a design standpoint I'm happy to swap it, just let me know.",
+          replyCount: 1,
+        },
+      ],
+    },
+  ],
+
+  // Topic 10: Payment integration (Peek x Stripe). Cross-org: Bob Chen is the
+  // Stripe engineer. Leaves a reserved seam after the kickoff message where the
+  // post-call highlights card will later render (condensed design, TBD).
+  '10': [
+    {
+      dateLabel: 'Mon, September 9',
+      convs: [
+        {
+          id: 't10_c1',
+          authorName: 'You',
+          timestamp: '11:05 AM',
+          body: "Kickoff with the Stripe team just wrapped. Good session, we're aligned on scope and @Bob Chen is our main contact on their side going forward.\n\nShort version for anyone who missed it: we're going with Stripe Checkout, and the failure and retry paths are where we need to be careful. Full notes below.",
+          replyCount: 1,
+        },
+
+        // ── Post-call highlights card renders here (auto summary from the
+        //    kickoff call). New condensed design, not one row per point.
+        //    Designed later once the Meet highlights layout is chosen. ──
+
+        {
+          id: 't10_c2',
+          authorName: 'Daniel Stanton',
+          timestamp: '2:40 PM',
+          body: "Confirmed we're using Stripe Checkout rather than building our own card form. It keeps us out of most of the PCI scope and we get 3DS and wallets for free.\n\nTradeoff is less control over the exact UI, but for v1 that's the right call. We can revisit a custom flow later if there's a real need.",
+          reactions: [{ emoji: '👍', count: 4, owner: 'others' }, { emoji: '🚀', count: 2, owner: 'yours' }],
+          replyCount: 2,
+        },
+      ],
+    },
+    {
+      dateLabel: 'Wed, September 11',
+      convs: [
+        {
+          id: 't10_c3',
+          authorName: 'Alice Johnson',
+          timestamp: '10:20 AM',
+          body: "First pass at the payment flow is in Figma. Happy path plus the states we talked about: processing, success, and a first cut of the failure screen.\n\nThe error copy is still rough. I want to get the failure and 3DS-declined states right before this goes to eng, so feedback welcome.",
+          attachments: ['fg-frame-7', 'fg-frame-8'],
+          replyCount: 2,
+        },
+        {
+          id: 't10_c4',
+          authorName: 'You',
+          timestamp: '11:35 AM',
+          body: "@Bob Chen quick one on the failed payment screen. When a charge fails after the customer completes 3DS, what does Stripe actually return, and what should we be showing them?\n\nTrying to avoid a dead end where the customer has no idea whether to retry or reach for a different card.",
+          replyCount: 3,
+        },
+        {
+          id: 't10_c5',
+          authorName: 'Bob Chen',
+          timestamp: '12:12 PM',
+          body: "Good question. After a 3DS challenge the charge can still fail, most often as a plain card decline from the issuer. You get a `payment_intent.payment_failed` event with a decline code and a human readable message you can surface.\n\nMy advice: show the issuer's message when it's safe to, keep the customer on the same screen, and offer both retry and a different payment method. Sending them back to the start of checkout is where you lose people.",
+        },
+        {
+          id: 't10_c6',
+          authorName: 'Amie Miles',
+          timestamp: '3:05 PM',
+          body: "One thing we can't skip is reconciliation. If the webhook that confirms a payment is delayed or dropped, we can mark an order paid when it isn't, or the other way around.\n\nWe need idempotent handling keyed on the event id, plus a fallback job that reconciles against Stripe on a schedule. I'd treat this as launch blocking, not a nice to have.",
+          highlightType: 'concern',
+          replyCount: 2,
+        },
+      ],
+    },
+    {
+      dateLabel: 'Today',
+      convs: [
+        {
+          id: 't10_c7',
+          authorName: 'Daniel Stanton',
+          timestamp: '9:30 AM',
+          body: "Reconciliation approach is settled. We store the payment intent id on the order, handle webhooks idempotently by event id, and run a job every 15 minutes that reconciles anything still pending against Stripe.\n\nWriting it up as the first PR now.",
+          reactions: [{ emoji: '🙌', count: 3, owner: 'yours' }],
+          replyCount: 2,
+          isResolved: true,
+          resolvedBy: 'Daniel Stanton',
+          resolutionMessage: 'Stripe Checkout, idempotent webhooks by event id, 15 min reconciliation job. First PR in progress.',
+        },
+        {
+          id: 't10_c8',
+          authorName: 'Juan Foley',
+          timestamp: '10:48 AM',
+          body: "Heads up before we lock the flow. On mobile Safari the redirect back from Checkout occasionally lands on a blank page if the tab was backgrounded during the 3DS step.\n\nIt's intermittent but it's a real drop-off. @Bob Chen have you run into this, and is there a return handling you'd recommend?",
+          isUrgent: true,
           replyCount: 1,
         },
       ],

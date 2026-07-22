@@ -24,6 +24,10 @@ export const PEOPLE: Person[] = [
   { id: 'jake',   name: 'Jake Walter',     role: 'Software Engineer',    avatarSrc: jakeWalter },
   { id: 'juan',   name: 'Juan Foley',      role: 'Frontend Engineer',    avatarSrc: juanFoley },
   { id: 'zack',   name: 'Zack Bright',     role: 'Data Analyst',         avatarSrc: zackBright },
+  // External collaborator from Stripe (Payment integration topic). No seeded
+  // portrait on purpose - renders as an initials avatar, which reads as an
+  // outside guest rather than one of the core team.
+  { id: 'bob',    name: 'Bob Chen',        role: 'Payments Engineer, Stripe' },
 ]
 
 const AVATAR_BY_NAME: Record<string, string> = PEOPLE.reduce<Record<string, string>>((acc, p) => {
