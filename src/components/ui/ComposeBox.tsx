@@ -477,7 +477,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
             {highlightItems.length > 0 && (
               <div className="flex flex-col">
                 <div className="flex items-center h-[32px] px-2">
-                  <span className="text-[12px] font-medium leading-none text-text-primary">Highlights</span>
+                  <span className="text-[12px] font-medium leading-none text-text-primary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">Highlights</span>
                 </div>
                 {highlightItems.map((item) => {
                   const globalIdx = filteredSlashItems.indexOf(item)
@@ -495,11 +495,11 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
                       }}
                     >
                       <HighlightSwatch type={item.type} />
-                      <span className="flex-1 text-sm text-text-secondary">{item.label}</span>
+                      <span className="flex-1 text-sm text-text-secondary signal:text-text-primary">{item.label}</span>
                       {globalIdx === slashHighlight && (
                         <div className="flex items-center gap-2 shrink-0 text-text-muted">
                           <span className="text-[12px] leading-[1.2]">↩</span>
-                          <span className="text-[9px] font-medium leading-[1.15]">Enter</span>
+                          <span className="text-[9px] font-medium leading-[1.15] signal:font-mono signal:text-[9.5px] signal:tracking-[0.04em]">Enter</span>
                         </div>
                       )}
                     </div>
@@ -513,7 +513,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
             {shortcutItems.length > 0 && (
               <div className="flex flex-col">
                 <div className="flex items-center h-[32px] px-2">
-                  <span className="text-[12px] font-medium leading-none text-text-primary">Shortcuts</span>
+                  <span className="text-[12px] font-medium leading-none text-text-primary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">Shortcuts</span>
                 </div>
                 {shortcutItems.map((item) => {
                   const globalIdx = filteredSlashItems.indexOf(item)
@@ -530,7 +530,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
                         handleSlashSelect(item)
                       }}
                     >
-                      <span className="flex-1 text-sm text-text-secondary">{item.label}</span>
+                      <span className="flex-1 text-sm text-text-secondary signal:text-text-primary">{item.label}</span>
                       <kbd className="inline-flex items-center justify-center bg-bg-inset border border-border-strong rounded-sm px-1 py-[1px] text-[11px] text-text-secondary leading-[1.2] min-w-[18px] shrink-0">
                         {item.trigger}
                       </kbd>
@@ -558,14 +558,14 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
                 }}
               >
                 <HighlightSwatch type={type} />
-                <span className="text-sm text-text-secondary">{HIGHLIGHT_META[type].label}</span>
+                <span className="text-sm text-text-secondary signal:text-text-primary">{HIGHLIGHT_META[type].label}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="relative bg-bg-inset border border-border-default focus-within:border-border-strong rounded-lg p-3 flex flex-col gap-4 transition-colors">
+      <div className="relative bg-bg-inset border border-border-default focus-within:border-border-strong rounded-lg p-3 flex flex-col gap-4 transition-colors signal:transition-shadow signal:focus-within:border-border-focus signal:focus-within:shadow-[shadow:var(--focus-ring)]">
         {/* Editable area - left border when urgent or highlight */}
         <div data-composer-editor className={cn(
           'relative min-h-[20px] transition-all',
@@ -713,6 +713,10 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
             const hasReadyFile = pendingFiles.some((f) => f.status === 'done')
             const canSend = (!isEmpty || attachedFrameIds.length > 0 || hasReadyFile) && !isUploading
             return (
+              <div className="flex items-center gap-2.5">
+              <span className="hidden signal:inline font-mono text-[9px] tracking-[0.04em] text-text-muted select-none">
+                Enter to send · Shift+Enter new line
+              </span>
               <button
                 onMouseDown={(e) => {
                   e.preventDefault()
@@ -723,12 +727,13 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
                 className={cn(
                   'flex items-center justify-center p-1 rounded-lg transition-colors',
                   canSend
-                    ? 'bg-accent-primary hover:bg-accent-hover text-text-inverse cursor-pointer'
+                    ? 'bg-accent-primary hover:bg-accent-hover text-text-inverse cursor-pointer signal:shadow-[shadow:var(--glow-accent)]'
                     : 'bg-bg-disabled text-text-disabled pointer-events-none'
                 )}
               >
                 <IconArrowUp size={16} stroke={1.5} />
               </button>
+              </div>
             )
           })()}
         </div>

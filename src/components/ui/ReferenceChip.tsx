@@ -40,7 +40,7 @@ export function ReferenceChip({ label }: ReferenceChipProps) {
         e.preventDefault()
         e.stopPropagation()
       }}
-      className="inline-flex items-center gap-1 rounded-sm px-1 mx-0.5 bg-bg-active text-text-primary text-sm font-normal cursor-pointer hover:underline underline-offset-2 decoration-text-secondary"
+      className="inline-flex items-center gap-1 rounded-sm px-1 mx-0.5 bg-bg-active text-text-primary text-sm font-normal cursor-pointer hover:underline underline-offset-2 decoration-text-secondary signal:font-mono signal:text-[12px] signal:tracking-[0.01em] signal:text-[color:var(--text-interactive)]"
       style={{ verticalAlign: 'text-bottom', height: '1.4em' }}
     >
       {iconSrc && (

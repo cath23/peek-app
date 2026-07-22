@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { PEOPLE } from '@/api'
+import { PEOPLE, PeekDataProvider } from '@/api'
 import { CreateTopicDialog } from './CreateTopicDialog'
 
 const meta = {
@@ -10,6 +10,14 @@ const meta = {
     // Portals a fixed overlay to document.body — iframe it in Docs.
     docs: { story: { inline: false, height: '500px' } },
   },
+  decorators: [
+    // The invitee directory reads people through the seam's Convex context.
+    Story => (
+      <PeekDataProvider>
+        <Story />
+      </PeekDataProvider>
+    ),
+  ],
   args: {
     onConfirm: () => {},
     onCancel: () => {},

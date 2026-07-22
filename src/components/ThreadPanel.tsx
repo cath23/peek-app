@@ -114,11 +114,11 @@ export function ThreadPanel({
           {huddleMemberCount != null && (
             <IconLock size={16} stroke={1.5} className="text-text-secondary" />
           )}
-          <span className="text-body-2-strong text-text-primary">Replies</span>
+          <span className="text-body-2-strong text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.16em] signal:text-[color:var(--text-interactive)]">Replies</span>
         </div>
         <div className="flex items-center gap-2">
           {isResolved && (
-            <span className="text-caption text-success-default">Resolved</span>
+            <span className="text-caption text-success-default signal:font-mono signal:text-[9.5px] signal:uppercase signal:tracking-[0.1em]">Resolved</span>
           )}
           {(() => {
             // Show member pill for huddle threads OR DM threads. Both display

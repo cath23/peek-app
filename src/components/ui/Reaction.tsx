@@ -55,7 +55,7 @@ export function Reaction({
         )}
       >
         <span className="text-[16px] leading-none shrink-0">{emoji}</span>
-        <span className="text-chip text-text-primary">{count}</span>
+        <span className="text-chip text-text-primary signal:font-mono signal:text-[10px] signal:font-semibold signal:tabular-nums">{count}</span>
       </button>
     </WithTooltip>
   )

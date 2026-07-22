@@ -34,7 +34,7 @@ export function ScreenerSection({ items, onOpen, onLater, onDismiss, className }
               isExpanded && 'rotate-90'
             )}
           />
-          <span className="text-h5 text-text-primary">Screener</span>
+          <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">Screener</span>
         </div>
         <Chip type="brand" label={String(items.length)} />
       </div>

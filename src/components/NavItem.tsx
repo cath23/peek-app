@@ -27,7 +27,7 @@ export function NavItem({ to, icon, label, match }: NavItemProps) {
           <span
             className={cn(
               'flex items-center transition-colors',
-              isActive ? 'text-text-primary' : 'text-text-secondary'
+              isActive ? 'text-text-primary signal:text-[color:var(--text-interactive)]' : 'text-text-secondary'
             )}
           >
             {icon}

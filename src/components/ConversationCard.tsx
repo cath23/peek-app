@@ -8,6 +8,7 @@ import { ResolutionBlock, extractResolution, extractResolutionFromText } from '@
 import { HighlightTag, extractHighlightType } from '@/extensions/highlight'
 import {
   IconMessage2,
+  IconChevronRight,
   IconAlertSquareRounded,
   IconChecks,
   IconArrowNarrowRight,
@@ -48,6 +49,10 @@ interface ConversationCardProps {
   body: string
   reactions?: ReactionData[]
   replyCount?: number
+  /** Reply-author names for the signal theme's facepile reply row (ignored elsewhere). */
+  replyAuthors?: { name: string; avatarSrc?: string }[]
+  /** Time of the last reply, shown in the signal theme's reply row (ignored elsewhere). */
+  lastReplyTime?: string
   /** Figma frame ids attached to the message (rendered as preview cards). */
   attachments?: string[]
   /** Real uploaded files (rendered as file chips / image thumbnails). */
@@ -88,6 +93,8 @@ export function ConversationCard({
   body,
   reactions,
   replyCount,
+  replyAuthors,
+  lastReplyTime,
   attachments,
   files,
   hasNewReply = false,
@@ -561,7 +568,7 @@ export function ConversationCard({
           <div className="p-2 border border-accent-primary rounded-lg">
             <div className="flex items-start gap-2">
               <Avatar size={24} src={authorAvatarSrc} alt={authorName} className="shrink-0 mt-1" />
-              <div className="flex-1 min-w-0 bg-bg-inset border border-border-default rounded-lg p-3 flex flex-col gap-4">
+              <div className="flex-1 min-w-0 bg-bg-inset border border-border-default rounded-lg p-3 flex flex-col gap-4 signal:transition-shadow signal:focus-within:border-border-focus signal:focus-within:shadow-[shadow:var(--focus-ring)]">
                 <div className={cn(
                   'relative min-h-[20px] transition-all',
                   (editHasUrgent || editHasHighlight) && 'border-l-[4px] border-border-strong pl-2'
@@ -602,17 +609,17 @@ export function ConversationCard({
             <div className="flex items-center gap-2 shrink-0">
               <Avatar size={24} src={authorAvatarSrc} alt={authorName} />
               <span className="text-body-2-strong text-text-primary whitespace-nowrap">{authorName}</span>
-              <span className="text-caption text-text-muted whitespace-nowrap">{timestamp}</span>
+              <span className="text-caption text-text-muted whitespace-nowrap signal:font-mono signal:text-[10px] signal:tracking-[0.02em] signal:tabular-nums">{timestamp}</span>
               {highlightState && <HighlightPill type={highlightState} />}
             </div>
             {hasNewMessage && !isUrgent && (
               <div className="w-6 h-6 flex items-center justify-center shrink-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-accent-primary" />
+                <div className="w-1.5 h-1.5 rounded-full bg-accent-primary signal:shadow-[shadow:0_0_6px_rgba(86,200,255,0.7)]" />
               </div>
             )}
             {hasNewMessage && isUrgent && (
               <div className="w-6 h-6 flex items-center justify-center shrink-0">
-                <div className="flex items-center p-0.5 rounded-full bg-warning-muted">
+                <div className="flex items-center p-0.5 rounded-full bg-warning-muted signal:shadow-[shadow:var(--glow-warning)]">
                   <IconAlertSquareRounded size={12} stroke={2.5} className="text-warning-default" />
                 </div>
               </div>
@@ -676,11 +683,41 @@ export function ConversationCard({
           {/* Replies */}
           {!isEditing && replyCount != null && replyCount > 0 && (
             <div className="flex items-center gap-2 pl-8 pr-2 pb-1.5 w-full">
-              <div className="group/replies flex items-center gap-2 py-1.5 shrink-0">
-                <IconMessage2 size={16} stroke={1.5} className="text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0" />
-                <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors">
+              <div className="group/replies flex items-center gap-2 py-1.5 shrink-0 signal:px-2 signal:rounded-lg signal:border signal:border-transparent signal:hover:border-[color:var(--accent-wash-2)] signal:hover:bg-[color:var(--accent-wash)] signal:transition-colors">
+                {replyAuthors && replyAuthors.length > 0 && (
+                  <div className="hidden signal:flex items-center shrink-0">
+                    {replyAuthors.slice(0, 4).map((a, i) => (
+                      <Avatar
+                        key={a.name}
+                        size={18}
+                        src={a.avatarSrc}
+                        alt={a.name}
+                        className={cn('ring-[1.5px] ring-bg-surface', i > 0 && '-ml-1.5')}
+                      />
+                    ))}
+                  </div>
+                )}
+                <IconMessage2
+                  size={16}
+                  stroke={1.5}
+                  className={cn(
+                    'text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0 signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-[color:var(--text-interactive)]',
+                    replyAuthors && replyAuthors.length > 0 && 'signal:hidden'
+                  )}
+                />
+                <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors signal:font-medium signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-[color:var(--text-interactive)]">
                   {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
                 </span>
+                {lastReplyTime && (
+                  <span className="hidden signal:inline font-mono text-[9.5px] text-text-muted tabular-nums">
+                    {lastReplyTime}
+                  </span>
+                )}
+                <IconChevronRight
+                  size={12}
+                  stroke={2}
+                  className="hidden signal:block text-text-muted group-hover/replies:text-[color:var(--text-interactive)] transition-all group-hover/replies:translate-x-0.5"
+                />
               </div>
               {hasNewReply && !isUrgent && (
                 <>
@@ -701,8 +738,8 @@ export function ConversationCard({
 
         {/* ── Resolution banner - bottom, hidden while editing ── */}
         {!isTopic && resolved && !isEditing && (
-          <div className="flex items-center gap-2 pl-10 pr-3 pb-2">
-            <IconChecks size={16} stroke={1.5} className="text-success-default shrink-0" />
+          <div className="flex items-center gap-2 pl-10 pr-3 pb-2 signal:ml-8 signal:mr-3 signal:mb-2 signal:pl-3 signal:pr-3 signal:py-2.5 signal:rounded-[10px] signal:border signal:border-[rgba(63,222,140,0.22)] signal:bg-[color:var(--success-wash)]">
+            <IconChecks size={16} stroke={1.5} className="text-success-default shrink-0 signal:drop-shadow-[0_0_5px_rgba(63,222,140,0.6)]" />
             <span className="text-[12px] leading-[1.1] font-medium text-success-default whitespace-nowrap">
               {resolvedBy || 'Someone'} resolved
             </span>

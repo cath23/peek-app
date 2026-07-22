@@ -27,8 +27,8 @@ export function SearchInput({
         {...props}
       />
       {shortcut && (
-        <div className="flex items-center justify-center px-1 py-px rounded-sm bg-bg-inset border border-border-strong shrink-0">
-          <span className="text-caption text-text-secondary whitespace-nowrap">{shortcut}</span>
+        <div className="flex items-center justify-center px-1 py-px rounded-sm bg-bg-inset border border-border-strong shrink-0 signal:bg-[rgba(255,255,255,.05)] signal:border-b-2">
+          <span className="text-caption text-text-secondary whitespace-nowrap signal:font-mono signal:text-[10px]">{shortcut}</span>
         </div>
       )}
     </div>

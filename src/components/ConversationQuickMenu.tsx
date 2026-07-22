@@ -57,7 +57,12 @@ export function ConversationQuickMenu({
           <IconCircleDashed size={16} stroke={1.5} />
         </IconButton>
       ) : (
-        <IconButton tooltip="Resolve" aria-label="Resolve" onClick={onResolve}>
+        <IconButton
+          tooltip="Resolve"
+          aria-label="Resolve"
+          onClick={onResolve}
+          className="signal:hover:bg-success-muted signal:hover:text-success-default"
+        >
           <IconCircleCheck size={16} stroke={1.5} />
         </IconButton>
       )}

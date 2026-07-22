@@ -56,7 +56,7 @@ function MenuItem({
       <span
         className={cn(
           'flex-1 text-sm truncate',
-          destructive ? 'text-error-default' : 'text-text-secondary'
+          destructive ? 'text-error-default' : 'text-text-secondary signal:text-text-primary'
         )}
       >
         {label}
@@ -119,7 +119,7 @@ export function ConversationMoreMenu({
     >
       <div className="flex flex-col">
         <div className="flex h-[32px] items-center px-2">
-          <span className="text-h5 text-text-primary">Utilities</span>
+          <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">Utilities</span>
         </div>
 
         {isTopic ? (
@@ -168,7 +168,7 @@ export function ConversationMoreMenu({
               onMouseLeave={closeSub}
             >
               <IconHighlight size={16} stroke={1.5} className="text-text-secondary shrink-0" />
-              <span className="flex-1 text-sm text-text-secondary">
+              <span className="flex-1 text-sm text-text-secondary signal:text-text-primary">
                 {currentHighlight ? 'Change highlight' : 'Mark as Highlight'}
               </span>
               <IconChevronRight size={16} stroke={1.5} className="text-text-muted shrink-0" />
@@ -192,7 +192,7 @@ export function ConversationMoreMenu({
                     onClick={() => onHighlight(type)}
                   >
                     <HighlightSwatch type={type} />
-                    <span className="text-sm text-text-secondary">{HIGHLIGHT_META[type].label}</span>
+                    <span className="text-sm text-text-secondary signal:text-text-primary">{HIGHLIGHT_META[type].label}</span>
                   </div>
                 ))}
                 {currentHighlight && (
@@ -203,7 +203,7 @@ export function ConversationMoreMenu({
                       onClick={() => onHighlight(undefined)}
                     >
                       <IconX size={16} stroke={1.5} className="text-text-secondary shrink-0" />
-                      <span className="text-sm text-text-secondary">Remove</span>
+                      <span className="text-sm text-text-secondary signal:text-text-primary">Remove</span>
                     </div>
                   </>
                 )}

@@ -19,7 +19,7 @@ export function HighlightPill({ type, className }: HighlightPillProps) {
         className="size-[10px] rounded-[2px] shrink-0"
         style={{ backgroundColor: meta.color }}
       />
-      <span className="text-text-primary">{meta.label}</span>
+      <span className="text-text-primary signal:font-mono signal:text-[10px] signal:font-semibold signal:tracking-[0.02em]">{meta.label}</span>
     </span>
   )
 }

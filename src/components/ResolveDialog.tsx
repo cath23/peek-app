@@ -19,7 +19,14 @@ export function ResolveDialog({ onResolve, onCancel }: ResolveDialogProps) {
       footer={
         <>
           <Button variant="muted" onClick={onCancel}>Cancel</Button>
-          <Button variant="primary" onClick={() => onResolve(message)}>Resolve</Button>
+          <Button
+            variant="primary"
+            onClick={() => onResolve(message)}
+            // Signal: the v3 resolve button — outlined at rest, green on hover.
+            className="signal:bg-transparent signal:border signal:border-border-default signal:text-text-primary signal:shadow-none signal:hover:bg-success-muted signal:hover:border-[rgba(63,222,140,0.5)] signal:hover:text-success-default signal:transition-colors"
+          >
+            Resolve
+          </Button>
         </>
       }
     >

@@ -1,10 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { PeekDataProvider } from '@/api'
 import { MembersDialog } from './MembersDialog'
 
 const meta = {
   title: 'Topics/MembersDialog',
   component: MembersDialog,
   parameters: { layout: 'fullscreen' },
+  decorators: [
+    // Roster rows read live profile roles through the seam's Convex context.
+    Story => (
+      <PeekDataProvider>
+        <Story />
+      </PeekDataProvider>
+    ),
+  ],
   args: {
     memberNames: ['You', 'Alice Johnson', 'Jake Walter', 'Zack Bright', 'Amie Miles'],
     onInvite: () => {},

@@ -28,6 +28,13 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+// Signal-theme reply-row data: the facepile + last-reply time only render
+// under the signal theme; light/dark ignore these args entirely.
+const replyRow = {
+  replyAuthors: [{ name: 'Alice Johnson' }, { name: 'Jake Walter' }, { name: 'Zack Bright' }],
+  lastReplyTime: '12:42 PM',
+}
+
 /** Resting card: avatar, author, time, body. Hover it to reveal the quick-action toolbar. */
 export const Default: Story = {}
 
@@ -41,7 +48,7 @@ export const WithReactions: Story = {
 }
 
 export const WithReplies: Story = {
-  args: { replyCount: 3 },
+  args: { replyCount: 3, ...replyRow },
 }
 
 /** New top-level message — soft blue border + blue dot by the author's name. */
@@ -51,7 +58,7 @@ export const Unread: Story = {
 
 /** Unread reply — blue "1 new" chip next to the reply count. */
 export const UnreadReply: Story = {
-  args: { replyCount: 3, hasNewReply: true },
+  args: { replyCount: 3, hasNewReply: true, ...replyRow },
 }
 
 /**
@@ -64,7 +71,7 @@ export const Urgent: Story = {
 
 /** Urgent unread reply — amber "1 new" chip. */
 export const UrgentReply: Story = {
-  args: { replyCount: 3, hasNewReply: true, isUrgent: true },
+  args: { replyCount: 3, hasNewReply: true, isUrgent: true, ...replyRow },
 }
 
 /** A highlighted message wears its colored type pill in the author line. */
@@ -79,6 +86,7 @@ export const Resolved: Story = {
     resolvedBy: 'Alice',
     resolutionMessage: 'Spec updated: SDK 3.4.2 + retry shortcut. Going to QA next sprint.',
     replyCount: 4,
+    ...replyRow,
   },
 }
 

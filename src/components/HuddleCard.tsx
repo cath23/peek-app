@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   IconMessage2,
+  IconChevronRight,
   IconDotsVertical,
   IconLock,
   IconAlertSquareRounded,
@@ -225,7 +226,7 @@ export function HuddleCard({
           )}>
             {inStream ? inStreamMemberLabel : gridMemberLabel}
           </span>
-          <span className="text-caption text-text-muted whitespace-nowrap shrink-0">
+          <span className="text-caption text-text-muted whitespace-nowrap shrink-0 signal:font-mono signal:text-[10px] signal:tracking-[0.02em] signal:tabular-nums">
             {inStream
               ? (huddle.conversation?.timestamp ?? huddle.lastActivity)
               : huddle.conversation
@@ -234,12 +235,12 @@ export function HuddleCard({
           </span>
           {inStream && hasNewMessage && !isUrgent && (
             <div className="w-6 h-6 flex items-center justify-center shrink-0 ml-auto">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent-primary" />
+              <div className="w-1.5 h-1.5 rounded-full bg-accent-primary signal:shadow-[shadow:0_0_6px_rgba(86,200,255,0.7)]" />
             </div>
           )}
           {inStream && hasNewMessage && isUrgent && (
             <div className="w-6 h-6 flex items-center justify-center shrink-0 ml-auto">
-              <div className="flex items-center p-0.5 rounded-full bg-warning-muted">
+              <div className="flex items-center p-0.5 rounded-full bg-warning-muted signal:shadow-[shadow:var(--glow-warning)]">
                 <IconAlertSquareRounded size={12} stroke={2.5} className="text-warning-default" />
               </div>
             </div>
@@ -275,20 +276,25 @@ export function HuddleCard({
             pl-8 pr-2 pb-1.5) so huddles and conversations sitting side by side in
             V3's mixed stream share the same reply-count chrome. */}
         {!inStream && replyCount > 0 && (
-          <div className="flex items-center gap-2 text-text-secondary h-6">
+          <div className="flex items-center gap-2 text-text-secondary h-6 signal:text-[color:var(--text-interactive)]">
             <IconMessage2 size={14} stroke={1.5} className="shrink-0" />
-            <span className="text-caption">
+            <span className="text-caption signal:font-medium">
               {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
             </span>
           </div>
         )}
         {inStream && replyCount > 0 && (
           <div className="flex items-center gap-2 pl-8 pr-2 pb-1.5 w-full">
-            <div className="group/replies flex items-center gap-2 py-1.5 shrink-0">
-              <IconMessage2 size={16} stroke={1.5} className="text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0" />
-              <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors">
+            <div className="group/replies flex items-center gap-2 py-1.5 shrink-0 signal:px-2 signal:rounded-lg signal:border signal:border-transparent signal:hover:border-[color:var(--accent-wash-2)] signal:hover:bg-[color:var(--accent-wash)] signal:transition-colors">
+              <IconMessage2 size={16} stroke={1.5} className="text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0 signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-[color:var(--text-interactive)]" />
+              <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors signal:font-medium signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-[color:var(--text-interactive)]">
                 {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
               </span>
+              <IconChevronRight
+                size={12}
+                stroke={2}
+                className="hidden signal:block text-text-muted group-hover/replies:text-[color:var(--text-interactive)] transition-all group-hover/replies:translate-x-0.5"
+              />
             </div>
             {hasNewReply && !isUrgent && (
               <>
@@ -356,7 +362,7 @@ export function HuddleCard({
             <div className="bg-bg-elevated border border-border-default rounded-lg shadow-lg w-[244px] p-2 flex flex-col gap-2">
               <div className="flex flex-col">
                 <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-bg-hover">
-                  <span className="flex-1 text-sm text-text-secondary">View details</span>
+                  <span className="flex-1 text-sm text-text-secondary signal:text-text-primary">View details</span>
                 </div>
               </div>
               <Divider className="mx-0" />

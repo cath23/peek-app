@@ -74,7 +74,7 @@ function ReplyMoreMenu({ onEdit, onDelete, currentHighlight, onHighlight, isOwnM
             className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-bg-hover w-full"
             onClick={onEdit}
           >
-            <span className="flex-1 text-sm text-text-secondary">Edit message</span>
+            <span className="flex-1 text-sm text-text-secondary signal:text-text-primary">Edit message</span>
           </div>
         )}
         {onHighlight && (
@@ -85,7 +85,7 @@ function ReplyMoreMenu({ onEdit, onDelete, currentHighlight, onHighlight, isOwnM
               onMouseEnter={openSub}
               onMouseLeave={closeSub}
             >
-              <span className="flex-1 text-sm text-text-secondary">
+              <span className="flex-1 text-sm text-text-secondary signal:text-text-primary">
                 {currentHighlight ? 'Change highlight' : 'Mark as Highlight'}
               </span>
               <IconChevronRight size={16} stroke={1.5} className="text-text-muted shrink-0" />
@@ -109,7 +109,7 @@ function ReplyMoreMenu({ onEdit, onDelete, currentHighlight, onHighlight, isOwnM
                     onClick={() => onHighlight(type)}
                   >
                     <HighlightSwatch type={type} />
-                    <span className="text-sm text-text-secondary">{HIGHLIGHT_META[type].label}</span>
+                    <span className="text-sm text-text-secondary signal:text-text-primary">{HIGHLIGHT_META[type].label}</span>
                   </div>
                 ))}
                 {currentHighlight && (
@@ -120,7 +120,7 @@ function ReplyMoreMenu({ onEdit, onDelete, currentHighlight, onHighlight, isOwnM
                       onClick={() => onHighlight(undefined)}
                     >
                       <IconX size={16} stroke={1.5} className="text-text-secondary shrink-0" />
-                      <span className="text-sm text-text-secondary">Remove</span>
+                      <span className="text-sm text-text-secondary signal:text-text-primary">Remove</span>
                     </div>
                   </>
                 )}
@@ -510,17 +510,17 @@ export function ThreadReplyCard({
               <div className="flex items-center gap-2 shrink-0 flex-1 min-w-0">
                 <Avatar size={24} src={authorAvatarSrc} alt={authorName} />
                 <span className="text-body-2-strong text-text-primary whitespace-nowrap">{authorName}</span>
-                <span className="text-caption text-text-muted whitespace-nowrap">{timestamp}</span>
+                <span className="text-caption text-text-muted whitespace-nowrap signal:font-mono signal:text-[10px] signal:tracking-[0.02em] signal:tabular-nums">{timestamp}</span>
                 {highlightState && <HighlightPill type={highlightState} />}
               </div>
               {isNew && !isUrgent && (
                 <div className="w-6 h-6 flex items-center justify-center shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-accent-primary" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent-primary signal:shadow-[shadow:0_0_6px_rgba(86,200,255,0.7)]" />
                 </div>
               )}
               {isNew && isUrgent && (
                 <div className="w-6 h-6 flex items-center justify-center shrink-0">
-                  <div className="flex items-center p-0.5 rounded-full bg-warning-muted">
+                  <div className="flex items-center p-0.5 rounded-full bg-warning-muted signal:shadow-[shadow:var(--glow-warning)]">
                     <IconAlertSquareRounded size={12} stroke={2.5} className="text-warning-default" />
                   </div>
                 </div>

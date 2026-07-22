@@ -25,6 +25,12 @@ function ResolveConversation({ messageId }: { messageId: string }) {
 
   if (!c) return null
 
+  // Signal theme: the reply row's facepile + last-reply time come straight
+  // from the live thread (light/dark ignore these props).
+  const allReplies = [...thread.replies, ...thread.sentReplies]
+  const replyAuthors = [...new Set(allReplies.map(r => r.authorName))].map(name => ({ name }))
+  const lastReplyTime = allReplies[allReplies.length - 1]?.timestamp
+
   return (
     <ConversationCard
       authorName={c.authorName}
@@ -32,6 +38,8 @@ function ResolveConversation({ messageId }: { messageId: string }) {
       body={c.body}
       reactions={c.reactions}
       replyCount={c.replyCount}
+      replyAuthors={replyAuthors}
+      lastReplyTime={lastReplyTime}
       isResolved={c.isResolved ?? false}
       resolvedBy={c.resolvedBy ?? ''}
       resolutionMessage={c.resolutionMessage ?? ''}

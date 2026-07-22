@@ -53,7 +53,7 @@ export function ScreenerLaterMenu({ onPick }: { onPick: (untilMs: number) => voi
             style={{ top: rect.bottom + 4, left: rect.left }}
           >
             <div className="flex items-center h-7 px-3">
-              <span className="text-[12px] font-medium leading-none text-text-secondary">Remind me</span>
+              <span className="text-[12px] font-medium leading-none text-text-secondary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em]">Remind me</span>
             </div>
             {OPTIONS.map((o) => (
               <div

@@ -15,15 +15,23 @@ interface ToastProps {
   className?: string
 }
 
+// Signal: every toast is the same dark overlay pill (v3) — the type lives in
+// the icon color + glow, not the surface.
 const SURFACE_BY_TYPE: Record<ToastType, string> = {
-  success: 'bg-success-muted',
-  brand: 'bg-accent-muted',
-  neutral: 'bg-bg-inset border border-border-subtle',
+  success: 'bg-success-muted signal:bg-bg-inset signal:border signal:border-border-default signal:shadow-[shadow:var(--shadow-md)]',
+  brand: 'bg-accent-muted signal:bg-bg-inset signal:border signal:border-border-default signal:shadow-[shadow:var(--shadow-md)]',
+  neutral: 'bg-bg-inset border border-border-subtle signal:border-border-default signal:shadow-[shadow:var(--shadow-md)]',
+}
+
+const ICON_BY_TYPE: Record<ToastType, string> = {
+  success: 'signal:text-success-default signal:drop-shadow-[0_0_5px_rgba(63,222,140,0.7)]',
+  brand: 'signal:text-[color:var(--text-interactive)] signal:drop-shadow-[0_0_5px_rgba(86,200,255,0.6)]',
+  neutral: 'signal:text-text-secondary',
 }
 
 const ACTION_BORDER_BY_TYPE: Record<ToastType, string> = {
-  success: '',
-  brand: '',
+  success: 'signal:border signal:border-border-default signal:hover:border-border-strong',
+  brand: 'signal:border signal:border-border-default signal:hover:border-border-strong',
   neutral: 'border border-border-default',
 }
 
@@ -41,15 +49,17 @@ export function Toast({
   return (
     <div
       className={cn(
-        'inline-flex items-center min-h-[32px] pl-2 pr-1 py-1 rounded-lg shadow-lg',
-        hasAction ? 'gap-[46px]' : '',
+        'inline-flex items-center min-h-[32px] pl-2 py-1 rounded-lg shadow-lg',
+        // Without an action the label needs real right padding; the action
+        // button brings its own edge, so the tight pr-1 only applies there.
+        hasAction ? 'pr-1 gap-[46px]' : 'pr-3',
         SURFACE_BY_TYPE[type],
         className,
       )}
     >
       <div className="flex items-center gap-2 shrink-0">
         {leadingIcon && (
-          <IconCircleCheck size={16} stroke={1.5} className="text-text-primary shrink-0" />
+          <IconCircleCheck size={16} stroke={1.5} className={cn('text-text-primary shrink-0', ICON_BY_TYPE[type])} />
         )}
         <span className="font-normal text-[14px] leading-[1.4] text-text-primary whitespace-nowrap">
           {label}

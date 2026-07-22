@@ -19,7 +19,7 @@ export function TopicMenu({ topics, highlight, onSelect, onHighlightChange }: To
       <div className="p-2">
         {/* Section header */}
         <div className="flex items-center h-8 px-3">
-          <span className="text-h5 text-text-secondary">Topics</span>
+          <span className="text-h5 text-text-secondary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Topics</span>
         </div>
 
         {/* Rows */}
@@ -48,7 +48,7 @@ export function TopicMenu({ topics, highlight, onSelect, onHighlightChange }: To
             {i === highlight && (
               <div className="flex items-center gap-2 shrink-0 text-text-muted">
                 <span className="text-[12px] leading-[1.2]">↩</span>
-                <span className="text-[9px] font-medium leading-[1.15]">#topic</span>
+                <span className="text-[9px] font-medium leading-[1.15] signal:font-mono signal:text-[9.5px] signal:tracking-[0.04em]">#topic</span>
               </div>
             )}
           </div>

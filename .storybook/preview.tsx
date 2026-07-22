@@ -5,9 +5,13 @@ import { GLOBALS_UPDATED } from 'storybook/internal/core-events'
 import { themes } from 'storybook/theming'
 import '../src/index.css'
 import './preview.css'
+import './signal.css'
 
 const applyTheme = (theme?: string) => {
-  document.documentElement.classList.toggle('dark', theme === 'dark')
+  // "signal" is a dark-based theme: keep .dark active so dark: variants apply,
+  // then .signal's variables (loaded after index.css) override the palette.
+  document.documentElement.classList.toggle('dark', theme === 'dark' || theme === 'signal')
+  document.documentElement.classList.toggle('signal', theme === 'signal')
   document.body.classList.add('bg-bg-base', 'text-text-primary', 'font-sans')
 }
 
@@ -26,7 +30,9 @@ try {
 applyTheme('dark')
 
 const withTheme: Decorator = (Story, context) => {
-  const theme = context.globals.theme ?? 'dark'
+  // parameters.forceTheme lets theme-specific stories (e.g. the Signal
+  // specimens page) pin their theme regardless of the toolbar.
+  const theme = (context.parameters.forceTheme as string) ?? context.globals.theme ?? 'dark'
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
@@ -42,7 +48,7 @@ const preview: Preview = {
       toolbar: {
         title: 'Theme',
         icon: 'mirror',
-        items: ['light', 'dark'],
+        items: ['light', 'dark', 'signal'],
         dynamicTitle: true,
       },
     },

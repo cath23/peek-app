@@ -245,7 +245,7 @@ export const FilesMenu = forwardRef<FilesMenuRef, FilesMenuProps>(
             if (entry.type === 'header') {
               return (
                 <div key={`h-${entry.label}`} className={cn('flex items-center h-8 px-3 py-1', i > 0 && 'mt-1')}>
-                  <span className="text-[12px] font-medium leading-none text-text-secondary">{entry.label}</span>
+                  <span className="text-[12px] font-medium leading-none text-text-secondary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em]">{entry.label}</span>
                 </div>
               )
             }
@@ -276,7 +276,7 @@ export const FilesMenu = forwardRef<FilesMenuRef, FilesMenuProps>(
                   {isHighlighted ? (
                     <div className="flex items-center gap-2 shrink-0 text-text-muted">
                       <span className="text-[12px] leading-[1.2]">↩</span>
-                      <span className="text-[9px] font-medium leading-[1.15]">Enter</span>
+                      <span className="text-[9px] font-medium leading-[1.15] signal:font-mono signal:text-[9.5px] signal:tracking-[0.04em]">Enter</span>
                     </div>
                   ) : (
                     <span className="text-text-muted shrink-0">
@@ -340,7 +340,7 @@ export const FilesMenu = forwardRef<FilesMenuRef, FilesMenuProps>(
                 {isHighlighted && (
                   <div className="flex items-center gap-2 shrink-0 text-text-muted">
                     <span className="text-[12px] leading-[1.2]">↩</span>
-                    <span className="text-[9px] font-medium leading-[1.15]">Enter</span>
+                    <span className="text-[9px] font-medium leading-[1.15] signal:font-mono signal:text-[9.5px] signal:tracking-[0.04em]">Enter</span>
                   </div>
                 )}
               </div>

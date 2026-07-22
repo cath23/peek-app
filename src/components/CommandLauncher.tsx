@@ -160,7 +160,7 @@ export function CommandLauncher({ context, onClose }: CommandLauncherProps) {
   }
 
   const enterHint = (
-    <span className="text-caption text-text-secondary whitespace-nowrap shrink-0">↩ Enter</span>
+    <span className="text-caption text-text-secondary whitespace-nowrap shrink-0 signal:font-mono signal:text-[10px] signal:tracking-[0.04em]">↩ Enter</span>
   )
 
   const iconTile = (content: React.ReactNode) => (
@@ -169,7 +169,7 @@ export function CommandLauncher({ context, onClose }: CommandLauncherProps) {
 
   const sectionHeader = (label: string) => (
     <div key={`hdr-${label}`} className="flex items-center h-7 px-3">
-      <span className="text-[12px] font-medium leading-none text-text-secondary">{label}</span>
+      <span className="text-[12px] font-medium leading-none text-text-secondary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em]">{label}</span>
     </div>
   )
 
@@ -395,8 +395,8 @@ export function CommandLauncher({ context, onClose }: CommandLauncherProps) {
               placeholder={placeholder}
               className="flex-1 min-w-0 bg-transparent text-input-value text-text-primary placeholder:text-text-muted outline-none"
             />
-            <div className="flex items-center justify-center px-1 py-px rounded-sm bg-bg-inset border border-border-strong shrink-0">
-              <span className="text-caption text-text-secondary whitespace-nowrap">esc</span>
+            <div className="flex items-center justify-center px-1 py-px rounded-sm bg-bg-inset border border-border-strong shrink-0 signal:bg-[rgba(255,255,255,0.05)] signal:border-border-default signal:border-b-2 signal:rounded">
+              <span className="text-caption text-text-secondary whitespace-nowrap signal:font-mono signal:text-[10px]">esc</span>
             </div>
           </div>
 
@@ -437,6 +437,20 @@ export function CommandLauncher({ context, onClose }: CommandLauncherProps) {
             )}
           </div>
           )}
+
+          {/* Signal theme: the v3 palette's navigation tips footer */}
+          <div className="hidden signal:flex items-center gap-4 h-9 px-4 border-t border-border-subtle shrink-0 font-mono text-[10px] text-text-muted select-none">
+            <span className="flex items-center gap-1.5">
+              <kbd>↑</kbd>
+              <kbd>↓</kbd> navigate
+            </span>
+            <span className="flex items-center gap-1.5">
+              <kbd>enter</kbd> open
+            </span>
+            <span className="flex items-center gap-1.5">
+              <kbd>esc</kbd> close
+            </span>
+          </div>
         </div>
       </div>
     </>,

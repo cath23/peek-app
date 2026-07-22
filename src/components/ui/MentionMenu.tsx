@@ -23,7 +23,7 @@ export function MentionMenu({ people, highlight, isUrgent, onSelect, onHighlight
       <div className="p-2">
         {/* Section header */}
         <div className="flex items-center h-8 px-3 py-1">
-          <span className="text-[12px] font-medium leading-none text-text-secondary">
+          <span className="text-[12px] font-medium leading-none text-text-secondary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em]">
             {isUrgent ? 'Urgent mention' : 'People'}
           </span>
         </div>
@@ -57,7 +57,7 @@ export function MentionMenu({ people, highlight, isUrgent, onSelect, onHighlight
             {i === highlight && (
               <div className="flex items-center gap-2 shrink-0 text-text-muted">
                 <span className="text-[12px] leading-[1.2]">↩</span>
-                <span className="text-[9px] font-medium leading-[1.15]">Enter</span>
+                <span className="text-[9px] font-medium leading-[1.15] signal:font-mono signal:text-[9.5px] signal:tracking-[0.04em]">Enter</span>
               </div>
             )}
           </div>

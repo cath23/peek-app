@@ -128,7 +128,7 @@ export function TopBar({ onMenuToggle, onSearchClick }: TopBarProps) {
             </>
           )}
           <div className="flex items-center h-7 px-3">
-            <span className="text-[12px] font-medium leading-none text-text-secondary">Theme</span>
+            <span className="text-[12px] font-medium leading-none text-text-secondary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em]">Theme</span>
           </div>
           {THEME_OPTIONS.map((opt) => {
             const Icon = opt.icon

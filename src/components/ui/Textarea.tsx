@@ -16,6 +16,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
           'bg-bg-inset border border-border-default focus:border-border-strong rounded-lg px-3 py-2',
           'text-[14px] leading-[1.4] font-normal text-text-primary placeholder:text-text-muted',
           'resize-none outline-none transition-colors',
+          'signal:transition-shadow signal:focus:border-border-focus signal:focus:shadow-[shadow:var(--focus-ring)]',
           className,
         )}
         {...props}

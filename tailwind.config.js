@@ -1,3 +1,5 @@
+import plugin from 'tailwindcss/plugin'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
@@ -6,6 +8,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Geist', 'system-ui', 'sans-serif'],
+        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
       },
       fontSize: {
         // Headings
@@ -95,5 +98,9 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // `signal:` variant — active only under the .signal theme class. Today only
+    // Storybook ever applies .signal, so these styles are invisible in the app.
+    plugin(({ addVariant }) => addVariant('signal', '.signal &')),
+  ],
 }

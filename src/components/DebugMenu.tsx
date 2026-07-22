@@ -142,7 +142,7 @@ function DebugSection({ title, children }: { title: string; children: React.Reac
   return (
     <div className="flex flex-col">
       <div className="flex items-center h-7 px-2">
-        <span className="text-[11px] font-medium text-text-muted uppercase tracking-wide">{title}</span>
+        <span className="text-[11px] font-medium text-text-muted uppercase tracking-wide signal:font-mono signal:text-[10px] signal:tracking-[0.14em]">{title}</span>
       </div>
       {children}
     </div>

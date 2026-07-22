@@ -13,11 +13,11 @@ interface ChipProps {
 
 const typeStyles: Record<ChipType, string> = {
   neutral: 'bg-bg-inset text-text-primary',
-  brand: 'bg-accent-muted text-accent-primary',
-  info: 'bg-info-muted text-info-default',
-  warning: 'bg-warning-muted text-warning-default',
-  success: 'bg-success-muted text-success-default',
-  error: 'bg-error-muted text-error-default',
+  brand: 'bg-accent-muted text-accent-primary signal:border signal:border-[rgba(86,200,255,0.3)]',
+  info: 'bg-info-muted text-info-default signal:border signal:border-[rgba(86,200,255,0.3)]',
+  warning: 'bg-warning-muted text-warning-default signal:border signal:border-[rgba(255,176,32,0.3)] signal:shadow-[shadow:0_0_7px_rgba(255,176,32,0.4)]',
+  success: 'bg-success-muted text-success-default signal:border signal:border-[rgba(63,222,140,0.3)]',
+  error: 'bg-error-muted text-error-default signal:border signal:border-[rgba(255,107,107,0.3)]',
 }
 
 export function Chip({
@@ -36,7 +36,7 @@ export function Chip({
       )}
     >
       {leadingIcon && <span className="shrink-0 size-3">{leadingIcon}</span>}
-      {label && <span className="text-chip whitespace-nowrap">{label}</span>}
+      {label && <span className="text-chip whitespace-nowrap signal:font-mono signal:text-[10px] signal:font-semibold signal:tracking-[0.02em] signal:tabular-nums">{label}</span>}
       {trailingIcon && <span className="shrink-0 size-3">{trailingIcon}</span>}
     </div>
   )

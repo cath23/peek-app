@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { PeekDataProvider } from '@/api'
 import { ComposeBox } from './ComposeBox'
 
 const meta = {
@@ -6,10 +7,13 @@ const meta = {
   component: ComposeBox,
   parameters: { layout: 'padded' },
   decorators: [
+    // The upload actions come from the seam's Convex context.
     Story => (
-      <div className="w-[560px]">
-        <Story />
-      </div>
+      <PeekDataProvider>
+        <div className="w-[560px]">
+          <Story />
+        </div>
+      </PeekDataProvider>
     ),
   ],
   args: {

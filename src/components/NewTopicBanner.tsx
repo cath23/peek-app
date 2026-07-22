@@ -17,7 +17,7 @@ export function NewTopicBanner({ title, kind = 'topic', onInviteMembers }: NewTo
     <div className="bg-accent-muted rounded-lg p-2 flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0">
         <div className="bg-accent-primary rounded-md size-6 flex items-center justify-center shrink-0">
-          <IconPencilMinus size={16} stroke={1.5} className="text-accent-muted" />
+          <IconPencilMinus size={16} stroke={1.5} className="text-accent-muted signal:text-[color:var(--text-inverse)]" />
         </div>
         <span className="text-[14px] leading-[1.4] text-text-primary truncate">
           {kind === 'dm' ? 'This is the beginning of your conversation with' : 'This is the beginning of your conversations in'}{' '}
