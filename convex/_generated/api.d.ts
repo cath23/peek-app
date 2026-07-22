@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as desk from "../desk.js";
+import type * as dev_bulk from "../dev/bulk.js";
 import type * as dev_seedDates from "../dev/seedDates.js";
 import type * as dev_seedDemo from "../dev/seedDemo.js";
 import type * as http from "../http.js";
@@ -32,6 +33,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   desk: typeof desk;
+  "dev/bulk": typeof dev_bulk;
   "dev/seedDates": typeof dev_seedDates;
   "dev/seedDemo": typeof dev_seedDemo;
   http: typeof http;

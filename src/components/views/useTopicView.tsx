@@ -355,6 +355,8 @@ export function useTopicView({
                     reactions={c.reactions}
                     highlightType={c.highlightType}
                     replyCount={c.replyCount}
+                    replyAuthors={c.replyAuthors}
+                    lastReplyTime={c.lastReplyTime}
                     isResolved={c.isResolved}
                     resolvedBy={c.resolvedBy}
                     resolutionMessage={c.resolutionMessage}
@@ -501,6 +503,8 @@ export function useTopicView({
                           reactions={c.reactions}
                           highlightType={c.highlightType}
                           replyCount={c.replyCount}
+                          replyAuthors={c.replyAuthors}
+                          lastReplyTime={c.lastReplyTime}
                           hasNewMessage={entry.kind === 'conv' && c.hasNewMessage && (c.isUrgent || showUnreads)}
                           hasNewReply={entry.kind === 'conv' && c.hasNewReply && (c.isUrgent || showUnreads)}
                           isUrgent={entry.kind === 'conv' ? c.isUrgent : undefined}
@@ -537,6 +541,8 @@ export function useTopicView({
                           reactions={c.reactions}
                           highlightType={c.highlightType}
                           replyCount={c.replyCount}
+                          replyAuthors={c.replyAuthors}
+                          lastReplyTime={c.lastReplyTime}
                           hasNewMessage={c.hasNewMessage && (c.isUrgent || showUnreads)}
                           hasNewReply={c.hasNewReply && (c.isUrgent || showUnreads)}
                           isUrgent={c.isUrgent}
@@ -571,6 +577,8 @@ export function useTopicView({
                           reactions={m.reactions}
                           highlightType={m.highlightType}
                           replyCount={m.replyCount}
+                          replyAuthors={m.replyAuthors}
+                          lastReplyTime={m.lastReplyTime}
                           isResolved={m.isResolved}
                           resolvedBy={m.resolvedBy}
                           resolutionMessage={m.resolutionMessage}

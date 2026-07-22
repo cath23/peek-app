@@ -44,6 +44,10 @@ export interface RemoteMessage {
   files?: FileAttachment[]
   /** Derived server-side (list only). */
   replyCount?: number
+  /** Distinct reply authors in first-reply order (list only). */
+  replyAuthors?: { id: string; name: string }[]
+  /** Send time of the newest reply (list only). */
+  lastReplyAt?: number
   /** Aggregated server-side from per-user rows (§4.6). */
   reactions?: ReactionData[]
 }
@@ -103,6 +107,10 @@ export function toConversationData(r: RemoteMessage, meId: string | undefined): 
     hasNewMessage: r.hasNewMessage,
     hasNewReply: r.hasNewReply,
     replyCount: r.replyCount,
+    replyAuthors: r.replyAuthors?.map((a) => ({
+      name: a.id === meId ? CURRENT_USER_NAME : a.name,
+    })),
+    lastReplyTime: r.lastReplyAt !== undefined ? formatTimestamp(r.lastReplyAt) : undefined,
     createdAtMs: r.createdAt,
   }
 }
@@ -220,6 +228,19 @@ function mergeConv(c: ConversationData, o: Overrides, recountReplies = true): Co
     replyCount: recountReplies
       ? (REPLIES[c.id]?.length ?? c.replyCount ?? 0) + (o.sentReplies[c.id]?.length ?? 0)
       : c.replyCount ?? 0,
+    // Reply-row facepile + last-reply time. Convex rows arrive with these
+    // already shaped; mock/optimistic rows derive them from the fixture +
+    // session-sent replies.
+    ...(c.replyAuthors
+      ? {}
+      : (() => {
+          const rs = [...(REPLIES[c.id] ?? []), ...(o.sentReplies[c.id] ?? [])]
+          if (rs.length === 0) return {}
+          return {
+            replyAuthors: [...new Set(rs.map((r) => r.authorName))].map((name) => ({ name })),
+            lastReplyTime: rs[rs.length - 1].timestamp,
+          }
+        })()),
   }
 }
 
@@ -496,5 +517,25 @@ export function useReplyCount(): (messageId: string | undefined, fallback?: numb
     if (!messageId) return fallback
     if (hasConvex) return fallback
     return (REPLIES[messageId]?.length ?? fallback) + (o.sentReplies[messageId]?.length ?? 0)
+  }
+}
+
+/**
+ * Live reply-row metadata (facepile authors + last-reply time) for a thread
+ * id — the huddle-card counterpart of the fields ConversationData rows carry.
+ * Mock mode derives from the fixture + session-sent replies; the Convex path
+ * returns nothing and callers fall back to the server-shaped fields already
+ * on the row.
+ */
+export function useReplyMeta(): (messageId: string | undefined) => Pick<ConversationData, 'replyAuthors' | 'lastReplyTime'> {
+  const o = useTopicMutations()
+  return (messageId) => {
+    if (!messageId || hasConvex) return {}
+    const rs = [...(REPLIES[messageId] ?? []), ...(o.sentReplies[messageId] ?? [])]
+    if (rs.length === 0) return {}
+    return {
+      replyAuthors: [...new Set(rs.map((r) => r.authorName))].map((name) => ({ name })),
+      lastReplyTime: rs[rs.length - 1].timestamp,
+    }
   }
 }

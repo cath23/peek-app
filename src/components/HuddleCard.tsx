@@ -14,7 +14,7 @@ import { Chip } from './ui/Chip'
 import { Divider } from './ui/Divider'
 import { IconButton } from './ui/IconButton'
 import { cn } from '@/lib/utils'
-import { useReplyCount, type Huddle } from '@/api'
+import { useReplyCount, useReplyMeta, type Huddle } from '@/api'
 
 interface HuddleCardProps {
   huddle: Huddle
@@ -100,6 +100,13 @@ export function HuddleCard({
   const replyCountOf = useReplyCount()
   const threadId = huddle.seedMessageId ?? huddle.conversation?.id
   const replyCount = replyCountOf(threadId, huddle.conversation?.replyCount ?? 0)
+
+  // Reply-row facepile + last-reply time (signal theme). Mock mode derives
+  // them live; the Convex row already carries the server-shaped fields.
+  const replyMetaOf = useReplyMeta()
+  const replyMeta = replyMetaOf(threadId)
+  const replyAuthors = replyMeta.replyAuthors ?? huddle.conversation?.replyAuthors
+  const lastReplyTime = replyMeta.lastReplyTime ?? huddle.conversation?.lastReplyTime
 
   const handleMore = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -286,14 +293,39 @@ export function HuddleCard({
         {inStream && replyCount > 0 && (
           <div className="flex items-center gap-2 pl-8 pr-2 pb-1.5 w-full">
             <div className="group/replies flex items-center gap-2 py-1.5 shrink-0 signal:px-2 signal:rounded-lg signal:border signal:border-transparent signal:hover:border-[color:var(--accent-wash-2)] signal:hover:bg-[color:var(--accent-wash)] signal:transition-colors">
-              <IconMessage2 size={16} stroke={1.5} className="text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0 signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-[color:var(--text-interactive)]" />
-              <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors signal:font-medium signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-[color:var(--text-interactive)]">
+              {replyAuthors && replyAuthors.length > 0 && (
+                <div className="hidden signal:flex items-center shrink-0">
+                  {replyAuthors.slice(0, 4).map((a, i) => (
+                    <Avatar
+                      key={a.name}
+                      size={18}
+                      src={a.avatarSrc}
+                      alt={a.name}
+                      className={cn('ring-[1.5px] ring-bg-surface', i > 0 && '-ml-1.5')}
+                    />
+                  ))}
+                </div>
+              )}
+              <IconMessage2
+                size={16}
+                stroke={1.5}
+                className={cn(
+                  'text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0 signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-text-primary',
+                  replyAuthors && replyAuthors.length > 0 && 'signal:hidden'
+                )}
+              />
+              <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors signal:font-medium signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-text-primary">
                 {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
               </span>
+              {lastReplyTime && (
+                <span className="hidden signal:inline font-mono text-[9.5px] leading-[12px] mt-px text-text-muted tabular-nums">
+                  {lastReplyTime}
+                </span>
+              )}
               <IconChevronRight
                 size={12}
                 stroke={2}
-                className="hidden signal:block text-text-muted group-hover/replies:text-[color:var(--text-interactive)] transition-all group-hover/replies:translate-x-0.5"
+                className="hidden signal:block text-text-muted group-hover/replies:text-text-primary transition-all group-hover/replies:translate-x-0.5"
               />
             </div>
             {hasNewReply && !isUrgent && (

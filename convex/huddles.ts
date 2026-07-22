@@ -47,13 +47,21 @@ export const list = query({
         .collect()
       msgs.sort((a, b) => a.createdAt - b.createdAt)
       const shapeFull = async (m: Doc<'messages'>) => {
-        const replies = await ctx.db
-          .query('replies')
-          .withIndex('by_message', (q) => q.eq('messageId', m._id))
-          .collect()
+        const replies = (
+          await ctx.db
+            .query('replies')
+            .withIndex('by_message', (q) => q.eq('messageId', m._id))
+            .collect()
+        ).sort((a, b) => a.createdAt - b.createdAt)
+        const replyAuthorIds = [...new Set(replies.map((r) => r.authorId))]
         return {
           ...(await shape(ctx, m, names)),
           replyCount: replies.length,
+          replyAuthors: replyAuthorIds.map((id) => ({
+            id: id as string,
+            name: names.get(id) ?? 'Unknown',
+          })),
+          lastReplyAt: replies.length > 0 ? replies[replies.length - 1].createdAt : undefined,
           reactions: await aggregateReactions(ctx, m._id, me ?? undefined, names),
           ...(await unreadFlags(ctx, m, me, wm, replies)),
         }

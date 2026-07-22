@@ -701,22 +701,22 @@ export function ConversationCard({
                   size={16}
                   stroke={1.5}
                   className={cn(
-                    'text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0 signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-[color:var(--text-interactive)]',
+                    'text-text-secondary group-hover/replies:text-text-primary transition-colors shrink-0 signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-text-primary',
                     replyAuthors && replyAuthors.length > 0 && 'signal:hidden'
                   )}
                 />
-                <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors signal:font-medium signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-[color:var(--text-interactive)]">
+                <span className="text-chip text-text-secondary group-hover/replies:text-text-primary transition-colors signal:font-medium signal:text-[color:var(--text-interactive)] signal:group-hover/replies:text-text-primary">
                   {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
                 </span>
                 {lastReplyTime && (
-                  <span className="hidden signal:inline font-mono text-[9.5px] text-text-muted tabular-nums">
+                  <span className="hidden signal:inline font-mono text-[9.5px] leading-[12px] mt-px text-text-muted tabular-nums">
                     {lastReplyTime}
                   </span>
                 )}
                 <IconChevronRight
                   size={12}
                   stroke={2}
-                  className="hidden signal:block text-text-muted group-hover/replies:text-[color:var(--text-interactive)] transition-all group-hover/replies:translate-x-0.5"
+                  className="hidden signal:block text-text-muted group-hover/replies:text-text-primary transition-all group-hover/replies:translate-x-0.5"
                 />
               </div>
               {hasNewReply && !isUrgent && (

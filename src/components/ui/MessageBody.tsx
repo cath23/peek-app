@@ -14,6 +14,7 @@ import linearIcon from '@/assets/linear icon.svg'
 import { TOPICS } from '@/api'
 import { APP_FILES, DOCUMENT_FILES } from '@/api'
 import { INLINE_TOKEN_RE, matchReference, matchUrl, parseBodySegments } from '@/lib/textParsing'
+import { cn } from '@/lib/utils'
 import { ReferenceChip } from './ReferenceChip'
 
 // Inline token renderer shared by ConversationCard and ThreadReplyCard: turns
@@ -88,8 +89,17 @@ function renderWithMentions(text: string, isTopicResolved: (id: string) => boole
           )
         }
         if (/^(?:!@|@)/.test(part) && part.length > 1) {
+          // Same treatment the composer gives the tag while typing: urgent
+          // mentions wear the warning colors, plain mentions the accent.
+          const urgent = part.startsWith('!@')
           return (
-            <span key={i} className="rounded-sm px-1 mx-0.5 bg-bg-active text-text-primary text-sm font-normal select-none">
+            <span
+              key={i}
+              className={cn(
+                'rounded-sm px-1 mx-0.5 text-sm font-normal select-none',
+                urgent ? 'bg-warning-muted text-warning-default' : 'bg-accent-muted text-accent-primary'
+              )}
+            >
               {part}
             </span>
           )

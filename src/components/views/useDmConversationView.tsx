@@ -216,6 +216,8 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
                   reactions={c.reactions}
                   highlightType={c.highlightType}
                   replyCount={c.replyCount}
+                  replyAuthors={c.replyAuthors}
+                  lastReplyTime={c.lastReplyTime}
                   hasNewMessage={c.hasNewMessage && (c.isUrgent || showUnreads)}
                   hasNewReply={c.hasNewReply && (c.isUrgent || showUnreads)}
                   isUrgent={c.isUrgent}
@@ -253,6 +255,8 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
                   reactions={m.reactions}
                   highlightType={m.highlightType}
                   replyCount={m.replyCount}
+                  replyAuthors={m.replyAuthors}
+                  lastReplyTime={m.lastReplyTime}
                   isResolved={m.isResolved}
                   resolvedBy={m.resolvedBy}
                   resolutionMessage={m.resolutionMessage}

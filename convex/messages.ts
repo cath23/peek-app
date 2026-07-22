@@ -192,13 +192,23 @@ export const list = query({
     const wm = me ? await watermarks(ctx, me) : new Map<string, number>()
     const shaped = []
     for (const m of rows) {
-      const replies = await ctx.db
-        .query('replies')
-        .withIndex('by_message', (q) => q.eq('messageId', m._id))
-        .collect()
+      const replies = (
+        await ctx.db
+          .query('replies')
+          .withIndex('by_message', (q) => q.eq('messageId', m._id))
+          .collect()
+      ).sort((a, b) => a.createdAt - b.createdAt)
+      // Distinct authors in first-reply order + newest reply time — the
+      // reply row's facepile (client renders the viewer as 'You' by id).
+      const replyAuthorIds = [...new Set(replies.map((r) => r.authorId))]
       shaped.push({
         ...(await shape(ctx, m, names)),
         replyCount: replies.length,
+        replyAuthors: replyAuthorIds.map((id) => ({
+          id: id as string,
+          name: names.get(id) ?? 'Unknown',
+        })),
+        lastReplyAt: replies.length > 0 ? replies[replies.length - 1].createdAt : undefined,
         reactions: await aggregateReactions(ctx, m._id, me ?? undefined, names),
         ...(await unreadFlags(ctx, m, me, wm, replies)),
       })
