@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom'
 import { IconX, IconArrowLeft, IconUserPlus } from '@tabler/icons-react'
 import { IconButton } from './ui/IconButton'
 import { Button } from './ui/Button'
+import { Chip } from './ui/Chip'
 import { PersonChipInput } from './ui/PersonChipInput'
 import { Avatar } from './ui/Avatar'
-import { usePeople, type Person } from '@/api'
+import { usePeople, useCurrentUser, CURRENT_USER_NAME, type Person } from '@/api'
 
 export type MembersDialogView = 'list' | 'add'
 
@@ -38,8 +39,18 @@ export function MembersDialog({
   const [view, setView] = useState<MembersDialogView>(initialView)
   const [invitees, setInvitees] = useState<Person[]>([])
   const people = usePeople() ?? []
+  const me = useCurrentUser()
   const memberIds = people.filter((p) => memberNames.includes(p.name)).map((p) => p.id)
   const personByName = new Map(people.map((p) => [p.name, p]))
+  /** Role as entered in the profile — both sources are reactive queries, so a
+   *  profile edit updates the label live. The directory excludes the viewer,
+   *  whose row renders as 'You' and reads from users.me instead. */
+  const roleFor = (name: string): string | undefined => {
+    const fromDirectory = personByName.get(name)?.role
+    if (fromDirectory) return fromDirectory
+    if (name === CURRENT_USER_NAME || name === me?.name) return me?.role || undefined
+    return undefined
+  }
 
   const canConfirm = invitees.length > 0
   const confirmInvite = () => {
@@ -72,8 +83,9 @@ export function MembersDialog({
                 </IconButton>
               )}
               <span className="text-h4 text-text-primary truncate">
-                {view === 'add' ? 'Add members' : `Members · ${memberNames.length}`}
+                {view === 'add' ? 'Add members' : 'Members'}
               </span>
+              {view === 'list' && <Chip label={String(memberNames.length)} />}
             </div>
             <IconButton tooltip="Close" aria-label="Close" onClick={onClose}>
               <IconX size={16} stroke={1.5} />
@@ -96,14 +108,14 @@ export function MembersDialog({
                 </div>
               )}
               {memberNames.map((name) => {
-                const person = personByName.get(name)
+                const role = roleFor(name)
                 return (
                   <div key={name} className="flex items-center gap-3 h-12 px-5">
                     <Avatar size={32} name={name} alt={name} />
                     <div className="flex flex-col flex-1 min-w-0 gap-[2px] justify-center">
                       <div className="text-[14px] font-normal leading-[1.4] text-text-primary truncate">{name}</div>
-                      {person?.role && (
-                        <div className="text-[12px] leading-[1.2] text-text-secondary truncate">{person.role}</div>
+                      {role && (
+                        <div className="text-[12px] leading-[1.2] text-text-secondary truncate">{role}</div>
                       )}
                     </div>
                   </div>

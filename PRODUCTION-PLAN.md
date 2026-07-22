@@ -613,6 +613,12 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       incidentally kills the dropdown-overlaps-footer e2e gotcha since
       picking clears the query and closes the list). 13 checks in the
       updated .verify-add-members.mjs.
+      **v3 (user feedback)**: every roster row shows the member's PROFILE
+      role, live — roles come from `usePeople` (reactive; directory excludes
+      the viewer) with the 'You' row reading `useCurrentUser().role`
+      instead, so a profile edit updates the label in place (verified with a
+      real ProfileDialog round-trip in the driver). Header count is now the
+      shared `Chip` component ("Members" + neutral chip) instead of text.
 - [ ] Email verification (deferred from Phase 3) · DM-row menu
       (left inert by ruling 2026-07-17)
 
