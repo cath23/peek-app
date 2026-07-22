@@ -585,6 +585,22 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       HuddleCard's inStream footer (documented exact-parity twin). File /
       Figma chips already had hover treatment — untouched. Verified computed
       styles in the live app (.verify-hover-states.mjs).
+- [x] **Add members to an existing topic** (2026-07-22) — the header members
+      pill is now the entry point (user chose the Slack-style shape): click
+      opens a `MembersMenu` popover listing every member (avatar + name, full
+      roster — the pill itself caps at 3 avatars) with an **"Add members"**
+      row on top that opens the existing `InviteMembersDialog` →
+      `useInviteToTopic()` → `topics.addMembers`. ZERO backend changes: the
+      invitee's unread (no watermark ⇒ all new) and Screener entry (rule #2,
+      on the topic's next message) follow from existing behavior. The add row
+      is member-gated (`isMemberHere`) — non-members see the read-only list
+      and keep the Join banner as their path (capability rule). Huddle-mode
+      pill stays inert (membership set at creation). Menu rules: outside
+      click / Escape / mouse-leave close. Stories: MembersMenu (member /
+      non-member / scrolling) + ConversationHeader.Topic exercises the
+      popover. Verified live incl. fresh-signup non-member
+      (.verify-add-members.mjs, 10 checks; dev auto-login opt-out via
+      sessionStorage init script).
 - [ ] Email verification (deferred from Phase 3) · DM-row menu
       (left inert by ruling 2026-07-17)
 

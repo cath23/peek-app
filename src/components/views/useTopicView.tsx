@@ -310,6 +310,13 @@ export function useTopicView({
         onStartHuddle={
           huddleVariant === 1 || isV2HuddleView ? undefined : () => setIsCreatingHuddle(true)
         }
+        onAddMembers={
+          // Members-only, like the empty-topic banner (non-members get the
+          // Join banner as their path in).
+          !isV2HuddleView && isMemberHere && topicId != null
+            ? () => setIsInvitingMembers(true)
+            : undefined
+        }
         tabs={
           huddleVariant === 1 ? (
             <TopicTabs
