@@ -38,7 +38,7 @@ export const Small: Story = {
 }
 
 export const WithLeadingIcon: Story = {
-  args: { variant: 'primary', leadingIcon: <IconPlus className="size-4" /> },
+  args: { variant: 'primary', leadingIcon: <IconPlus stroke={1.5} className="size-4" /> },
 }
 
 export const Disabled: Story = {
@@ -57,7 +57,7 @@ export const AllVariants: Story = {
               <Button variant={variant} size={size}>
                 Button
               </Button>
-              <Button variant={variant} size={size} leadingIcon={<IconPlus className={size === 'small' ? 'size-3.5' : 'size-4'} />}>
+              <Button variant={variant} size={size} leadingIcon={<IconPlus stroke={1.5} className={size === 'small' ? 'size-3.5' : 'size-4'} />}>
                 Button
               </Button>
               <Button variant={variant} size={size} disabled>
