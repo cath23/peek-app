@@ -7,7 +7,7 @@ import { JoinTopicBanner } from '@/components/JoinTopicBanner'
 import { MembersDialog, type MembersDialogView } from '@/components/MembersDialog'
 import { HuddleCreator } from '@/components/HuddleCreator'
 import { ConversationCard } from '@/components/ConversationCard'
-import { ThreadPanel } from '@/components/ThreadPanel'
+import { ThreadPanel, ThreadPanelLoading } from '@/components/ThreadPanel'
 import { HuddleCard } from '@/components/HuddleCard'
 import { StartHuddleDialog, type StartHuddleResult } from '@/components/StartHuddleDialog'
 import { DateDivider } from '@/components/ui/DateDivider'
@@ -719,7 +719,12 @@ export function useTopicView({
     </div>
   )
 
-  const threadPanel = threadConv ? (
+  // While a selected thread's conversation is still loading (remote-only
+  // messages have no local copy), keep the panel column mounted with a
+  // loading shell — rendering null here reads as the panel closing/reopening.
+  const threadPanel = !threadConv && threadConvId && thread.isLoading ? (
+    <ThreadPanelLoading onClose={closeThread} />
+  ) : threadConv ? (
     <ThreadPanel
       conversation={threadConv}
       replies={threadReplies}

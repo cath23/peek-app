@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { ConversationHeader } from '@/components/ConversationHeader'
 import { NewTopicBanner } from '@/components/NewTopicBanner'
 import { ConversationCard } from '@/components/ConversationCard'
-import { ThreadPanel } from '@/components/ThreadPanel'
+import { ThreadPanel, ThreadPanelLoading } from '@/components/ThreadPanel'
 import { DateDivider } from '@/components/ui/DateDivider'
 import { Button } from '@/components/ui/Button'
 import { ComposeBox, type SendPayload } from '@/components/ui/ComposeBox'
@@ -291,7 +291,11 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
 
   const threadPromotion = threadConvId ? huddleContextByMessageId.get(threadConvId) : undefined
 
-  const threadPanel = threadConv ? (
+  // Same rule as useTopicView: a selected-but-still-loading thread keeps the
+  // panel column mounted with a loading shell instead of unmounting it.
+  const threadPanel = !threadConv && threadConvId && thread.isLoading ? (
+    <ThreadPanelLoading onClose={closeThread} />
+  ) : threadConv ? (
     <ThreadPanel
       conversation={threadConv}
       replies={threadReplies}

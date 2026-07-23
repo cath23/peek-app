@@ -63,6 +63,36 @@ interface ThreadPanelProps {
   onReplyReactionsChange?: (replyId: string, reactions: ReactionData[]) => void
 }
 
+/**
+ * Loading stand-in that keeps the panel column mounted while the switched-to
+ * thread's conversation is still in flight. Remote-only messages (anything
+ * created in the app rather than seeded into the mock pools — i.e. all real
+ * data on the deployed builds) have no local copy, so the conversation query
+ * returns undefined for a beat on every switch; rendering null there tears
+ * down the whole panel and reads as close-and-reopen. Same chrome as the
+ * real panel, same 200ms-delayed skeleton as the replies area.
+ */
+export function ThreadPanelLoading({ onClose }: { onClose: () => void }) {
+  const [showSkeleton, setShowSkeleton] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setShowSkeleton(true), 200)
+    return () => clearTimeout(t)
+  }, [])
+  return (
+    <div className="flex flex-col h-full">
+      <div className="h-12 shrink-0 flex items-center justify-between pl-5 pr-4 py-2 border-b border-border-subtle z-20 relative bg-bg-surface">
+        <span className="text-body-2-strong text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.16em] signal:text-[color:var(--text-interactive)]">Replies</span>
+        <IconButton tooltip="Close" aria-label="Close thread" onClick={onClose}>
+          <IconX size={16} stroke={1.5} />
+        </IconButton>
+      </div>
+      <div className="flex-1 overflow-hidden px-4 pt-4">
+        {showSkeleton && <SkeletonConversationList />}
+      </div>
+    </div>
+  )
+}
+
 export function ThreadPanel({
   conversation,
   replies,
