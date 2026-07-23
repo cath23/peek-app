@@ -6,6 +6,7 @@ import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
 import { CreateTopicDialog, type StartTopicResult } from '@/components/CreateTopicDialog'
 import { PersonRow } from '@/components/ui/PersonRow'
+import { Divider } from '@/components/ui/Divider'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useTopicView } from '@/components/views/useTopicView'
@@ -38,7 +39,11 @@ function TopicSectionHeader({
             expanded && 'rotate-90'
           )}
         />
-        <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">{label}</span>
+        {/* Label stays text-primary in Signal too (user ruling 2026-07-23):
+            the topic rows below are the same brightness, so a secondary label
+            had no contrast against them — unlike Desk, where the sections
+            hold cards, not sibling text rows. */}
+        <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">{label}</span>
       </div>
     </div>
   )
@@ -184,6 +189,7 @@ export function TopicsPage() {
       <>
         <TopicSectionHeader label="Your topics" expanded={yourExpanded} onToggle={() => setYourExpanded((v) => !v)} />
         {yourExpanded && memberTopics.map(renderTopicRow)}
+        <Divider className="my-2" />
         <TopicSectionHeader label="Other topics" expanded={otherExpanded} onToggle={() => setOtherExpanded((v) => !v)} />
         {otherExpanded && otherTopics.map(renderTopicRow)}
       </>
