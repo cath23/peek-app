@@ -623,6 +623,14 @@ How we track (same convention as `STORYBOOK-PLAN.md`):
       (left inert by ruling 2026-07-17)
 
 ### Decision log
+- 2026-07-23 — **Rich text ships as plain-text markers** (`**bold**`,
+  `*italic*`, `__underline__`, `#`/`##` heading lines) — no schema change,
+  old messages render untouched, previews strip markers
+  (`stripInlineFormatting`). Scope ruling (user): shortcuts only
+  (Ctrl+B/I/U, `# `/`## ` input rules), no toolbar. Composer and sent-card
+  rendering share one CSS block (lists/headings/marks) so they can't drift.
+  Follow-up: `--text-secondary` lightened one step in dark + Signal themes
+  **on trial** (user feedback pending; old values in comments for revert).
 - 2026-07-16 — **QA batch #2 rulings (user)**. (1) Screener: new replies in
   threads you STARTED or PARTICIPATED IN create/refresh a Screener item, in
   addition to the mention rule. (2) Urgency belongs to the individual
