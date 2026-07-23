@@ -180,7 +180,7 @@ export const FigmaFindPanel = forwardRef<FigmaFindPanelHandle, FigmaFindPanelPro
                           : 'bg-bg-elevated/80 border-border-strong opacity-0 group-hover:opacity-100'
                       )}
                     >
-                      {isSelected && <IconCheck size={12} stroke={2.5} className="text-accent-muted" />}
+                      {isSelected && <IconCheck size={12} stroke={2.5} className="text-accent-muted signal:text-[color:var(--text-inverse)]" />}
                     </div>
 
                     {/* Expand-to-preview */}

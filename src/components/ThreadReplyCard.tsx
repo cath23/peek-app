@@ -18,6 +18,7 @@ import figmaIcon from '@/assets/figma icon.svg'
 import { FrameArt } from './ui/FrameArt'
 import { FrameLightbox } from './FrameLightbox'
 import { frameById, frameBreadcrumb, type FigmaFrame } from '@/api'
+import { Button } from './ui/Button'
 import { IconButton } from './ui/IconButton'
 import { Avatar } from './ui/Avatar'
 import ReactionPicker from './ReactionPicker'
@@ -493,8 +494,12 @@ export function ThreadReplyCard({
                     <IconButton tooltip="Snooze" aria-label="Snooze"><IconSquareForbid2 size={16} stroke={1.5} /></IconButton>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={handleEditCancel} className="h-6 px-1 text-xs font-medium text-text-primary border border-border-default rounded-md hover:bg-bg-active transition-colors cursor-pointer">Cancel</button>
-                    <button onClick={handleEditSave} disabled={editEmpty} className={cn('h-6 w-12 text-xs font-medium rounded-md transition-colors', editEmpty ? 'bg-bg-disabled text-text-disabled pointer-events-none' : 'bg-accent-primary hover:bg-accent-hover text-accent-muted cursor-pointer')}>Save</button>
+                    <Button variant="outlined" size="small" className="w-14" onClick={handleEditCancel}>
+                      Cancel
+                    </Button>
+                    <Button variant="primary" size="small" className="w-14" disabled={editEmpty} onClick={handleEditSave}>
+                      Save
+                    </Button>
                   </div>
                 </div>
               </div>
