@@ -38,7 +38,7 @@ function TopicSectionHeader({
             expanded && 'rotate-90'
           )}
         />
-        <span className="text-h5 text-text-primary">{label}</span>
+        <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">{label}</span>
       </div>
     </div>
   )
