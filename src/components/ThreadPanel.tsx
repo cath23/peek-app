@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { IconX, IconExternalLink, IconCircleDashed, IconCircleCheck, IconLock } from '@tabler/icons-react'
 import { Avatar } from './ui/Avatar'
@@ -90,6 +90,20 @@ export function ThreadPanel({
   onReplyReactionsChange,
 }: ThreadPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Delayed skeleton: switching threads keeps the panel mounted, but the
+  // replies query reloads and a full skeleton flash reads as the panel
+  // closing and reopening. Only show the skeleton when loading genuinely
+  // takes a beat — fast switches swap content in place with no flash.
+  const [showSkeleton, setShowSkeleton] = useState(false)
+  useEffect(() => {
+    if (!isLoadingReplies) {
+      setShowSkeleton(false)
+      return
+    }
+    const t = setTimeout(() => setShowSkeleton(true), 200)
+    return () => clearTimeout(t)
+  }, [isLoadingReplies])
 
   const allReplies = [...replies, ...sentReplies]
 
@@ -196,7 +210,7 @@ export function ThreadPanel({
             topic, a system-event divider is inserted between the pre-promotion replies (static)
             and the post-promotion replies (sentReplies). */}
         <div className="flex flex-col px-4 pb-4 gap-2">
-          {isLoadingReplies && <SkeletonConversationList />}
+          {isLoadingReplies && showSkeleton && <SkeletonConversationList />}
           {aboveReplies.map((reply) => (
             <div key={reply.id} data-reply-id={reply.id}>
             <ThreadReplyCard
