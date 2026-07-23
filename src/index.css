@@ -140,7 +140,7 @@
 
   /* text */
   --text-primary:   #FAFAFA;
-  --text-secondary: #A1A1AA;
+  --text-secondary: #AEAEB6; /* nudged up from #A1A1AA (2026-07-23) — brighter bodies, still clearly below primary */
   --text-muted:     #71717A;
   --text-disabled:  #52525B;
   --text-inverse:   #18181B;
@@ -199,7 +199,7 @@
 
   /* text */
   --text-primary:   #eef1f6;
-  --text-secondary: #a6adbb;
+  --text-secondary: #b2b9c6; /* nudged up from #a6adbb (2026-07-23) — same cool hue, one step brighter */
   --text-muted:     #6b7280;
   --text-disabled:  #464c58;
   --text-inverse:   #06121a;
