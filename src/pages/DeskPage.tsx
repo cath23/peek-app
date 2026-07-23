@@ -1,9 +1,10 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { IconChevronRight, IconPlus, IconSortDescending } from '@tabler/icons-react'
 import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
 import { Divider } from '@/components/ui/Divider'
+import { SectionLabel } from '@/components/ui/SectionHeader'
 import { IconButton } from '@/components/ui/IconButton'
 import { PersonRow } from '@/components/ui/PersonRow'
 import { ScreenerSection } from '@/components/ScreenerSection'
@@ -54,8 +55,8 @@ export function DeskPage() {
   const [dismissedOpenWorkIds, setDismissedOpenWorkIds] = useState<Set<string>>(new Set())
   const [starredExpanded, setStarredExpanded] = useState(true)
 
-  // The 1–2 item caps are a demo-composition affordance for the mock dataset.
-  // With a real backend the Screener IS the inbox and Urgent is real — capping
+  // The 1â€“2 item caps are a demo-composition affordance for the mock dataset.
+  // With a real backend the Screener IS the inbox and Urgent is real â€” capping
   // them would silently hide incoming messages.
   const screenerItems = (hasConvex ? allScreenerItems : allScreenerItems.slice(0, debug.desk.screenerItemsCount))
     .filter((i) => !dismissedScreenerIds.has(i.id))
@@ -81,7 +82,7 @@ export function DeskPage() {
     : baseOpenWork
 
   const dismissOpenWork = (id: string) => {
-    // Removing the conversation you're looking at clears the stale selection —
+    // Removing the conversation you're looking at clears the stale selection â€”
     // the right panel falls back to "No conversation selected" (QA #2.2).
     const item = openWorkItems.find((i) => i.id === id)
     const wasSelected =
@@ -115,7 +116,7 @@ export function DeskPage() {
     actions.dismissScreenerItem(id)
   }
 
-  /** "Open" → move the item into Open work. */
+  /** "Open" â†’ move the item into Open work. */
   const openScreener = (id: string) => {
     setDismissedScreenerIds((prev) => new Set([...prev, id]))
     actions.addScreenerToOpenWork(id)
@@ -230,7 +231,7 @@ export function DeskPage() {
               <>
                 <div className="flex flex-col">
                   <div className="flex h-[32px] items-center px-2">
-                    <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Urgent</span>
+                    <SectionLabel>Urgent</SectionLabel>
                   </div>
                   <div className="flex flex-col gap-0.5 mt-1">
                     {urgentItems.map((item) =>
@@ -275,7 +276,7 @@ export function DeskPage() {
             {/* Open work */}
             <div className="flex flex-col">
               <div className="flex h-[32px] items-center justify-between px-2">
-                <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Open work</span>
+                <SectionLabel>Open work</SectionLabel>
                 <div className="flex items-center gap-1">
                   <IconButton aria-label="Sort" tooltip="Sort by">
                     <IconSortDescending size={16} stroke={1.5} />
@@ -345,7 +346,7 @@ export function DeskPage() {
                       starredExpanded && 'rotate-90'
                     )}
                   />
-                  <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Starred</span>
+                  <SectionLabel>Starred</SectionLabel>
                 </div>
               </div>
               {starredExpanded && (

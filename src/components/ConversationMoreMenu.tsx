@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+﻿import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   IconCircleDashed,
   IconCircleCheck,
@@ -11,6 +11,7 @@ import {
 import { Divider } from './ui/Divider'
 import { HighlightSwatch } from './ui/HighlightPill'
 import { cn } from '@/lib/utils'
+import { SectionLabel } from './ui/SectionHeader'
 import { HIGHLIGHT_META, type HighlightType } from '@/api'
 
 interface ConversationMoreMenuProps {
@@ -119,7 +120,7 @@ export function ConversationMoreMenu({
     >
       <div className="flex flex-col">
         <div className="flex h-[32px] items-center px-2">
-          <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Utilities</span>
+          <SectionLabel>Utilities</SectionLabel>
         </div>
 
         {isTopic ? (
@@ -148,7 +149,7 @@ export function ConversationMoreMenu({
           <MenuItem
             icon={<IconCircleCheck size={16} stroke={1.5} className="text-text-secondary" />}
             label="Resolve"
-            shortcut="→"
+            shortcut="â†’"
             onClick={onResolve}
           />
         )}

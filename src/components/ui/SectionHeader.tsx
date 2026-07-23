@@ -1,7 +1,29 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { IconChevronRight, IconPlus, IconSortDescending } from '@tabler/icons-react'
 import { IconButton } from './IconButton'
 import { cn } from '@/lib/utils'
+
+/**
+ * THE section-header label — every section title in the app (Desk sections,
+ * Screener, Starred, topic sidebar sections, menu headings, the composer's
+ * slash menu) renders through this span so a style change is one edit.
+ * Ruling 2026-07-23: labels stay text-primary under Signal too.
+ * Metrics match the old `text-h5` (12px/100%/500) — written as arbitrary
+ * values because tw-merge silently drops custom text-{name} classes when a
+ * text-{color} follows in a merged list.
+ */
+export function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'text-[12px] leading-[12px] font-medium text-text-primary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em]',
+        className
+      )}
+    >
+      {children}
+    </span>
+  )
+}
 
 interface SectionHeaderProps {
   title: string
@@ -55,9 +77,7 @@ export function SectionHeader({
             )}
           />
         )}
-        <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">
-          {title}
-        </span>
+        <SectionLabel>{title}</SectionLabel>
       </div>
 
       {isHovered && (prop1stAction || prop2ndAction) && (

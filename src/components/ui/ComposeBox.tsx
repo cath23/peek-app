@@ -7,6 +7,7 @@ import { ResolutionBlock, extractResolution } from '@/extensions/resolution'
 import { HighlightTag, extractHighlightType } from '@/extensions/highlight'
 import { IconPaperclip, IconSquareForbid2, IconArrowUp, IconHighlight, IconX, IconLoader2, IconAlertCircle } from '@tabler/icons-react'
 import { IconButton } from './IconButton'
+import { SectionLabel } from './SectionHeader'
 import { HighlightSwatch } from './HighlightPill'
 import { FrameArt } from './FrameArt'
 import { FrameLightbox } from '../FrameLightbox'
@@ -479,7 +480,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
             {highlightItems.length > 0 && (
               <div className="flex flex-col">
                 <div className="flex items-center h-[32px] px-2">
-                  <span className="text-[12px] font-medium leading-none text-text-primary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em]">Highlights</span>
+                  <SectionLabel>Highlights</SectionLabel>
                 </div>
                 {highlightItems.map((item) => {
                   const globalIdx = filteredSlashItems.indexOf(item)
@@ -515,7 +516,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
             {shortcutItems.length > 0 && (
               <div className="flex flex-col">
                 <div className="flex items-center h-[32px] px-2">
-                  <span className="text-[12px] font-medium leading-none text-text-primary signal:font-mono signal:text-[10px] signal:uppercase signal:tracking-[0.14em]">Shortcuts</span>
+                  <SectionLabel>Shortcuts</SectionLabel>
                 </div>
                 {shortcutItems.map((item) => {
                   const globalIdx = filteredSlashItems.indexOf(item)

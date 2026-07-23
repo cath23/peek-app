@@ -1,12 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { IconMessagePlus, IconChevronRight } from '@tabler/icons-react'
-import { cn } from '@/lib/utils'
+import { IconMessagePlus } from '@tabler/icons-react'
 import { AppShell } from '@/layouts/AppShell'
 import { ContainerHeader } from '@/components/ContainerHeader'
 import { CreateTopicDialog, type StartTopicResult } from '@/components/CreateTopicDialog'
 import { PersonRow } from '@/components/ui/PersonRow'
 import { Divider } from '@/components/ui/Divider'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useTopicView } from '@/components/views/useTopicView'
@@ -14,40 +14,6 @@ import { CURRENT_USER_NAME, useUnread, useTopics, useCreateTopic, useDeleteTopic
 import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
-
-/** Collapsible sidebar section header — same visual as StarredSection's. */
-function TopicSectionHeader({
-  label,
-  expanded,
-  onToggle,
-}: {
-  label: string
-  expanded: boolean
-  onToggle: () => void
-}) {
-  return (
-    <div
-      className="group flex h-[32px] items-center justify-between px-2 rounded-lg cursor-pointer transition-colors hover:bg-bg-hover shrink-0"
-      onClick={onToggle}
-    >
-      <div className="flex items-center gap-1">
-        <IconChevronRight
-          size={12}
-          stroke={1.5}
-          className={cn(
-            'text-text-secondary transition-transform duration-150',
-            expanded && 'rotate-90'
-          )}
-        />
-        {/* Label stays text-primary in Signal too (user ruling 2026-07-23):
-            the topic rows below are the same brightness, so a secondary label
-            had no contrast against them — unlike Desk, where the sections
-            hold cards, not sibling text rows. */}
-        <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">{label}</span>
-      </div>
-    </div>
-  )
-}
 
 export function TopicsPage() {
   const { topicHasUnread, topicIsUrgent } = useUnread()
@@ -187,10 +153,10 @@ export function TopicsPage() {
     if (otherTopics.length === 0) return orderedTopics.map(renderTopicRow)
     return (
       <>
-        <TopicSectionHeader label="Your topics" expanded={yourExpanded} onToggle={() => setYourExpanded((v) => !v)} />
+        <SectionHeader title="Your topics" chevron isExpanded={yourExpanded} onToggle={() => setYourExpanded((v) => !v)} className="shrink-0" />
         {yourExpanded && memberTopics.map(renderTopicRow)}
         <Divider className="my-2" />
-        <TopicSectionHeader label="Other topics" expanded={otherExpanded} onToggle={() => setOtherExpanded((v) => !v)} />
+        <SectionHeader title="Other topics" chevron isExpanded={otherExpanded} onToggle={() => setOtherExpanded((v) => !v)} className="shrink-0" />
         {otherExpanded && otherTopics.map(renderTopicRow)}
       </>
     )

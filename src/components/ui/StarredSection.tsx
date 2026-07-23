@@ -1,7 +1,8 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { IconChevronRight } from '@tabler/icons-react'
 import { PersonRow } from './PersonRow'
 import { cn } from '@/lib/utils'
+import { SectionLabel } from './SectionHeader'
 import type { TopicStateType, TopicStateStatus } from './TopicState'
 
 export interface StarredItem {
@@ -47,9 +48,9 @@ export function StarredSection({
               isExpanded && 'rotate-90'
             )}
           />
-          <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">
+          <SectionLabel>
             Starred
-          </span>
+          </SectionLabel>
         </div>
       </div>
 
