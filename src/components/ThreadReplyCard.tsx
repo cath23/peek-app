@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
+import { peekStarterKit } from '@/extensions/editorKit'
 import { PeekMention, UrgentMention, TopicMention, FileMention, isSuggestionActive } from '@/extensions/mention'
 import { ResolutionBlock, extractResolution, extractResolutionFromText } from '@/extensions/resolution'
 import { HighlightTag, extractHighlightType } from '@/extensions/highlight'
@@ -230,11 +230,7 @@ export function ThreadReplyCard({
 
   const editEditor = useEditor({
     extensions: [
-      StarterKit.configure({
-        bold: false, italic: false, strike: false, code: false,
-        blockquote: false, codeBlock: false, horizontalRule: false, heading: false,
-        hardBreak: false, trailingNode: false,
-      }),
+      peekStarterKit,
       PeekMention, UrgentMention, TopicMention, FileMention, ResolutionBlock, HighlightTag,
     ],
     editorProps: {

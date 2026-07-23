@@ -14,6 +14,7 @@ import { Chip } from './ui/Chip'
 import { Divider } from './ui/Divider'
 import { IconButton } from './ui/IconButton'
 import { cn } from '@/lib/utils'
+import { stripInlineFormatting } from '@/lib/textParsing'
 import { useReplyCount, useReplyMeta, type Huddle } from '@/api'
 
 interface HuddleCardProps {
@@ -91,7 +92,8 @@ export function HuddleCard({
   const inStreamMemberLabel = huddle.members.join(', ')
 
   // Empty huddles (no seed conversation) show a placeholder preview.
-  const bodyText = huddle.conversation?.body ?? 'No messages yet'
+  // Formatting markers are stripped — previews are plain snippets.
+  const bodyText = stripInlineFormatting(huddle.conversation?.body ?? 'No messages yet')
 
   // Live reply count for the thread id the card opens (seedMessageId for
   // promoted huddles, conversation.id otherwise — same id useTopicView uses to

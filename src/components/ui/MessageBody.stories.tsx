@@ -64,3 +64,23 @@ export const ResolvedTopicChip: Story = {
     isTopicResolved: () => true,
   },
 }
+
+/**
+ * Inline rich text (2026-07): `**bold**`, `*italic*`, `__underline__`, and the
+ * combined `***bold italic***` — markers live in the plain-text body and render
+ * as styled spans. Word-internal asterisks (`2*3*4`) stay literal.
+ */
+export const RichTextMarks: Story = {
+  args: {
+    body:
+      'The **launch date moved** to Friday — *tentatively*, per __legal review__. This is ***not public*** yet.\n\nMath like 2*3*4 stays literal.',
+  },
+}
+
+/** `# ` headline and `## ` subheading lines, mixed with body text and a list. */
+export const Headings: Story = {
+  args: {
+    body:
+      '# Payment integration rollout\nQuick summary of where we landed.\n## Open questions\n- Do we gate refunds behind the same flag?\n- **Who owns** the retry queue?',
+  },
+}

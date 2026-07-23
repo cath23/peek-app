@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { registerActiveComposer, unregisterComposer } from '@/lib/composerRegistry'
 import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
+import { peekStarterKit } from '@/extensions/editorKit'
 import { PeekMention, UrgentMention, TopicMention, FileMention, isSuggestionActive } from '@/extensions/mention'
 import { ResolutionBlock, extractResolution } from '@/extensions/resolution'
 import { HighlightTag, extractHighlightType } from '@/extensions/highlight'
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { HIGHLIGHT_META, hasConvex, useUploadActions, type HighlightType, type UploadedFile } from '@/api'
 import { frameById, frameBreadcrumb, type FigmaFrame } from '@/api'
 import { FILE_ACCEPT_ATTR, validateFile, isImageAttachment, formatBytes, fileTypeLabel } from '@/lib/fileAttachments'
+import { wrapInlineMarks } from '@/lib/textParsing'
 
 export interface SendPayload {
   text: string
@@ -47,7 +48,7 @@ interface ComposeBoxProps {
   className?: string
 }
 
-function serializeInline(node: { forEach: (cb: (child: { type: { name: string }; attrs: Record<string, string>; text?: string }) => void) => void }): string {
+function serializeInline(node: { forEach: (cb: (child: { type: { name: string }; attrs: Record<string, string>; text?: string; marks?: ReadonlyArray<{ type: { name: string } }> }) => void) => void }): string {
   let text = ''
   node.forEach((child) => {
     if (child.type.name === 'hardBreak') {
@@ -63,7 +64,8 @@ function serializeInline(node: { forEach: (cb: (child: { type: { name: string };
     } else if (child.type.name === 'highlightTag') {
       // Skip - extracted as metadata, not serialized into text
     } else {
-      text += child.text ?? ''
+      const markNames = new Set((child.marks ?? []).map((m) => m.type.name))
+      text += wrapInlineMarks(child.text ?? '', markNames)
     }
   })
   return text
@@ -77,6 +79,9 @@ function serializeToText(editor: ReturnType<typeof useEditor>): string {
     if (node.type.name === 'resolutionBlock') return
     if (node.type.name === 'paragraph') {
       lines.push(serializeInline(node))
+    } else if (node.type.name === 'heading') {
+      const text = serializeInline(node)
+      if (text.trim()) lines.push(`${'#'.repeat(node.attrs.level === 2 ? 2 : 1)} ${text}`)
     } else if (node.type.name === 'bulletList') {
       node.forEach((li) => {
         li.forEach((liChild) => {
@@ -183,11 +188,7 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        bold: false, italic: false, strike: false, code: false,
-        blockquote: false, codeBlock: false, horizontalRule: false, heading: false,
-        hardBreak: false, trailingNode: false,
-      }),
+      peekStarterKit,
       PeekMention,
       UrgentMention,
       TopicMention,
@@ -256,7 +257,8 @@ export function ComposeBox({ onSend, placeholder = 'default', contextLabel, clas
       let hasAtomNode = false
       let hasHl = false
       doc.forEach((node) => {
-        if (node.type.name !== 'paragraph') hasNonParagraph = true
+        // Headings count as paragraph-like: an empty heading is still "empty".
+        if (node.type.name !== 'paragraph' && node.type.name !== 'heading') hasNonParagraph = true
       })
       doc.descendants((node) => {
         if (node.isAtom && node.type.name !== 'paragraph') hasAtomNode = true

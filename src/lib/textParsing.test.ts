@@ -6,7 +6,11 @@ import {
   matchUrl,
   parseInlineContent,
   parseBodySegments,
+  parseInlineMarks,
+  wrapInlineMarks,
+  stripInlineFormatting,
   serializeInline,
+  textToTiptapContent,
 } from './textParsing'
 
 // Helper to consume MENTION_RE in a way that doesn't carry state between calls
@@ -278,5 +282,137 @@ describe('matchReference', () => {
     expect(matchReference('@Alice Johnson')).toBeNull()
     expect(matchReference('[Some Topic]')).toBeNull()
     expect(matchReference('plain words')).toBeNull()
+  })
+})
+
+// ── Inline formatting marks (rich text) ──
+
+describe('parseInlineMarks', () => {
+  it('returns a single unstyled span for plain text', () => {
+    expect(parseInlineMarks('hello world')).toEqual([{ text: 'hello world' }])
+  })
+
+  it('parses **bold**', () => {
+    expect(parseInlineMarks('a **bold** word')).toEqual([
+      { text: 'a ' },
+      { text: 'bold', bold: true },
+      { text: ' word' },
+    ])
+  })
+
+  it('parses *italic* and __underline__', () => {
+    expect(parseInlineMarks('*it* and __un__')).toEqual([
+      { text: 'it', italic: true },
+      { text: ' and ' },
+      { text: 'un', underline: true },
+    ])
+  })
+
+  it('parses ***bold italic*** as one combined span', () => {
+    expect(parseInlineMarks('***both***')).toEqual([{ text: 'both', bold: true, italic: true }])
+  })
+
+  it('parses nested __**marks**__', () => {
+    expect(parseInlineMarks('__**both**__')).toEqual([{ text: 'both', bold: true, underline: true }])
+  })
+
+  it('parses multi-word content and multiple pairs on one line', () => {
+    expect(parseInlineMarks('**two words** then *more here*')).toEqual([
+      { text: 'two words', bold: true },
+      { text: ' then ' },
+      { text: 'more here', italic: true },
+    ])
+  })
+
+  it('leaves unmatched markers as literal text', () => {
+    expect(parseInlineMarks('a ** dangling')).toEqual([{ text: 'a ** dangling' }])
+    expect(parseInlineMarks('*unclosed')).toEqual([{ text: '*unclosed' }])
+  })
+
+  it('rejects pairs with whitespace at the inner edges', () => {
+    expect(parseInlineMarks('** not bold **')).toEqual([{ text: '** not bold **' }])
+  })
+
+  it('does not fire inside words (2*3*4 stays math)', () => {
+    expect(parseInlineMarks('2*3*4 = 24')).toEqual([{ text: '2*3*4 = 24' }])
+  })
+})
+
+describe('wrapInlineMarks', () => {
+  it('wraps by mark set and round-trips through parseInlineMarks', () => {
+    expect(wrapInlineMarks('bold', new Set(['bold']))).toBe('**bold**')
+    expect(wrapInlineMarks('it', new Set(['italic']))).toBe('*it*')
+    expect(wrapInlineMarks('un', new Set(['underline']))).toBe('__un__')
+    expect(wrapInlineMarks('both', new Set(['bold', 'italic']))).toBe('***both***')
+    expect(wrapInlineMarks('all', new Set(['bold', 'italic', 'underline']))).toBe('__***all***__')
+    expect(parseInlineMarks(wrapInlineMarks('all', new Set(['bold', 'italic', 'underline'])))).toEqual([
+      { text: 'all', bold: true, italic: true, underline: true },
+    ])
+  })
+
+  it('hoists edge whitespace outside the markers so the result parses back', () => {
+    expect(wrapInlineMarks('word ', new Set(['bold']))).toBe('**word** ')
+    expect(wrapInlineMarks(' word', new Set(['underline']))).toBe(' __word__')
+  })
+
+  it('returns text untouched when no known marks are present', () => {
+    expect(wrapInlineMarks('plain', new Set())).toBe('plain')
+    expect(wrapInlineMarks('linked', new Set(['link']))).toBe('linked')
+  })
+})
+
+describe('stripInlineFormatting', () => {
+  it('removes markers and heading prefixes, keeps text', () => {
+    expect(stripInlineFormatting('# Title\n**bold** and *it* and __un__')).toBe(
+      'Title\nbold and it and un'
+    )
+  })
+
+  it('leaves plain text and refs alone', () => {
+    expect(stripInlineFormatting('see PR #482 at 2*3*4')).toBe('see PR #482 at 2*3*4')
+  })
+})
+
+describe('parseInlineContent with marks', () => {
+  it('turns markers into marked text nodes', () => {
+    expect(parseInlineContent('a **bold** word')).toEqual([
+      { type: 'text', text: 'a ' },
+      { type: 'text', text: 'bold', marks: [{ type: 'bold' }] },
+      { type: 'text', text: ' word' },
+    ])
+  })
+
+  it('keeps mentions working next to marks', () => {
+    const out = parseInlineContent('**hi** @Alice Johnson')
+    expect(out[0]).toEqual({ type: 'text', text: 'hi', marks: [{ type: 'bold' }] })
+    expect(out[1]).toEqual({ type: 'text', text: ' ' })
+    expect(out[2]).toMatchObject({ type: 'mention', attrs: { label: 'Alice Johnson' } })
+  })
+})
+
+describe('heading lines', () => {
+  it('parseBodySegments turns # / ## lines into heading segments', () => {
+    expect(parseBodySegments('# Big\n## Small\nbody')).toEqual([
+      { type: 'heading', level: 1, text: 'Big' },
+      { type: 'heading', level: 2, text: 'Small' },
+      { type: 'text', lines: ['body'] },
+    ])
+  })
+
+  it('does not treat #123 refs or ### as headings', () => {
+    expect(parseBodySegments('#123 is merged')).toEqual([{ type: 'text', lines: ['#123 is merged'] }])
+    expect(parseBodySegments('### not a heading')).toEqual([
+      { type: 'text', lines: ['### not a heading'] },
+    ])
+  })
+
+  it('textToTiptapContent produces heading nodes that serialize back', () => {
+    const doc = textToTiptapContent('# Big\nbody')
+    expect(doc.content[0]).toEqual({
+      type: 'heading',
+      attrs: { level: 1 },
+      content: [{ type: 'text', text: 'Big' }],
+    })
+    expect(doc.content[1]).toEqual({ type: 'paragraph', content: [{ type: 'text', text: 'body' }] })
   })
 })

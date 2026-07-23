@@ -13,16 +13,35 @@ import figmaIcon from '@/assets/figma icon.svg'
 import linearIcon from '@/assets/linear icon.svg'
 import { TOPICS } from '@/api'
 import { APP_FILES, DOCUMENT_FILES } from '@/api'
-import { INLINE_TOKEN_RE, matchReference, matchUrl, parseBodySegments } from '@/lib/textParsing'
+import { INLINE_TOKEN_RE, matchReference, matchUrl, parseBodySegments, parseInlineMarks } from '@/lib/textParsing'
 import { cn } from '@/lib/utils'
 import { ReferenceChip } from './ReferenceChip'
 
 // Inline token renderer shared by ConversationCard and ThreadReplyCard: turns
 // [Topic]/[File] refs into chips (with live topic status icons), @/!@ mentions
 // into pills, and PEEK-/PR#/build# tokens into ReferenceChips.
+/** Storage markers (`**`/`*`/`__`) → styled spans. Plain text comes back
+ *  as-is so the common case adds no extra nodes. */
+function renderMarkedText(text: string): ReactNode {
+  const spans = parseInlineMarks(text)
+  if (spans.length === 1 && !spans[0].bold && !spans[0].italic && !spans[0].underline) return text
+  return spans.map((s, k) => (
+    <span
+      key={k}
+      className={cn(
+        s.bold && 'font-semibold',
+        s.italic && 'italic',
+        s.underline && 'underline underline-offset-2'
+      )}
+    >
+      {s.text}
+    </span>
+  ))
+}
+
 function renderWithMentions(text: string, isTopicResolved: (id: string) => boolean): ReactNode {
   const parts = text.split(INLINE_TOKEN_RE)
-  if (parts.length === 1) return text
+  if (parts.length === 1) return renderMarkedText(text)
   return (
     <>
       {parts.map((part, i) => {
@@ -107,7 +126,7 @@ function renderWithMentions(text: string, isTopicResolved: (id: string) => boole
         if (matchReference(part)) {
           return <ReferenceChip key={i} label={part} />
         }
-        return part || null
+        return part ? <span key={i}>{renderMarkedText(part)}</span> : null
       })}
     </>
   )
@@ -118,28 +137,32 @@ export function MessageBody({ body, isTopicResolved }: { body: string; isTopicRe
   return (
     <div data-message-body className="flex flex-col gap-1 text-sm text-text-secondary leading-[1.4] break-words">
       {segments.map((seg, i) => {
+        // Lists are native ul/ol so sent messages and the composer share the
+        // exact same markers, indent, and item spacing (see index.css).
         if (seg.type === 'bullet') {
           return (
-            <ul key={i} className="flex flex-col gap-1">
+            <ul key={i}>
               {seg.items.map((item, j) => (
-                <li key={j} className="flex gap-2">
-                  <span className="shrink-0 mt-px">•</span>
-                  <span className="min-w-0 break-words">{renderWithMentions(item, isTopicResolved)}</span>
-                </li>
+                <li key={j} className="break-words">{renderWithMentions(item, isTopicResolved)}</li>
               ))}
             </ul>
           )
         }
         if (seg.type === 'numbered') {
           return (
-            <ol key={i} className="flex flex-col gap-1">
+            <ol key={i}>
               {seg.items.map((item, j) => (
-                <li key={j} className="flex gap-2">
-                  <span className="shrink-0 text-text-muted">{j + 1}.</span>
-                  <span className="min-w-0 break-words">{renderWithMentions(item, isTopicResolved)}</span>
-                </li>
+                <li key={j} className="break-words">{renderWithMentions(item, isTopicResolved)}</li>
               ))}
             </ol>
+          )
+        }
+        if (seg.type === 'heading') {
+          // Same sizes the composer's h1/h2 get in index.css.
+          return seg.level === 1 ? (
+            <h1 key={i}>{renderWithMentions(seg.text, isTopicResolved)}</h1>
+          ) : (
+            <h2 key={i}>{renderWithMentions(seg.text, isTopicResolved)}</h2>
           )
         }
         return (
