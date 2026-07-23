@@ -356,7 +356,8 @@ export function ThreadReplyCard({
     let resolution = extractResolution(editEditor)
     let finalBody = trimmed
 
-    // Fallback for the mid-line "-> msg" pattern that the InputRule didn't catch.
+    // Fallback for a start-of-line "-> msg" the InputRule didn't catch
+    // (mid-line arrows are prose — ruling 2026-07-23).
     if (!resolution.hasResolution) {
       const fromText = extractResolutionFromText(trimmed)
       if (fromText) {

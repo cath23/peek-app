@@ -374,8 +374,9 @@ export function ConversationCard({
     let resolution = extractResolution(editEditor)
     let finalBody = trimmed
 
-    // Fallback: if the InputRule didn't fire (e.g. user typed "-> X" mid-line
-    // instead of at the start of a fresh paragraph), parse the serialized text.
+    // Fallback: if the InputRule didn't fire (e.g. pasted "-> X" at a line
+    // start), parse the serialized text. Start-of-line arrows only — mid-line
+    // arrows are prose (ruling 2026-07-23).
     if (!resolution.hasResolution) {
       const fromText = extractResolutionFromText(trimmed)
       if (fromText) {
