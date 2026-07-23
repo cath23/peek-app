@@ -733,9 +733,11 @@ export function ConversationCard({
         </div>
         )}
 
-        {/* ── Resolution banner - bottom, hidden while editing ── */}
+        {/* ── Resolution banner - bottom, hidden while editing ──
+            signal:ml-10 = card px-2 (8) + reply-row pl-8 (32): the banner's box
+            edge lines up with the reply pill's hover background above it. */}
         {!isTopic && resolved && !isEditing && (
-          <div className="flex items-center gap-2 pl-10 pr-3 pb-2 signal:ml-8 signal:mr-3 signal:mb-2 signal:pl-3 signal:pr-3 signal:py-2.5 signal:rounded-[10px] signal:border signal:border-[rgba(63,222,140,0.22)] signal:bg-[color:var(--success-wash)]">
+          <div className="flex items-center gap-2 pl-10 pr-3 pb-2 signal:ml-10 signal:mr-3 signal:mb-2 signal:pl-3 signal:pr-3 signal:py-2.5 signal:rounded-[10px] signal:border signal:border-[rgba(63,222,140,0.22)] signal:bg-[color:var(--success-wash)]">
             <IconChecks size={16} stroke={1.5} className="text-success-default shrink-0 signal:drop-shadow-[0_0_5px_rgba(63,222,140,0.6)]" />
             <span className="text-[12px] leading-[1.1] font-medium text-success-default whitespace-nowrap">
               {resolvedBy || 'Someone'} resolved
