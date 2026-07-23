@@ -47,7 +47,7 @@ export function StarredSection({
               isExpanded && 'rotate-90'
             )}
           />
-          <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">
+          <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">
             Starred
           </span>
         </div>

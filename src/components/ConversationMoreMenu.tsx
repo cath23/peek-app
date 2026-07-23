@@ -119,7 +119,7 @@ export function ConversationMoreMenu({
     >
       <div className="flex flex-col">
         <div className="flex h-[32px] items-center px-2">
-          <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">Utilities</span>
+          <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Utilities</span>
         </div>
 
         {isTopic ? (

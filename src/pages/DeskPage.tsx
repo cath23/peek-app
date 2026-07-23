@@ -230,7 +230,7 @@ export function DeskPage() {
               <>
                 <div className="flex flex-col">
                   <div className="flex h-[32px] items-center px-2">
-                    <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">Urgent</span>
+                    <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Urgent</span>
                   </div>
                   <div className="flex flex-col gap-0.5 mt-1">
                     {urgentItems.map((item) =>
@@ -275,7 +275,7 @@ export function DeskPage() {
             {/* Open work */}
             <div className="flex flex-col">
               <div className="flex h-[32px] items-center justify-between px-2">
-                <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">Open work</span>
+                <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Open work</span>
                 <div className="flex items-center gap-1">
                   <IconButton aria-label="Sort" tooltip="Sort by">
                     <IconSortDescending size={16} stroke={1.5} />
@@ -345,7 +345,7 @@ export function DeskPage() {
                       starredExpanded && 'rotate-90'
                     )}
                   />
-                  <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em] signal:text-text-secondary">Starred</span>
+                  <span className="text-h5 text-text-primary signal:font-mono signal:text-[10px] signal:font-medium signal:uppercase signal:tracking-[0.14em]">Starred</span>
                 </div>
               </div>
               {starredExpanded && (
