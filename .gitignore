@@ -14,6 +14,15 @@ dist-ssr
 storybook-static
 *storybook.log
 
+# Local verification scripts and screenshots (session scratch, never committed)
+.verify-*.mjs
+.verify-shots/
+
+# Throwaway design explorations and private notes
+design-lab/
+grant-pitch-review.md
+scenario-review.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
