@@ -55,8 +55,8 @@ export function DeskPage() {
   const [dismissedOpenWorkIds, setDismissedOpenWorkIds] = useState<Set<string>>(new Set())
   const [starredExpanded, setStarredExpanded] = useState(true)
 
-  // The 1â€“2 item caps are a demo-composition affordance for the mock dataset.
-  // With a real backend the Screener IS the inbox and Urgent is real â€” capping
+  // The 1–2 item caps are a demo-composition affordance for the mock dataset.
+  // With a real backend the Screener IS the inbox and Urgent is real — capping
   // them would silently hide incoming messages.
   const screenerItems = (hasConvex ? allScreenerItems : allScreenerItems.slice(0, debug.desk.screenerItemsCount))
     .filter((i) => !dismissedScreenerIds.has(i.id))
@@ -82,7 +82,7 @@ export function DeskPage() {
     : baseOpenWork
 
   const dismissOpenWork = (id: string) => {
-    // Removing the conversation you're looking at clears the stale selection â€”
+    // Removing the conversation you're looking at clears the stale selection —
     // the right panel falls back to "No conversation selected" (QA #2.2).
     const item = openWorkItems.find((i) => i.id === id)
     const wasSelected =
@@ -116,7 +116,7 @@ export function DeskPage() {
     actions.dismissScreenerItem(id)
   }
 
-  /** "Open" â†’ move the item into Open work. */
+  /** "Open" → move the item into Open work. */
   const openScreener = (id: string) => {
     setDismissedScreenerIds((prev) => new Set([...prev, id]))
     actions.addScreenerToOpenWork(id)
