@@ -23,6 +23,11 @@ design-lab/
 grant-pitch-review.md
 scenario-review.md
 
+# Internal product docs — kept locally, not published
+PRDs/
+docs/
+PROTOTYPE.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
