@@ -19,25 +19,30 @@
    what you type is exactly what the sent card shows. ─── */
 .tiptap ul,
 [data-message-body] ul,
+[data-highlights-card] ul,
 .tiptap ol,
-[data-message-body] ol {
+[data-message-body] ol,
+[data-highlights-card] ol {
   margin: 0 !important;
   padding: 0 0 0 1.25rem !important;
   list-style-position: outside;
 }
-.tiptap ul, [data-message-body] ul { list-style-type: disc !important; }
-.tiptap ol, [data-message-body] ol { list-style-type: decimal !important; }
+.tiptap ul, [data-message-body] ul, [data-highlights-card] ul { list-style-type: disc !important; }
+.tiptap ol, [data-message-body] ol, [data-highlights-card] ol { list-style-type: decimal !important; }
 .tiptap li,
-[data-message-body] li {
+[data-message-body] li,
+[data-highlights-card] li {
   margin: 0 !important;
   padding: 0 !important;
 }
 .tiptap li + li,
-[data-message-body] li + li {
+[data-message-body] li + li,
+[data-highlights-card] li + li {
   margin-top: 4px;
 }
 .tiptap li::marker,
-[data-message-body] li::marker {
+[data-message-body] li::marker,
+[data-highlights-card] li::marker {
   color: var(--text-muted);
 }
 .tiptap li p {
