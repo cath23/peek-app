@@ -3,6 +3,7 @@ import { IconArrowsDiagonal, IconArrowsDiagonalMinimize2, IconCheck } from '@tab
 import highlightsIcon from '@/assets/highlights icon.png'
 import { Button } from './ui/Button'
 import { HighlightPill } from './ui/HighlightPill'
+import { SectionLabel } from './ui/SectionHeader'
 import { HIGHLIGHT_META, type HighlightType } from '@/api'
 import { cn } from '@/lib/utils'
 
@@ -158,9 +159,7 @@ export function HighlightsCard({ data, defaultExpanded = false, className }: Hig
           <span className="size-4 rounded-sm bg-bg-inset flex items-center justify-center shrink-0 overflow-hidden">
             <img src={highlightsIcon} alt="" width={11} height={11} className="size-[11px]" />
           </span>
-          <span className="text-[12px] leading-none font-medium text-text-primary whitespace-nowrap">
-            Highlights
-          </span>
+          <SectionLabel className="whitespace-nowrap">Highlights</SectionLabel>
           {types.length > 0 && (
             <span className="flex items-center gap-[2px]">
               {types.map((t) => (
@@ -172,7 +171,7 @@ export function HighlightsCard({ data, defaultExpanded = false, className }: Hig
               ))}
             </span>
           )}
-          <span className="text-[12px] leading-[1.2] text-text-muted whitespace-nowrap">
+          <span className="text-[12px] leading-[1.2] text-text-muted whitespace-nowrap signal:font-mono signal:text-[10px] signal:tracking-[0.02em] signal:tabular-nums">
             {data.timestamp}
           </span>
         </div>
