@@ -61,3 +61,18 @@ export const Huddle: Story = {
     huddleMemberCount: 3,
   },
 }
+
+/**
+ * A DM promoted to a topic with a long title: the divider's topic link
+ * truncates with an ellipsis (never clips at the panel edge), while the
+ * "Promoted to" prefix and the date always stay visible.
+ */
+export const PromotedLongTitle: Story = {
+  args: {
+    promotionDivider: {
+      topicId: '3',
+      topicTitle: 'Researching using Buzz "backend" to power Peek on the Nostr protocol',
+      dateLabel: 'Today',
+    },
+  },
+}

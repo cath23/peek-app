@@ -267,14 +267,16 @@ export function ThreadPanel({
             <DateDivider
               className="px-0 py-1"
               label={
-                <span className="inline-flex items-center gap-1.5 text-text-secondary">
+                <span className="flex items-center gap-1.5 text-text-secondary min-w-0">
                   {promotionDivider.topicResolved ? (
-                    <IconCircleCheck size={14} stroke={1.5} className="text-success-default" />
+                    <IconCircleCheck size={14} stroke={1.5} className="text-success-default shrink-0" />
                   ) : (
-                    <IconCircleDashed size={14} stroke={1.5} />
+                    <IconCircleDashed size={14} stroke={1.5} className="shrink-0" />
                   )}
-                  <span>
-                    Promoted to{' '}
+                  {/* The title is the only part allowed to truncate — the
+                      "Promoted to" prefix and the date suffix always stay. */}
+                  <span className="flex items-center gap-1 min-w-0 whitespace-nowrap">
+                    <span className="shrink-0">Promoted to</span>
                     <Link
                       to={`/topics/${promotionDivider.topicId}`}
                       data-interactive
@@ -288,12 +290,11 @@ export function ThreadPanel({
                           promotionDivider.onTopicClick()
                         }
                       }}
-                      className="text-text-primary hover:underline"
+                      className="text-text-primary hover:underline min-w-0 truncate"
                     >
                       {promotionDivider.topicTitle}
                     </Link>
-                    {' · '}
-                    {promotionDivider.dateLabel}
+                    <span className="shrink-0">· {promotionDivider.dateLabel}</span>
                   </span>
                 </span>
               }
