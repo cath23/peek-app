@@ -11,12 +11,18 @@ export interface PartitionResult<T extends ReplyData = ReplyData> {
 /**
  * Split replies around a topic-promotion event for the thread panel.
  *
- * - Static `replies` (from mock data) lack a numeric timestamp and represent
- *   pre-existing data, so they always go above the divider.
- * - Runtime `sentReplies` are split by `createdAtMs` vs `promotedAtMs`:
- *   < promotedAtMs → above, >= promotedAtMs → below.
- * - When `promotedAtMs` is undefined (no promotion or no chronological anchor),
- *   no split happens: all sentReplies are merged with replies into `above`.
+ * A reply belongs *below* the divider only when it has a numeric `createdAtMs`
+ * at or after `promotedAtMs`. This holds regardless of which list it arrives in:
+ * once a post-promotion reply persists to Convex it moves from `sentReplies`
+ * into `replies`, and it must stay below the divider through that transition
+ * rather than jumping above it (which would shove the divider to the bottom).
+ *
+ * - Replies with no `createdAtMs` (static mock history) have no chronological
+ *   anchor, so they always stay above as pre-existing context.
+ * - When `promotedAtMs` is undefined (no promotion), no split happens: all
+ *   replies are merged into `above`.
+ *
+ * Original relative order is preserved within each side.
  */
 export function partitionRepliesAroundPromotion<T extends ReplyData>({
   replies,
@@ -30,7 +36,7 @@ export function partitionRepliesAroundPromotion<T extends ReplyData>({
   if (promotedAtMs == null) {
     return { above: [...replies, ...sentReplies], below: [] }
   }
-  const preDivider = sentReplies.filter((r) => (r.createdAtMs ?? 0) < promotedAtMs)
-  const postDivider = sentReplies.filter((r) => (r.createdAtMs ?? 0) >= promotedAtMs)
-  return { above: [...replies, ...preDivider], below: postDivider }
+  const all = [...replies, ...sentReplies]
+  const isBelow = (r: T) => r.createdAtMs != null && r.createdAtMs >= promotedAtMs
+  return { above: all.filter((r) => !isBelow(r)), below: all.filter(isBelow) }
 }

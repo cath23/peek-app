@@ -66,6 +66,27 @@ describe('partitionRepliesAroundPromotion', () => {
     expect(out.below.map((r) => r.id)).toEqual(['post_a', 'post_b'])
   })
 
+  it('persisted post-promotion reply (in `replies`) stays below the divider', () => {
+    // Regression: once a reply sent after promotion round-trips to Convex it
+    // moves from sentReplies into replies. It must still land below the divider,
+    // not jump above it and push the divider to the bottom of the thread.
+    const replies = [
+      reply('history', { createdAtMs: 200 }), // pre-promotion persisted
+      reply('persisted_post', { createdAtMs: 1500 }), // post-promotion persisted
+    ]
+    const out = partitionRepliesAroundPromotion({ replies, sentReplies: [], promotedAtMs: 1000 })
+    expect(out.above.map((r) => r.id)).toEqual(['history'])
+    expect(out.below.map((r) => r.id)).toEqual(['persisted_post'])
+  })
+
+  it('interleaved persisted + optimistic replies keep chronological sides', () => {
+    const replies = [reply('persisted_post', { createdAtMs: 1500 })]
+    const sentReplies = [reply('optimistic_post', { createdAtMs: 2000 })]
+    const out = partitionRepliesAroundPromotion({ replies, sentReplies, promotedAtMs: 1000 })
+    expect(out.above).toEqual([])
+    expect(out.below.map((r) => r.id)).toEqual(['persisted_post', 'optimistic_post'])
+  })
+
   it('empty inputs produce empty above + empty below', () => {
     const out = partitionRepliesAroundPromotion({ replies: [], sentReplies: [], promotedAtMs: 1000 })
     expect(out.above).toEqual([])
