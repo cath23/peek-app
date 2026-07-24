@@ -1,4 +1,6 @@
 import type { Scenario } from './player'
+import { MeetCall } from './scenes/MeetCall'
+import { MeetEnded } from './scenes/MeetEnded'
 
 // Scene stubs — each gets replaced by its pixel-perfect build (see
 // STORYBOARD.md for the beat map and status).
@@ -20,17 +22,12 @@ export const SCENARIOS: Scenario[] = [
       {
         id: 'meet-call',
         steps: 1,
-        render: () => <Stub title="Google Meet — Kick off" beat="In-call grid (pixel pass pending)" />,
+        render: () => <MeetCall />,
       },
       {
         id: 'meet-ended',
         steps: 2,
-        render: (local) => (
-          <Stub
-            title="Google Meet — You left the meeting"
-            beat={local === 0 ? 'Ended screen' : 'Highlights doc appears (beat 2)'}
-          />
-        ),
+        render: (local) => <MeetEnded showHighlights={local >= 1} />,
       },
       {
         id: 'peek-topic',

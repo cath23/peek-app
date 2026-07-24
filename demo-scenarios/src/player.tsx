@@ -49,6 +49,7 @@ export function Player({ scenarios }: { scenarios: Scenario[] }) {
     Math.min(Math.max(Number(params.get('step') ?? 0), 0), totalSteps - 1)
   )
   const [scale, setScale] = useState(1)
+  const [hud, setHud] = useState(() => params.get('hud') !== '0')
 
   // Keep the URL shareable as you step through.
   useEffect(() => {
@@ -74,6 +75,8 @@ export function Player({ scenarios }: { scenarios: Scenario[] }) {
         setStep((s) => Math.max(s - 1, 0))
       } else if (e.key === 'Home') {
         setStep(0)
+      } else if (e.key === 'h' || e.key === 'H') {
+        setHud((v) => !v)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -100,9 +103,12 @@ export function Player({ scenarios }: { scenarios: Scenario[] }) {
           {scene.render(local)}
         </div>
       </div>
-      <div className="hud">
-        S{scenario.id} · {scene.id} · step {step + 1}/{totalSteps} — → next, ← back
-      </div>
+      {/* Hidden with ?hud=0 or the H key — keep it out of recordings. */}
+      {hud && (
+        <div className="hud">
+          S{scenario.id} · {scene.id} · step {step + 1}/{totalSteps} — → next, ← back
+        </div>
+      )}
     </div>
   )
 }

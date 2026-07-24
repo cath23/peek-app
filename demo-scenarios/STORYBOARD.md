@@ -14,11 +14,15 @@ in-scene animation beat or a scene change. `?scenario=1&step=3` deep-links.
 
 | # | Scene           | Step / beat                                              | Status |
 |---|-----------------|----------------------------------------------------------|--------|
-| 0 | `meet-call`     | In-call grid: Greg, Peek Designer, Alice (muted), Stripe Engineer | scene stub — pixel pass pending |
-| 1 | `meet-ended`    | "You left the meeting"                                   | scene stub — pixel pass pending |
-| 2 | `meet-ended`    | Highlights doc appears below (fade/slide-in beat)        | pending |
+| 0 | `meet-call`     | In-call grid: Greg, Peek Designer, Alice (muted), Stripe Engineer | ✅ pixel pass done (vs Figma 666:658) |
+| 1 | `meet-ended`    | "You left the meeting"                                   | ✅ pixel pass done (vs Figma 681:2417) |
+| 2 | `meet-ended`    | Highlights doc rises in (500ms fade+lift)                | ✅ |
 | 3 | `peek-topic`    | Peek, Payment integration topic — collapsed Highlights bar just arrived | pending (real app iframe + demo dataset) |
 | 4 | `peek-topic`    | Highlights card expands (Expand click / auto-beat)       | pending |
+
+Player: `?hud=0` or the **H** key hides the step HUD for recording. Fonts:
+Meet scenes fall back Google Sans Flex → Roboto (CDN); metrics differ by
+~1px in places — acceptable at recording distance.
 
 Transitions: plain cuts between apps for now (crossfade at most). The
 "object travels between apps" morph is explicitly parked — prototype only if
