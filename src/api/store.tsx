@@ -22,6 +22,7 @@ import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { StarredProvider } from '@/api/internal/starred'
 import { TopicStoreProvider } from '@/api/internal/topicStore'
 import { TopicMutationsProvider } from '@/api/internal/topicMutations'
+import { OpenWorkProvider } from '@/api/internal/openWork'
 import { AvatarRegistryProvider } from './avatars'
 import { MentionDirectorySync, TopicDirectorySync } from './mentions'
 import type { ConversationData } from './types'
@@ -71,7 +72,9 @@ export function PeekDataProvider({ children }: { children: ReactNode }) {
         <TopicStoreProvider>
           <TopicDirectorySync />
           <TopicMutationsProvider>
-            <DmRuntimeProvider>{children}</DmRuntimeProvider>
+            <OpenWorkProvider>
+              <DmRuntimeProvider>{children}</DmRuntimeProvider>
+            </OpenWorkProvider>
           </TopicMutationsProvider>
         </TopicStoreProvider>
       </StarredProvider>
