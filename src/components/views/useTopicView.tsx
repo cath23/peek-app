@@ -37,6 +37,7 @@ import {
   type Huddle,
 } from '@/api'
 import { useLastSelection } from '@/lib/lastSelection'
+import { useToast } from '@/lib/toast'
 import { useDebug } from '@/lib/debug'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -78,6 +79,7 @@ export function useTopicView({
   const inviteToTopic = useInviteToTopic()
   const openWorkTopicIds = useOpenWorkTopicIds()
   const actions = usePeekActions()
+  const { showToast } = useToast()
   const { state: debug } = useDebug()
   const huddleVariant = debug.huddles.variant
   const topic = topicId != null ? findTopic(topicId) : undefined
@@ -323,10 +325,14 @@ export function useTopicView({
         }
         onToggleOpenWork={
           !isV2HuddleView && topicId != null
-            ? () =>
-                openWorkTopicIds.has(topicId)
-                  ? actions.removeTopicFromOpenWork(topicId)
-                  : actions.addTopicsToOpenWork([topicId])
+            ? () => {
+                if (openWorkTopicIds.has(topicId)) {
+                  actions.removeTopicFromOpenWork(topicId)
+                } else {
+                  actions.addTopicsToOpenWork([topicId])
+                  showToast({ label: 'Added to Open work', type: 'success' })
+                }
+              }
             : undefined
         }
         tabs={

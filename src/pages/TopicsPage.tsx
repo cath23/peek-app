@@ -14,6 +14,7 @@ import { CURRENT_USER_NAME, useUnread, useTopics, useCreateTopic, useDeleteTopic
 import { SkeletonSidebarList } from '@/components/ui/Skeleton'
 import { useDebug } from '@/lib/debug'
 import { useLastSelection } from '@/lib/lastSelection'
+import { useToast } from '@/lib/toast'
 
 export function TopicsPage() {
   const { topicHasUnread, topicIsUrgent } = useUnread()
@@ -29,6 +30,7 @@ export function TopicsPage() {
   const isTopicMember = useIsTopicMember()
   const openWorkTopicIds = useOpenWorkTopicIds()
   const actions = usePeekActions()
+  const { showToast } = useToast()
   const [yourExpanded, setYourExpanded] = useState(true)
   const [otherExpanded, setOtherExpanded] = useState(true)
   const huddleLookup = useHuddleLookup()
@@ -179,11 +181,14 @@ export function TopicsPage() {
                     onClick={() => handleSelectTopic(topic.id)}
                     onDeleteTopic={() => handleDeleteTopic(topic.id)}
                     openWorkAction={openWorkTopicIds.has(topic.id) ? 'remove' : 'add'}
-                    onToggleOpenWork={() =>
-                      openWorkTopicIds.has(topic.id)
-                        ? actions.removeTopicFromOpenWork(topic.id)
-                        : actions.addTopicsToOpenWork([topic.id])
-                    }
+                    onToggleOpenWork={() => {
+                      if (openWorkTopicIds.has(topic.id)) {
+                        actions.removeTopicFromOpenWork(topic.id)
+                      } else {
+                        actions.addTopicsToOpenWork([topic.id])
+                        showToast({ label: 'Added to Open work', type: 'success' })
+                      }
+                    }}
                   />
                   {topicHuddles.length > 0 && (() => {
                     // Linear-style branch tree, drawn as a single SVG path:
