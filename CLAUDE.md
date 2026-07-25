@@ -2,9 +2,10 @@
 
 Peek is a team-communication app (DMs, Topics, Huddles, Screener, Desk). This
 repo is the production app grown out of the pixel-perfect prototype preserved
-at `k:\PeekApp` (GitHub `cath23/Peek`, tag `prototype-v1`). See `PROTOTYPE.md`
-and `MIGRATION.md` for lineage, and `PRDs/Peek-Product-Overview.md` for the
-feature spec.
+at `k:\PeekApp` (GitHub `cath23/Peek`, tag `prototype-v1`). See
+`docs/PROTOTYPE.md` and `docs/MIGRATION.md` for lineage, and
+`PRDs/Peek-Product-Overview.md` for the feature spec. (`docs/` and `PRDs/` are
+local-only — kept out of the published repo; see `.gitignore`.)
 
 ## Stack
 
@@ -39,7 +40,7 @@ spec in `PRDs/Peek-Domain-Model.md`). Demo data:
   and stamp `CURRENT_USER_NAME` (the Phase 3 identity switch point). Extend
   the seam rather than bypassing it.
 
-## Direction — PRODUCTION-PLAN.md is the single source of truth for progress
+## Direction — docs/internal/PRODUCTION-PLAN.md is the single source of truth for progress
 
 Phase 0 (domain spec) ✅ and Phase 1 (data-access seam) ✅ are done
 (2026-07-08). Phase 2 (Convex persistence, hardcoded "You") is in progress:
