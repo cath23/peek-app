@@ -1,11 +1,7 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Player } from './player'
-import { SCENARIOS } from './scenarios'
 import './styles.css'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Player scenarios={SCENARIOS} />
-  </StrictMode>
-)
+// No StrictMode: its double mount would build the timeline twice and load the
+// embedded app frames twice over.
+createRoot(document.getElementById('root')!).render(<Player />)

@@ -53,9 +53,24 @@ function MutedBadge({ src, bgOpacity }: { src: string; bgOpacity: number }) {
   )
 }
 
-function RoundControl({ icon, width = 56, bg = '#333537' }: { icon: string; width?: number; bg?: string }) {
+function RoundControl({
+  icon,
+  width = 56,
+  bg = '#333537',
+  handle,
+}: {
+  icon: string
+  width?: number
+  bg?: string
+  /** Marks a control the film animates (the timeline presses it). */
+  handle?: string
+}) {
   return (
-    <div className="h-[48px] overflow-clip relative rounded-[100px] shrink-0" style={{ width, backgroundColor: bg }}>
+    <div
+      {...(handle ? { [`data-${handle}`]: '' } : {})}
+      className="h-[48px] overflow-clip relative rounded-[100px] shrink-0"
+      style={{ width, backgroundColor: bg }}
+    >
       <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[24px] top-1/2">
         <img alt="" className="absolute block inset-0 max-w-none size-full" src={icon} />
       </div>
@@ -142,7 +157,7 @@ export function MeetCall() {
           <RoundControl icon={closedCaption} />
           <RoundControl icon={backHand} />
           <RoundControl icon={moreVert} width={36} />
-          <RoundControl icon={callEnd} width={72} bg="#dc362e" />
+          <RoundControl icon={callEnd} width={72} bg="#dc362e" handle="hangup" />
         </div>
 
         {/* Right pill — chat + meeting tools */}

@@ -1,114 +1,161 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import gsap from 'gsap'
+import { usePeekFrames } from './lib/frames'
+import { Scenario1Layers, buildScenario1 } from './scenario1'
 
 // ── Scenario player ──
 //
-// Fixed 1440×1024 stage auto-scaled to the window. → / ← (or click /
-// shift-click) advances / rewinds one STEP. A step is either an in-scene
-// beat (the scene re-renders with a higher local step and animates the
-// difference) or a scene change (plain crossfade — no morphing, by ruling).
-// Deep link: ?scenario=1&step=3. Built to be screen-recorded: keyboard-only,
-// no chrome around the stage, background pure black.
-
-export interface Scene {
-  id: string
-  /** How many steps this scene owns (>= 1). Local step 0 = scene just shown. */
-  steps: number
-  render: (localStep: number) => ReactNode
-}
-
-export interface Scenario {
-  id: number
-  title: string
-  scenes: Scene[]
-}
+// A fixed 1440×1024 stage auto-scaled to the window, and one paused GSAP
+// master timeline. Nothing plays in response to a keypress: the keys seek the
+// timeline. That buys identical takes every recording, `?t=` deep links into
+// any moment, and GSDevTools scrubbing while tuning.
+//
+//   Space  play / pause          → / ←  next / previous beat
+//   R      restart and play      Home   back to the start
+//   H      hide the HUD          G      GSDevTools (tuning)
+//
+// Playback waits until every embedded app frame has reported its geometry, so
+// a slow dev-server compile can never be caught on film.
 
 const STAGE_W = 1440
 const STAGE_H = 1024
 
-/** Global step index → { scene index, local step }. */
-function locate(scenes: Scene[], globalStep: number): { scene: number; local: number } {
-  let remaining = globalStep
-  for (let i = 0; i < scenes.length; i++) {
-    if (remaining < scenes[i].steps) return { scene: i, local: remaining }
-    remaining -= scenes[i].steps
-  }
-  const last = scenes.length - 1
-  return { scene: last, local: scenes[last].steps - 1 }
-}
-
-export function Player({ scenarios }: { scenarios: Scenario[] }) {
+export function Player() {
   const params = new URLSearchParams(window.location.search)
-  const scenarioId = Number(params.get('scenario') ?? scenarios[0].id)
-  const scenario = scenarios.find((s) => s.id === scenarioId) ?? scenarios[0]
-  const totalSteps = useMemo(
-    () => scenario.scenes.reduce((n, s) => n + s.steps, 0),
-    [scenario]
-  )
+  const stageRef = useRef<HTMLDivElement>(null)
+  const tlRef = useRef<gsap.core.Timeline | null>(null)
+  const { links, geometry } = usePeekFrames()
 
-  const [step, setStep] = useState(() =>
-    Math.min(Math.max(Number(params.get('step') ?? 0), 0), totalSteps - 1)
-  )
   const [scale, setScale] = useState(1)
   const [hud, setHud] = useState(() => params.get('hud') !== '0')
-
-  // Keep the URL shareable as you step through.
-  useEffect(() => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('scenario', String(scenario.id))
-    url.searchParams.set('step', String(step))
-    window.history.replaceState(null, '', url)
-  }, [scenario.id, step])
+  const [status, setStatus] = useState('loading the app…')
 
   useEffect(() => {
-    const fit = () =>
-      setScale(Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H))
+    const fit = () => setScale(Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H))
     fit()
     window.addEventListener('resize', fit)
     return () => window.removeEventListener('resize', fit)
   }, [])
 
+  // Build once the app frames have been measured and the fonts are in — the
+  // title is split into words, and splitting before the font loads measures
+  // the wrong line breaks.
+  useEffect(() => {
+    if (!geometry || !stageRef.current) return
+    let disposed = false
+    let dispose = () => {}
+    void document.fonts.ready.then(() => {
+      if (disposed || !stageRef.current) return
+      const built = buildScenario1({ root: stageRef.current, geometry, links })
+      tlRef.current = built.tl
+      dispose = built.dispose
+      // Tuning handle: `__tl.pause(6.7)` in the console parks the film on any
+      // frame, and the screenshot checks drive it the same way.
+      ;(window as unknown as { __tl?: gsap.core.Timeline }).__tl = built.tl
+
+      const at = params.get('t')
+      if (at) built.tl.seek(Number.isNaN(Number(at)) ? at : Number(at))
+      if (params.get('autoplay') === '1') built.tl.play()
+      setStatus(describe(built.tl))
+    })
+    return () => {
+      disposed = true
+      dispose()
+      tlRef.current = null
+    }
+    // links is a stable set of callbacks over the frame refs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geometry])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === ' ') {
-        setStep((s) => Math.min(s + 1, totalSteps - 1))
-      } else if (e.key === 'ArrowLeft') {
-        setStep((s) => Math.max(s - 1, 0))
-      } else if (e.key === 'Home') {
-        setStep(0)
-      } else if (e.key === 'h' || e.key === 'H') {
-        setHud((v) => !v)
+      const tl = tlRef.current
+      if (e.key === 'h' || e.key === 'H') setHud((v) => !v)
+      if (!tl) return
+      switch (e.key) {
+        case ' ':
+          e.preventDefault()
+          tl.paused() ? tl.play() : tl.pause()
+          break
+        case 'ArrowRight':
+          tl.pause()
+          tl.seek(neighbourLabel(tl, 1))
+          break
+        case 'ArrowLeft':
+          tl.pause()
+          tl.seek(neighbourLabel(tl, -1))
+          break
+        case 'r':
+        case 'R':
+          tl.restart()
+          break
+        case 'Home':
+          tl.pause(0)
+          break
+        case 'g':
+        case 'G':
+          void openDevTools(tl)
+          break
       }
+      setStatus(describe(tl))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [totalSteps])
+  }, [])
 
-  const { scene: sceneIdx, local } = locate(scenario.scenes, step)
-  const scene = scenario.scenes[sceneIdx]
+  // Keep the HUD honest during playback without re-rendering every frame.
+  useEffect(() => {
+    if (!hud) return
+    const id = window.setInterval(() => {
+      if (tlRef.current) setStatus(describe(tlRef.current))
+    }, 120)
+    return () => window.clearInterval(id)
+  }, [hud])
 
   return (
-    <div
-      className="player"
-      onClick={(e) => {
-        if (e.shiftKey) setStep((s) => Math.max(s - 1, 0))
-        else setStep((s) => Math.min(s + 1, totalSteps - 1))
-      }}
-    >
+    <div className="player">
       <div
+        ref={stageRef}
         className="stage"
         style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})` }}
       >
-        {/* key on scene id → remount per scene → CSS crossfade-in */}
-        <div key={scene.id} className="scene">
-          {scene.render(local)}
-        </div>
+        <Scenario1Layers links={links} />
       </div>
-      {/* Hidden with ?hud=0 or the H key — keep it out of recordings. */}
-      {hud && (
-        <div className="hud">
-          S{scenario.id} · {scene.id} · step {step + 1}/{totalSteps} — → next, ← back
-        </div>
-      )}
+      {hud && <div className="hud">S1 · {status} — space play, → ← beats, R restart, H hud, G tune</div>}
     </div>
   )
+}
+
+/** Label at the playhead, and the time, for the HUD. */
+function describe(tl: gsap.core.Timeline): string {
+  const labels = sortedLabels(tl)
+  const t = tl.time()
+  const current = [...labels].reverse().find((l) => t >= l.time - 0.001)
+  return `${current?.name ?? 'start'} · ${t.toFixed(2)}s / ${tl.duration().toFixed(2)}s${
+    tl.paused() ? '' : ' ▶'
+  }`
+}
+
+function sortedLabels(tl: gsap.core.Timeline): { name: string; time: number }[] {
+  return Object.entries(tl.labels)
+    .map(([name, time]) => ({ name, time: time as number }))
+    .sort((a, b) => a.time - b.time)
+}
+
+/** The next / previous beat, so → and ← step the film rather than scrub it. */
+function neighbourLabel(tl: gsap.core.Timeline, dir: 1 | -1): number {
+  const labels = sortedLabels(tl)
+  const t = tl.time()
+  if (dir === 1) return labels.find((l) => l.time > t + 0.01)?.time ?? tl.duration()
+  return [...labels].reverse().find((l) => l.time < t - 0.01)?.time ?? 0
+}
+
+/** Loaded on demand: it is a tuning tool, and it draws its own UI over the
+ *  stage, so it must never be in a take. */
+let devTools: unknown = null
+async function openDevTools(tl: gsap.core.Timeline) {
+  if (devTools) return
+  const { GSDevTools } = await import('gsap/GSDevTools')
+  gsap.registerPlugin(GSDevTools)
+  devTools = GSDevTools.create({ animation: tl })
 }

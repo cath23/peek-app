@@ -17,7 +17,10 @@ body,
 body {
   background: #000;
   font-family: 'Geist', system-ui, sans-serif;
-  overflow: hidden;
+  /* clip, not hidden: `hidden` leaves a scroll container, and scrollIntoView
+     inside the embedded app bubbles up the frame tree and scrolls it — which
+     shifts every layer sideways. `clip` can't be scrolled at all. */
+  overflow: clip;
   user-select: none;
 }
 
@@ -33,22 +36,10 @@ body {
   position: relative;
   flex-shrink: 0;
   transform-origin: center center;
-  overflow: hidden;
-}
-
-.scene {
-  position: absolute;
-  inset: 0;
-  animation: scene-in 280ms ease-out;
-}
-
-@keyframes scene-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  /* Must be `clip` — see the note on body above. The floating card copies
+     overflow the stage by design, so with `hidden` the stage is a scroll
+     container the embedded app can scroll out from under us. */
+  overflow: clip;
 }
 
 /* Step HUD — small, out of frame when recording at exact stage bounds. */
@@ -60,27 +51,4 @@ body {
   color: #52525b;
   letter-spacing: 0.02em;
   pointer-events: none;
-}
-
-/* Placeholder scene styling until the pixel pass lands. */
-.stub {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: #101014;
-  color: #a1a1aa;
-}
-
-.stub h1 {
-  font-size: 28px;
-  font-weight: 600;
-  color: #fafafa;
-}
-
-.stub p {
-  font-size: 14px;
 }
