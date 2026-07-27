@@ -85,66 +85,27 @@ const KICK_OFF_HIGHLIGHTS: HighlightsData = {
 }
 
 /**
- * The topic stream at the moment the scenario cuts to Peek. A few messages
- * from the days before the call give the topic a history, and the highlights
- * row is the newest thing in it — nobody wrote it, the call did.
+ * Everyone in the topic. Nobody has written in it yet, so this is what the
+ * members pill has to go on — the team set the topic up around the call.
+ */
+export const DEMO_TOPIC_MEMBERS = [
+  'You',
+  'Alice Curtis',
+  'Greg Bothman',
+  'Juan Foley',
+  'Amie Miles',
+  'Bob Chen',
+]
+
+/**
+ * The topic at the moment the scenario cuts to Peek: empty except for the
+ * highlights (user ruling 2026-07-27). Nobody has typed a word in here — the
+ * first thing in the topic is what the call produced.
  */
 export const DEMO_TOPIC_CONVERSATIONS: ConvGroup[] = [
   {
-    dateLabel: 'Wed, September 3',
-    convs: [
-      {
-        id: 'd1_c0',
-        authorName: 'You',
-        timestamp: '11:20 AM',
-        body: "Opening this for the Stripe work so it doesn't live in six DMs. Everything about the payment flow goes here.\n\nWhat I have so far is a flow that assumes payments succeed, which is not a flow. I'd rather settle the failure cases with Stripe on the call than guess at them in Figma.",
-        replyCount: 2,
-        replyAuthors: [{ name: 'Amie Miles' }, { name: 'Juan Foley' }],
-        lastReplyTime: '1:02 PM',
-      },
-      {
-        id: 'd1_c0b',
-        authorName: 'Juan Foley',
-        timestamp: '3:48 PM',
-        body: "I can wire up the test integration this week if someone gets us sandbox keys. Worth knowing which decline codes we actually have to handle before I write the error mapping.",
-      },
-    ],
-  },
-  {
-    dateLabel: 'Fri, September 5',
-    convs: [
-      {
-        id: 'd1_c1',
-        authorName: 'Amie Miles',
-        timestamp: '9:24 AM',
-        body: "Stripe are on for Monday, 10:00. Their payments engineer @Bob Chen is joining, so this is our chance to settle the parts we've been guessing at.\n\nTwo things I want to come out of the call: which integration we're building against, and what happens when a payment fails.",
-        replyCount: 3,
-        replyAuthors: [{ name: 'Greg Bothman' }, { name: 'You' }],
-        lastReplyTime: '10:41 AM',
-      },
-      {
-        id: 'd1_c2',
-        authorName: 'Alice Curtis',
-        timestamp: '2:15 PM',
-        body: "I'll bring the flow I sketched last week. It covers the happy path properly and the error states barely at all, which is roughly where my questions are.\n\nIf we can agree on the failure copy in the call I can have real screens by Wednesday.",
-        reactions: [{ emoji: '👍', count: 3, owner: 'others' }],
-      },
-    ],
-  },
-  {
     dateLabel: 'Today',
     convs: [
-      {
-        id: 'd1_c3',
-        authorName: 'Greg Bothman',
-        timestamp: '9:52 AM',
-        body: "Agenda for the kick off is in the topic files. Short version: integration choice, failure and 3DS states, then webhooks and reconciliation if there's time.\n\nJoining from the Meet link in the invite.",
-        replyCount: 1,
-        replyAuthors: [{ name: 'Juan Foley' }],
-        lastReplyTime: '9:58 AM',
-      },
-      // The call's highlights, arriving on their own — the beat the scenario
-      // is built around. Collapsed at first (beat 3), expanded at beat 4.
       {
         id: 'd1_hl',
         authorName: 'Highlights',

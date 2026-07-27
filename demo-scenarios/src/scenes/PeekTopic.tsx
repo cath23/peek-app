@@ -26,17 +26,15 @@ const VIEW_H = 945
 const CHROME_H = 79
 
 /**
- * How far the camera pushes in on beat 1. One fixed zoom for the whole move,
- * before and after the card opens: a camera that zooms in and then back out
- * to re-frame reads as hunting for its subject.
- *
- * The card is nearly as wide as the app, so at this zoom its right side falls
- * outside the frame. That's why the framing anchors its LEFT edge instead of
- * centering it — the text wraps well before the right edge, so everything
- * that gets cropped is empty card.
+ * Beat 1's zoom comes from the card's WIDTH: filling the frame with it, edge
+ * to edge bar a margin, is as far in as the camera can go without cutting the
+ * card in half. That width doesn't change when the card opens, so the zoom is
+ * the same before and after — a camera that zooms in and then back out to
+ * re-frame reads as hunting for its subject.
  */
-const FOCUS_ZOOM = 1.5
-const FOCUS_MARGIN = 32
+const FOCUS_MARGIN = 24
+const ZOOM_MIN = 1.2
+const ZOOM_MAX = 1.6
 
 interface Rect {
   x: number
@@ -56,19 +54,19 @@ const REST: Camera = { z: 1, tx: 0, ty: 0 }
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
 
 /**
- * Frame `rect` at `z`: its left edge a margin in from the frame's left, and
- * vertically centred — or top-aligned when it is too tall to fit, so a long
+ * Frame `rect`: centred, or top-aligned when it is too tall to fit, so a long
  * card is read from the top down. Panning is clamped to the page, because
  * empty space beyond its edges reads as a mistake on film.
  */
-function frame(rect: Rect, z: number): Camera {
+function frame(rect: Rect): Camera {
+  const z = clamp((VIEW_W - 2 * FOCUS_MARGIN) / rect.width, ZOOM_MIN, ZOOM_MAX)
   const fits = z * rect.height <= VIEW_H - 2 * FOCUS_MARGIN
   const ty = fits
     ? VIEW_H / 2 - z * (rect.y + rect.height / 2)
     : FOCUS_MARGIN - z * rect.y
   return {
     z,
-    tx: clamp(FOCUS_MARGIN - z * rect.x, VIEW_W - z * VIEW_W, 0),
+    tx: clamp(VIEW_W / 2 - z * (rect.x + rect.width / 2), VIEW_W - z * VIEW_W, 0),
     ty: clamp(ty, VIEW_H - z * VIEW_H, 0),
   }
 }
@@ -126,7 +124,7 @@ export function PeekTopic({ beat }: { beat: number }) {
   let camera = REST
   if (beat === 1) {
     const focus = expandedRect ?? rect
-    if (focus) camera = frame(focus, FOCUS_ZOOM)
+    if (focus) camera = frame(focus)
   }
 
   return (

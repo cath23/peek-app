@@ -13,18 +13,28 @@ import { useCallback } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { useTopicMutations } from '@/api/internal/topicMutations'
+import { demoMode } from '@/demo/demoMode'
+import { DEMO_TOPIC_ID, DEMO_TOPIC_MEMBERS } from '@/demo/scenario1'
 import { CURRENT_USER_NAME, useCurrentUser } from './currentUser'
 import { useTopicStore } from '@/api/internal/topicStore'
 import { hasConvex } from './store'
 import type { Topic } from './types'
 import type { Person } from './types'
 
+/** Demo mode (recording rig): the scenario's topic carries its cast, since
+ *  nothing has been written in it for the members pill to derive them from. */
+function withDemoMembers(topics: Topic[]): Topic[] {
+  return topics.map((t) =>
+    t.id === DEMO_TOPIC_ID ? { ...t, invitees: DEMO_TOPIC_MEMBERS } : t,
+  )
+}
+
 /** All topics. `undefined` while the Convex query is loading. */
 export function useTopics(): Topic[] | undefined {
   const { topics: localTopics, extraTopics, deletedTopicIds } = useTopicStore()
   const me = useCurrentUser()
   const remote = useQuery(api.topics.list, hasConvex ? {} : 'skip')
-  if (!hasConvex) return localTopics
+  if (!hasConvex) return demoMode ? withDemoMembers(localTopics) : localTopics
   if (remote === undefined || me === undefined) return undefined
   const mapped: Topic[] = remote.map((t) => ({
     id: t.id,

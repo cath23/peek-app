@@ -17,7 +17,7 @@ in-scene animation beat or a scene change. `?scenario=1&step=3` deep-links.
 | 0 | `meet-call`     | In-call grid: Greg, Peek Designer, Alice (muted), Stripe Engineer | ✅ pixel pass done (vs Figma 666:658) |
 | 1 | `meet-ended`    | "You left the meeting"                                   | ✅ pixel pass done (vs Figma 681:2417) |
 | 2 | `meet-ended`    | Highlights doc rises in (500ms fade+lift)                | ✅ |
-| 3 | `peek-topic`    | Peek, Payment integration topic — the highlights have landed as a collapsed bar | ✅ real app in an iframe |
+| 3 | `peek-topic`    | Peek, Payment integration topic — empty but for the highlights, landed as a collapsed bar | ✅ real app in an iframe |
 | 4 | `peek-topic`    | Camera pushes in on the bar; the card expands as it arrives | ✅ |
 | 5 | `peek-topic`    | Camera pulls back out, expanded card in context          | ✅ |
 
@@ -58,12 +58,17 @@ They embed the REAL app in an iframe — not a rebuilt mock. The app runs in
   it asks the app to expand the card, and the app reports where the card
   actually is so the camera can frame it.
 
-The camera is a CSS transform on the whole browser-framed screen, at one
-fixed zoom for the whole move — a camera that zooms in and then back out to
-re-frame reads as hunting for its subject. It anchors the card's left edge
-rather than centring it, because the card is nearly as wide as the app and
-everything cropped off the right is empty. Nothing is pinned to a layout, so
-the beats keep working as the app's UI changes.
+The camera is a CSS transform on the whole browser-framed screen. Its zoom
+comes from the card's width — filling the frame with the card, edge to edge
+bar a margin, is as far in as it can go without cutting the card in half.
+That width doesn't change when the card opens, so the zoom is identical
+before and after and only the framing drifts: a camera that zooms in and then
+back out to re-frame reads as hunting for its subject. Nothing is pinned to a
+layout, so the beats keep working as the app's UI changes.
+
+The topic itself is **empty apart from the highlights** (ruling 2026-07-27) —
+nobody has typed a word in it, so the first thing in it is what the call
+produced. Its members come from the topic, not from message authors.
 
 The card itself is a real app component (`src/components/HighlightsCard.tsx`,
 Storybook: Messages/HighlightsCard), rendered from the stream data
