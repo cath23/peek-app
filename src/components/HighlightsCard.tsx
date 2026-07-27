@@ -1,10 +1,16 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { IconArrowsDiagonal, IconArrowsDiagonalMinimize2, IconCheck } from '@tabler/icons-react'
 import highlightsIcon from '@/assets/highlights icon.png'
 import { Button } from './ui/Button'
 import { HighlightPill } from './ui/HighlightPill'
 import { SectionLabel } from './ui/SectionHeader'
-import { HIGHLIGHT_META, type HighlightType } from '@/api'
+import {
+  HIGHLIGHT_META,
+  type HighlightBlock,
+  type HighlightTodo,
+  type HighlightType,
+  type HighlightsData,
+} from '@/api'
 import { cn } from '@/lib/utils'
 
 // ── Highlights card ──
@@ -18,30 +24,8 @@ import { cn } from '@/lib/utils'
 // headings, plain text, bullet lists, highlight groups (pill + lines), and
 // checkbox todos, so future sources aren't boxed into "key points/action
 // items". The Figma reference (Scenario 1, node 792:14245) is one instance
-// of this model.
-
-export interface HighlightTodo {
-  text: string
-  /** Rendered as an inline @mention tag before the text. */
-  assignee?: string
-  done?: boolean
-}
-
-export type HighlightBlock =
-  | { kind: 'heading'; text: string }
-  | { kind: 'text'; lines: string[] }
-  | { kind: 'bullets'; items: string[] }
-  | { kind: 'highlight'; type: HighlightType; lines: string[] }
-  | { kind: 'todos'; items: HighlightTodo[] }
-
-export interface HighlightsData {
-  id: string
-  /** e.g. "Kick off call" */
-  title: string
-  /** e.g. "10:30 AM" */
-  timestamp: string
-  blocks: HighlightBlock[]
-}
+// of this model. The block types live in the data seam (`@/api`) because a
+// highlights payload rides along on a stream row (`ConversationData.highlights`).
 
 interface HighlightsCardProps {
   data: HighlightsData
@@ -144,9 +128,25 @@ function Block({ block }: { block: HighlightBlock }) {
 export function HighlightsCard({ data, defaultExpanded = false, className }: HighlightsCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const types = swatchTypes(data.blocks)
+  const ref = useRef<HTMLDivElement>(null)
+
+  // The card usually sits at the bottom of a stream that is pinned to its
+  // end, so everything it reveals opens below the fold. Follow it down the
+  // way the stream follows a new message.
+  const toggle = () => {
+    setExpanded((v) => {
+      if (!v) {
+        requestAnimationFrame(() =>
+          ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
+        )
+      }
+      return !v
+    })
+  }
 
   return (
     <div
+      ref={ref}
       data-highlights-card
       className={cn(
         'bg-bg-elevated rounded-lg pl-3 pr-2 py-1.5 flex flex-col gap-2 w-full',
@@ -180,6 +180,9 @@ export function HighlightsCard({ data, defaultExpanded = false, className }: Hig
           variant="outlined"
           size="small"
           className="pr-1 shrink-0"
+          // Stable hook for the demo rig, which drives the real button so the
+          // recording shows the real interaction (see src/demo/demoBridge.ts).
+          data-highlights-toggle
           leadingIcon={
             expanded ? (
               <IconArrowsDiagonalMinimize2 size={16} stroke={1.5} />
@@ -187,7 +190,7 @@ export function HighlightsCard({ data, defaultExpanded = false, className }: Hig
               <IconArrowsDiagonal size={16} stroke={1.5} />
             )
           }
-          onClick={() => setExpanded((v) => !v)}
+          onClick={toggle}
         >
           {expanded ? 'Minimize' : 'Expand'}
         </Button>
@@ -195,7 +198,7 @@ export function HighlightsCard({ data, defaultExpanded = false, className }: Hig
 
       {/* Content */}
       {expanded && (
-        <div className="py-2 pr-2 flex flex-col gap-2 items-start w-full">
+        <div className="py-2 pr-2 flex flex-col gap-2 items-start w-full animate-highlights-in">
           <p className="text-[18px] leading-[1.2] font-semibold text-text-primary mb-1">
             {data.title}
           </p>

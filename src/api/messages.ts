@@ -11,6 +11,8 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { TOPIC_CONVERSATIONS } from '@/data/topicData'
 import { DM_CONVERSATIONS } from '@/data/dmData'
+import { demoMode } from '@/demo/demoMode'
+import { DEMO_TOPIC_CONVERSATIONS, DEMO_TOPIC_ID } from '@/demo/scenario1'
 import { mockConvIdFor } from './directory'
 import { REPLIES } from '@/data/replyData'
 import { useTopicMutations } from '@/api/internal/topicMutations'
@@ -268,6 +270,11 @@ const EMPTY_TOPIC: TopicMessages = {
   showEarlier: NOOP,
 }
 
+/** Demo mode (recording rig): the scenario's own stream for its one topic. */
+function demoTopicGroups(topicId: string): ConvGroup[] | undefined {
+  return demoMode && topicId === DEMO_TOPIC_ID ? DEMO_TOPIC_CONVERSATIONS : undefined
+}
+
 export function useTopicMessages(topicId: string | null): TopicMessages {
   const o = useTopicMutations()
   // Convex-aware lookup: the members pill must reflect server topicMembers
@@ -299,7 +306,7 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
     sent = sentLocal.filter((c) => !remoteIds.has(c.id)).map((c) => mergeConv(c, o))
     hasEarlier = remote.hasMore
   } else {
-    groups = (TOPIC_CONVERSATIONS[topicId] ?? [])
+    groups = (demoTopicGroups(topicId) ?? TOPIC_CONVERSATIONS[topicId] ?? [])
       .map((g) => ({
         dateLabel: g.dateLabel,
         convs: g.convs.filter((c) => !o.deletedIds.has(c.id)).map((c) => mergeConv(c, o)),
@@ -309,11 +316,14 @@ export function useTopicMessages(topicId: string | null): TopicMessages {
   }
   const all = [...groups.flatMap((g) => g.convs), ...sent]
 
-  const openCount = all.filter((c) => !(c.isResolved ?? false)).length
-  const resolvedCount = all.length - openCount
-  const replyAuthors = all.flatMap((c) => (REPLIES[c.id] ?? []).map((r) => r.authorName))
+  // App-generated highlights rows ride in the stream but aren't messages:
+  // they have no author to count as a member and nothing to resolve.
+  const messages = all.filter((c) => !c.highlights)
+  const openCount = messages.filter((c) => !(c.isResolved ?? false)).length
+  const resolvedCount = messages.length - openCount
+  const replyAuthors = messages.flatMap((c) => (REPLIES[c.id] ?? []).map((r) => r.authorName))
   const members = Array.from(
-    new Set([...(topic?.invitees ?? []), ...all.map((c) => c.authorName), ...replyAuthors]),
+    new Set([...(topic?.invitees ?? []), ...messages.map((c) => c.authorName), ...replyAuthors]),
   )
   const hasAnyPublicMessages = all.length > 0
 

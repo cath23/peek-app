@@ -90,11 +90,18 @@ export default {
           from: { opacity: '0' },
           to: { opacity: '1' },
         },
+        'highlights-in': {
+          from: { opacity: '0', transform: 'translateY(-4px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         // Delayed reveal for loading skeletons: invisible for the first 150ms
         // so fast loads never flash a skeleton (user decision 2026-07-08).
         'skeleton-in': 'skeleton-in 0.2s ease-out 0.15s both',
+        // Expanding a highlights card reveals a lot of content at once —
+        // a short fade+lift keeps it from snapping into place.
+        'highlights-in': 'highlights-in 0.18s ease-out both',
       },
     },
   },

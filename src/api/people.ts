@@ -9,8 +9,16 @@
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { PEOPLE as MOCK_PEOPLE, avatarFor } from '@/data/peopleData'
+import { demoMode } from '@/demo/demoMode'
+import { DEMO_EXTRA_PEOPLE } from '@/demo/scenario1'
 import { hasConvex } from './store'
 import type { Person } from './types'
+
+// Demo mode adds the scenario's cast to the directory so their portraits and
+// @mentions resolve (see src/demo/scenario1.ts).
+const MOCK_DIRECTORY = demoMode
+  ? [...MOCK_PEOPLE, ...DEMO_EXTRA_PEOPLE].sort((a, b) => a.name.localeCompare(b.name))
+  : MOCK_PEOPLE
 
 /**
  * All people in the workspace, excluding the current user.
@@ -19,7 +27,7 @@ import type { Person } from './types'
  */
 export function usePeople(): Person[] | undefined {
   const remote = useQuery(api.people.list, hasConvex ? {} : 'skip')
-  if (!hasConvex) return MOCK_PEOPLE
+  if (!hasConvex) return MOCK_DIRECTORY
   if (remote === undefined) return undefined
   return remote.map((p) => ({
     id: p.id,

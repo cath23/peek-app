@@ -9,6 +9,7 @@ import { HuddleCreator } from '@/components/HuddleCreator'
 import { ConversationCard } from '@/components/ConversationCard'
 import { ThreadPanel, ThreadPanelLoading } from '@/components/ThreadPanel'
 import { HuddleCard } from '@/components/HuddleCard'
+import { HighlightsCard } from '@/components/HighlightsCard'
 import { StartHuddleDialog, type StartHuddleResult } from '@/components/StartHuddleDialog'
 import { DateDivider } from '@/components/ui/DateDivider'
 import { SkeletonConversationList, SkeletonHuddleGrid } from '@/components/ui/Skeleton'
@@ -513,6 +514,11 @@ export function useTopicView({
                         )
                       }
                       const c = entry.conv
+                      // App-generated highlights (e.g. captured from a call)
+                      // render as their own card, not as a message.
+                      if (c.highlights) {
+                        return <HighlightsCard key={`${topicId}_${c.id}`} data={c.highlights} />
+                      }
                       return (
                         <ConversationCard
                           key={`${topicId}_${c.id}`}
@@ -551,7 +557,9 @@ export function useTopicView({
                   {currentGroups.map((group) => (
                     <div key={group.dateLabel} className="flex flex-col gap-2">
                       <DateDivider label={group.dateLabel} className="sticky top-0 z-10 bg-bg-surface" />
-                      {group.convs.map((c) => (
+                      {group.convs.map((c) => c.highlights ? (
+                        <HighlightsCard key={`${topicId}_${c.id}`} data={c.highlights} />
+                      ) : (
                         <ConversationCard
                           key={`${topicId}_${c.id}`}
                           authorName={c.authorName}

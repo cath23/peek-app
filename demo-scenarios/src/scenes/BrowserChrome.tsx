@@ -1,5 +1,5 @@
-import favicon from '../assets/meet/favicon.png'
-import userProfile from '../assets/meet/user-profile.png'
+import meetFavicon from '../assets/meet/favicon.png'
+import avatarYou from '../assets/meet/avatar-you.png'
 import iconMore from '../assets/meet/icon-more.svg'
 import iconStar from '../assets/meet/icon-star.svg'
 import iconSecure from '../assets/meet/icon-secure.svg'
@@ -21,11 +21,17 @@ interface BrowserChromeProps {
   urlHost: string
   /** Rendered muted, e.g. "/uir-wmte-coi?authuser=2" */
   urlPath: string
+  /** Tab favicon. Defaults to Meet's. */
+  favicon?: string
 }
 
 /** Dark Chrome window chrome (80px): traffic lights + tab strip + URL bar.
- *  Shared by every browser-framed scene; built from Figma 666:1511. */
-export function BrowserChrome({ tabTitle, urlHost, urlPath }: BrowserChromeProps) {
+ *  Shared by every browser-framed scene; built from Figma 666:1511.
+ *
+ *  The account portrait is the scenario's protagonist in every scene — it is
+ *  the same browser throughout, so it can't change faces between the Meet
+ *  and Peek beats (the Figma boards had a different placeholder there). */
+export function BrowserChrome({ tabTitle, urlHost, urlPath, favicon = meetFavicon }: BrowserChromeProps) {
   return (
     <div className="absolute h-[80px] left-0 overflow-clip right-0 top-0">
       {/* Tab strip */}
@@ -86,7 +92,7 @@ export function BrowserChrome({ tabTitle, urlHost, urlPath }: BrowserChromeProps
               </div>
             </div>
             <div className="-translate-x-1/2 -translate-y-1/2 absolute left-[calc(50%-14.5px)] size-[22px] top-1/2">
-              <img alt="" className="absolute block inset-0 max-w-none size-full" height="22" src={userProfile} width="22" />
+              <img alt="" className="absolute block inset-0 max-w-none rounded-full size-full" height="22" src={avatarYou} width="22" />
             </div>
           </div>
           <div className="-translate-y-1/2 absolute h-[28px] left-[134px] overflow-clip right-[81px] top-1/2">

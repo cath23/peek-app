@@ -29,6 +29,34 @@ export const HIGHLIGHT_META: Record<HighlightType, { color: string; label: strin
   summary:    { color: 'var(--highlight-summary)', label: 'Summary' },
 }
 
+/** One action item inside a highlights payload. */
+export interface HighlightTodo {
+  text: string
+  /** Rendered as an inline @mention tag before the text. */
+  assignee?: string
+  done?: boolean
+}
+
+/** Highlights bodies are a free-form block list, not fixed sections — see
+ *  HighlightsCard for the rendering contract. */
+export type HighlightBlock =
+  | { kind: 'heading'; text: string }
+  | { kind: 'text'; lines: string[] }
+  | { kind: 'bullets'; items: string[] }
+  | { kind: 'highlight'; type: HighlightType; lines: string[] }
+  | { kind: 'todos'; items: HighlightTodo[] }
+
+/** An app-generated highlights object (e.g. captured from a Meet call) that
+ *  lands in a topic as a first-class card in the stream. */
+export interface HighlightsData {
+  id: string
+  /** e.g. "Kick off call" */
+  title: string
+  /** e.g. "10:30 AM" */
+  timestamp: string
+  blocks: HighlightBlock[]
+}
+
 export interface ReactionData {
   emoji: string
   count: number
@@ -78,6 +106,10 @@ export interface ConversationData {
   replyAuthors?: { name: string; avatarSrc?: string }[]
   /** Formatted time of the newest reply, shown next to the reply count. */
   lastReplyTime?: string
+  /** Present on app-generated highlights rows: the stream renders a
+   *  HighlightsCard instead of a message card, and every message field above
+   *  is ignored. */
+  highlights?: HighlightsData
 }
 
 export interface ConvGroup {

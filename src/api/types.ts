@@ -8,6 +8,9 @@
 export type {
   Topic,
   HighlightType,
+  HighlightTodo,
+  HighlightBlock,
+  HighlightsData,
   ReactionData,
   FileAttachment,
   ConversationData,

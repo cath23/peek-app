@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { HighlightsCard, type HighlightsData } from './HighlightsCard'
+import type { HighlightsData } from '@/api'
+import { HighlightsCard } from './HighlightsCard'
 
 const meta = {
   title: 'Messages/HighlightsCard',

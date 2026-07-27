@@ -8,8 +8,13 @@ import { AuthGate } from './auth/AuthGate'
 import { LastSelectionProvider } from './lib/lastSelection'
 import { ToastProvider } from './lib/toast'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
+import { demoMode } from './demo/demoMode'
+import { installDemoBridge } from './demo/demoBridge'
 import './index.css'
 import App from './App.tsx'
+
+// Recording rig only (`?demo=1`) — lets the scenario player drive this embed.
+if (demoMode) installDemoBridge()
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>

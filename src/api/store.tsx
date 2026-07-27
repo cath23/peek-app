@@ -23,16 +23,18 @@ import { StarredProvider } from '@/api/internal/starred'
 import { TopicStoreProvider } from '@/api/internal/topicStore'
 import { TopicMutationsProvider } from '@/api/internal/topicMutations'
 import { OpenWorkProvider } from '@/api/internal/openWork'
+import { demoMode } from '@/demo/demoMode'
 import { AvatarRegistryProvider } from './avatars'
 import { MentionDirectorySync, TopicDirectorySync } from './mentions'
 import type { ConversationData } from './types'
 
 // Convex client — present only when a deployment is configured
 // (`npx convex dev` writes VITE_CONVEX_URL to .env.local). Absent in unit
-// tests and in checkouts without a deployment, where the mock-backed
-// internals below serve everything, so the app works in both modes.
+// tests, in checkouts without a deployment, and in demo mode (the recording
+// rig — see src/demo/demoMode.ts), where the mock-backed internals below
+// serve everything, so the app works in both modes.
 const CONVEX_URL =
-  import.meta.env.MODE === 'test'
+  import.meta.env.MODE === 'test' || demoMode
     ? undefined
     : (import.meta.env.VITE_CONVEX_URL as string | undefined) || undefined // '' counts as absent
 // The client always exists so seam hooks can call useQuery/useMutation
