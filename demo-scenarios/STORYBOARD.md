@@ -37,44 +37,46 @@ The frozen snapshots share the live app on 5173, so app-side demo-data changes
 can drift what they show; each version's **rendered mp4 in `renders/` is its
 authoritative record**.
 
-## The film, v3 — ~12.1s, 30fps, one orchestrated take
+## The film, v3 — ~11.7s, 30fps, one orchestrated take
 
 **No cuts (ruling):** the highlights must visibly be the same object from call
 to topic. **And no beat fully stops before the next begins (ruling):** every
-move's tail overlaps the next move's head.
+move's tail overlaps the next move's head — measured, the film moves
+continuously from the pop to the landing.
 
 ```
 00.0–01.6  BOOKEND. Small Peek mark + name + "Highlights land in the topic."
            over the CALL, blurred and dimmed. No scrim — the blur carries it.
 01.6–02.6  FOCUS PULL. The title dissolves upward while the call sharpens,
-           brightens, grows ~5% and settles into centre — arriving, not
-           switching on.                                    [SFX room tone up]
+           brightens, grows ~5% and settles into centre.    [SFX room tone up]
 02.4–03.5  THE CLICK. Cursor in while the frame still sharpens, arcs to the
            hang-up button; the camera pushes to 1.12 WHILE it travels; button
            brightens; press + expanding ring.                      [SFX click]
-03.6–04.5  THE GENIE. The window swaps for its ribbon twin on one frame (same
-           pixels) and pours into a dock point at the bottom — bottom ribbons
-           lead, the window necks into a funnel, vertical motion blur scales
-           with pour speed.                                [SFX genie whoosh]
+03.6–04.55 THE GENIE. The window swaps for its ribbon twin on one frame (same
+           pixels) and pours into a dock point — bottom ribbons lead, the
+           window necks into a funnel, and each ribbon SWAYS sideways by its
+           own progress, drawing the genie S-curve down the column. Motion
+           blur scales with pour speed.                    [SFX genie whoosh]
 04.35–5.0  THE HIGHLIGHTS STREAK IN while the last ribbons are still pouring —
            motion blur only, oversized arrival settling to hero size.
                                                             [SFX whoosh, −3f]
 05.0–05.5  HOLD on the bar. One line, "Expand".
 05.5–06.1  POP. Copies swap on the frame the label changes; content sweeps in
-           over 9f; the card overshoots with back.out(4) and a ±1° tilt as it
-           snaps back. Fast and cheeky.                         [SFX soft pop]
-06.1–07.0  READ. Dead still. Four lines.
-07.0–07.95 THE TOPIC APPROACHES FROM DEPTH, during the read: small, soft and
-           dim far behind the card, coming forward — scale, focus and light on
-           one shared curve, so it reads as one object approaching, not three
-           effects. The card stays pin-sharp in front.         [SFX low rise]
-08.0–08.8  THE JELLY PULL. The card is sucked into the topic: accelerating,
-           bowing on an arc, leaning ~1.3° into the travel, stretching like
-           taffy mid-flight — then lands directly above the compose box with
-           a squash and snaps back square. Handoff to the app's own card 7f
-           earlier, underneath, invisible.                  [SFX snap-thunk]
-08.8–09.6  REST on the docked card. Nothing else appears (ruling: no reply).
-09.6–12.1  MIRROR. The topic sinks into exactly the opening's blur-and-dim
+           over 9f; back.out(4) overshoot with a ±1° tilt.      [SFX soft pop]
+05.85–7.3  READ, WHILE THE TOPIC APPROACHES FROM DEPTH: the pop is still
+           settling when the topic starts forward — small, soft, dim far
+           behind the pin-sharp card, scale + focus + light on one shared
+           curve. Reading time and the approach are the same beat.
+                                                               [SFX low rise]
+07.3–07.8  THE CREEP. The card starts drifting toward the topic — the magnet
+           beginning to win — while the topic finishes settling.
+07.8–08.55 THE COMMIT. It accelerates, bows on an arc, leans ~1.3° into the
+           travel, stretches like taffy — lands directly above the compose box
+           with a squash and snaps back square. The app's own card is revealed
+           2–3 frames before the copy fades, underneath, invisible — any
+           earlier and it ghosts behind the flying card.    [SFX snap-thunk]
+08.55–9.2  REST on the docked card. Nothing else appears (ruling: no reply).
+09.2–11.7  MIRROR. The topic sinks into exactly the opening's blur-and-dim
            and the same small title returns, same size, same position. First
            frame: the call about to happen. Last frame: what it produced.
                                                         [SFX riser, resolve]
@@ -91,12 +93,12 @@ change against the beat table. v3:
 | Beat | mean | peak | |
 |---|---|---|---|
 | focus pull | 0.74 | 1.85 | visible arrival |
-| cursor + punch | 1.54 | 6.61 | the punch registers |
-| genie pour | 3.89 | 10.71 | the showpiece — biggest event by design |
-| bar streaks in | 0.77 | 6.60 | overlaps the pour's tail (runs 3.77–4.43 and 4.35→) |
-| pop open | 0.45 | 1.07 | card-sized subject; area-weighted metric |
-| topic from depth | 0.30 | 0.59 | sustained approach, 28 frames |
-| jelly pull | 0.53 | 1.30 | with landing spike |
+| cursor + punch | 1.54 | 6.62 | the punch registers |
+| genie pour | 3.68 | 10.39 | the showpiece; one 22-frame run with the sway |
+| bar streaks in | 1.57 | 10.39 | inside the pour's tail — true overlap |
+| pop open | 0.52 | 1.07 | card-sized subject; area-weighted metric |
+| read + approach | 0.26 | 0.55 | sustained, 43 frames — reading IS the approach |
+| creep → commit → land | 0.26 → 0.50 | 0.97 | unbroken motion from pop to landing |
 | every HOLD | 0.00 | — | genuinely still |
 
 The metric is area-weighted: full-frame moves always out-score card-sized

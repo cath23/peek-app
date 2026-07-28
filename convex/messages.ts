@@ -150,6 +150,7 @@ export async function resolveFileAttachments(
 
 export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
   const resolvedByReply = m.resolvedByReplyId ? await ctx.db.get(m.resolvedByReplyId) : null
+  const reopenedAfterReply = m.reopenedAfterReplyId ? await ctx.db.get(m.reopenedAfterReplyId) : null
   return {
     id: m.seedKey ?? (m._id as string),
     authorId: m.authorId as string,
@@ -163,6 +164,9 @@ export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, nam
     resolvedById: m.resolvedById ? (m.resolvedById as string) : undefined,
     resolutionMessage: m.resolutionMessage,
     resolvedByReplyId: resolvedByReply ? resolvedByReply.seedKey ?? (resolvedByReply._id as string) : undefined,
+    reopenedBy: m.reopenedById ? names.get(m.reopenedById) : undefined,
+    reopenedAtMs: m.reopenedAt,
+    reopenedAfterReplyId: reopenedAfterReply ? reopenedAfterReply.seedKey ?? (reopenedAfterReply._id as string) : undefined,
     attachments: m.attachments,
     files: await resolveFileAttachments(ctx, m.fileAttachments),
   }
@@ -395,12 +399,28 @@ export const setResolution = mutation({
     const m = await findMessageByKey(ctx, key)
     if (!m) return
     if (!resolved) {
+      // Stamp the reopen event only on a real resolved → open transition.
+      const reopener = m.resolved ? await viewerOrThrow(ctx) : null
+      const lastReply = m.resolved
+        ? await ctx.db
+            .query('replies')
+            .withIndex('by_message', (q) => q.eq('messageId', m._id))
+            .order('desc')
+            .first()
+        : null
       await ctx.db.patch(m._id, {
         resolved: undefined,
         resolvedById: undefined,
         resolutionMessage: undefined,
         resolvedByReplyId: undefined,
         resolvedAt: undefined,
+        ...(reopener
+          ? {
+              reopenedById: reopener._id,
+              reopenedAt: Date.now(),
+              reopenedAfterReplyId: lastReply?._id,
+            }
+          : {}),
       })
       return
     }

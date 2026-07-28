@@ -41,13 +41,12 @@ const T = {
   genie: 3.62,
   whip: 4.35, // the bar streaks in while the last ribbons are still pouring
   expand: 5.5,
-  read: 6.1,
-  approach: 7.0, // the topic starts forward from depth during the read
-  pull: 8.0,
-  handoff: 8.62,
-  endBlur: 9.6,
-  brandBack: 9.85,
-  end: 12.0,
+  approach: 5.85, // the topic starts forward from depth while the pop is still settling
+  pull: 7.3, // creep first — the magnet starting to win — then commit at +0.5
+  handoff: 8.36,
+  endBlur: 9.2,
+  brandBack: 9.45,
+  end: 11.6,
 }
 
 /** How big the card plays alone on screen — 1.3× its docked size. */
@@ -252,17 +251,21 @@ export function buildScenario1(opts: {
     if (!pouring) return
     let maxV = 0
     strips.forEach((el, i) => {
-      const delay = ((GENIE_STRIPS - 1 - i) / (GENIE_STRIPS - 1)) * 0.45
-      const p = clamp01((g - delay) / 0.55)
+      const delay = ((GENIE_STRIPS - 1 - i) / (GENIE_STRIPS - 1)) * 0.5
+      const p = clamp01((g - delay) / 0.5)
       const yc = GENIE_STRIP_H * (i + 0.5)
-      const dy = Math.pow(p, 1.7) * (DOCK.y - yc)
+      const dy = Math.pow(p, 1.6) * (DOCK.y - yc)
+      // The sway is what makes it genie rather than a fall: each ribbon bows
+      // sideways by its own progress, and because neighbouring ribbons are at
+      // different progress, the offsets draw an S-curve down the column.
+      const dx = Math.sin(p * Math.PI) * -72
       const sxRibbon = 1 - 0.96 * Math.pow(p, 1.1)
       el.style.transformOrigin = `${DOCK.x}px ${yc}px`
-      el.style.transform = `translateY(${dy}px) scaleX(${sxRibbon})`
+      el.style.transform = `translate(${dx}px, ${dy}px) scaleX(${sxRibbon})`
       el.style.opacity = String(1 - Math.max(0, (p - 0.88) / 0.12))
       maxV = Math.max(maxV, Math.sin(p * Math.PI))
     })
-    blurGenie.setAttribute('stdDeviation', `0 ${maxV * 9}`)
+    blurGenie.setAttribute('stdDeviation', `${maxV * 2.5} ${maxV * 9}`)
   }
 
   const render = () => {
@@ -279,12 +282,14 @@ export function buildScenario1(opts: {
 
   const tipAt = (x: number, y: number) => ({ x: x - TIP_X, y: y - TIP_Y })
 
-  /** The app's own card is revealed a beat BEFORE the floating copy goes,
+  /** The app's own card is revealed just BEFORE the floating copy fades,
    *  while the copy sits exactly on top of it: same pixels, so nothing can be
-   *  seen. Derived from the playhead, so scrubbing backwards puts it back. */
+   *  seen. The margin is deliberately tight — with an accelerating pull, any
+   *  earlier and the real card is visible in the topic behind the one still
+   *  flying toward it. Derived from the playhead, so scrubbing puts it back. */
   let sentCard: boolean | null = null
   const syncApp = (time: number) => {
-    const visible = time >= T.handoff - 0.24
+    const visible = time >= T.handoff - 0.08
     if (visible === sentCard) return
     sentCard = visible
     links.app.send('set-card-visible', { visible })
@@ -367,7 +372,7 @@ export function buildScenario1(opts: {
   tl.fromTo(
     s,
     { genieP: 0 },
-    { genieP: 1, duration: 0.85, ease: 'power1.in', immediateRender: false },
+    { genieP: 1, duration: 0.92, ease: 'power1.in', immediateRender: false },
     T.genie,
   )
   tl.to(cursor, { opacity: 0, duration: 0.2, ease: 'power1.in' }, T.genie + 0.15)
@@ -448,22 +453,30 @@ export function buildScenario1(opts: {
     T.expand,
   )
 
-  // ── Read. And during the read, the topic approaches from depth: small,
-  //    soft and dim far behind the card, coming forward — scale, focus and
-  //    light on one shared curve, so it reads as one object approaching. ──
-  tl.addLabel('read', T.read)
+  // ── The topic approaches from depth WHILE the pop is still settling and
+  //    the card is being read: small, soft and dim far behind it, coming
+  //    forward slowly — scale, focus and light on one shared curve, so it
+  //    reads as one object approaching. Nothing waits for anything. ──
   tl.addLabel('approach', T.approach)
-  tl.to(peek, { opacity: 1, duration: 0.25, ease: 'power1.out' }, T.approach)
-  tl.to(peek, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 0.9, ease: 'power2.out' }, T.approach)
+  tl.to(peek, { opacity: 1, duration: 0.3, ease: 'power1.out' }, T.approach)
+  tl.to(peek, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.55, ease: 'power2.out' }, T.approach)
 
-  // ── The pull: sucked in, not carried. It accelerates, bows on an arc and
-  //    leans into the travel (see place()), stretches like taffy mid-flight,
-  //    then lands above the composer with a squash and snaps back square. ──
+  // ── The pull, in two phases so the flow never parks: as the topic settles
+  //    into place the card is already CREEPING toward it — the magnet
+  //    starting to win — then it commits: accelerating, bowing on an arc,
+  //    leaning into the travel (see place()), stretching like taffy, landing
+  //    above the composer with a squash and snapping back square. ──
   tl.addLabel('pull', T.pull)
   tl.fromTo(
     s,
     { dockP: 0, lift: 1 },
-    { dockP: 1, lift: 0, duration: 0.55, ease: 'power2.in', immediateRender: false },
+    {
+      immediateRender: false,
+      keyframes: [
+        { dockP: 0.07, lift: 0.96, duration: 0.5, ease: 'power1.inOut' },
+        { dockP: 1, lift: 0, duration: 0.5, ease: 'power2.in' },
+      ],
+    },
     T.pull,
   )
   tl.fromTo(
@@ -472,12 +485,12 @@ export function buildScenario1(opts: {
     {
       immediateRender: false,
       keyframes: [
-        { squash: 1.06, pinch: 0.96, duration: 0.32, ease: 'power2.in' },
-        { squash: 0.955, pinch: 1.02, duration: 0.1, ease: 'power1.in' },
-        { squash: 1, pinch: 1, duration: 0.24, ease: 'back.out(2.5)' },
+        { squash: 1.06, pinch: 0.96, duration: 0.3, ease: 'power2.in' },
+        { squash: 0.955, pinch: 1.02, duration: 0.08, ease: 'power1.in' },
+        { squash: 1, pinch: 1, duration: 0.22, ease: 'back.out(2.5)' },
       ],
     },
-    T.pull + 0.13,
+    T.pull + 0.62,
   )
   tl.fromTo(
     s,
@@ -485,11 +498,11 @@ export function buildScenario1(opts: {
     {
       immediateRender: false,
       keyframes: [
-        { blurY: 7, duration: 0.3, ease: 'power2.in' },
-        { blurY: 0, duration: 0.18, ease: 'power2.out' },
+        { blurY: 7, duration: 0.28, ease: 'power2.in' },
+        { blurY: 0, duration: 0.16, ease: 'power2.out' },
       ],
     },
-    T.pull + 0.05,
+    T.pull + 0.55,
   )
   tl.addLabel('handoff', T.handoff)
   tl.fromTo(s, { cardOpacity: 1 }, { cardOpacity: 0, duration: 0.06, immediateRender: false }, T.handoff)

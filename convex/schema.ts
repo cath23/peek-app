@@ -113,6 +113,13 @@ export default defineSchema({
     /** Set when resolution came from a `→ msg` reply — drives inline editing. */
     resolvedByReplyId: v.optional(v.id('replies')),
     resolvedAt: v.optional(v.number()),
+    /** Latest reopen event — renders as a system note in the thread timeline.
+     *  Survives a later re-resolve (reopen note + newer resolution both show). */
+    reopenedById: v.optional(v.id('users')),
+    reopenedAt: v.optional(v.number()),
+    /** Last reply at reopen time (the note's anchor). Undefined = reopened
+     *  before any reply existed → note renders at the top of the list. */
+    reopenedAfterReplyId: v.optional(v.id('replies')),
     /** Figma frame ids (static integration mocks, §6). */
     attachments: v.optional(v.array(v.string())),
     /** Real uploaded files (Phase 5) — separate lane from Figma `attachments`. */

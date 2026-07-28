@@ -12,6 +12,7 @@ import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useOpenWorkOverrides } from '@/api/internal/openWork'
 import { hasConvex, useDmRuntime } from './store'
 import { CURRENT_USER_NAME } from './currentUser'
+import { REPLIES } from '@/data/replyData'
 import type { UploadedFile } from './uploads'
 import type { ConversationData, FileAttachment, HighlightType, Huddle, ReactionData, ReplyData } from './types'
 
@@ -227,24 +228,38 @@ export function usePeekActions() {
     // ── Resolution ──
     /** Card-level resolve/reopen (conv menu / resolve dialog). Replaces the
      *  whole override — a reply pointer from an earlier `→ msg` is dropped,
-     *  matching the previous card behavior. */
+     *  matching the previous card behavior. Reopening stamps the reopen event
+     *  (who + after which reply) so the thread renders a system note at its
+     *  chronological spot; resolving keeps an earlier reopen note alive. */
     setResolution(id: string, resolved: boolean, resolvedBy?: string, message?: string) {
-      m.setResolvedOverrides((prev) => ({ ...prev, [id]: { resolved, resolvedBy, message } }))
+      m.setResolvedOverrides((prev) => ({
+        ...prev,
+        [id]: resolved
+          ? { resolved, resolvedBy, message, ...keepReopen(prev[id]) }
+          : { resolved: false, ...stampReopen(id) },
+      }))
       if (hasConvex) void setResolutionRemote({ key: id, resolved, resolutionMessage: message, dropReplyPointer: true })
     },
 
     /** Thread-panel resolution edit: resolving keeps the reply pointer so the
-     *  owning reply card can keep editing it inline; reopening clears all. */
+     *  owning reply card can keep editing it inline; reopening clears the
+     *  resolution and stamps the reopen event. */
     setThreadResolution(id: string, resolved: boolean, message?: string) {
       m.setResolvedOverrides((prev) => {
         const existing = prev[id]
         if (resolved) {
           return {
             ...prev,
-            [id]: { resolved: true, resolvedBy: CURRENT_USER_NAME, message, resolvedByReplyId: existing?.resolvedByReplyId },
+            [id]: {
+              resolved: true,
+              resolvedBy: CURRENT_USER_NAME,
+              message,
+              resolvedByReplyId: existing?.resolvedByReplyId,
+              ...keepReopen(existing),
+            },
           }
         }
-        return { ...prev, [id]: { resolved: false } }
+        return { ...prev, [id]: { resolved: false, ...stampReopen(id) } }
       })
       if (hasConvex) void setResolutionRemote({ key: id, resolved, resolutionMessage: resolved ? message : undefined })
     },
