@@ -42,11 +42,11 @@ const T = {
   whip: 4.35, // the bar streaks in while the last ribbons are still pouring
   expand: 5.5,
   approach: 5.85, // the topic starts forward from depth while the pop is still settling
-  pull: 7.3, // creep first — the magnet starting to win — then commit at +0.5
-  handoff: 8.36,
-  endBlur: 9.2,
-  brandBack: 9.45,
-  end: 11.6,
+  pull: 5.95, // the card creeps AS the topic approaches — both converge at once
+  handoff: 7.06,
+  endBlur: 8.6, // the docked rest before this is the reading time (ruling: read after placement)
+  brandBack: 8.85,
+  end: 11.0,
 }
 
 /** How big the card plays alone on screen — 1.3× its docked size. */
@@ -459,13 +459,13 @@ export function buildScenario1(opts: {
   //    reads as one object approaching. Nothing waits for anything. ──
   tl.addLabel('approach', T.approach)
   tl.to(peek, { opacity: 1, duration: 0.3, ease: 'power1.out' }, T.approach)
-  tl.to(peek, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.55, ease: 'power2.out' }, T.approach)
+  tl.to(peek, { scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.15, ease: 'power2.out' }, T.approach)
 
-  // ── The pull, in two phases so the flow never parks: as the topic settles
-  //    into place the card is already CREEPING toward it — the magnet
-  //    starting to win — then it commits: accelerating, bowing on an arc,
-  //    leaning into the travel (see place()), stretching like taffy, landing
-  //    above the composer with a squash and snapping back square. ──
+  // ── The pull, converging WITH the approach (ruling: both at once, and the
+  //    reading happens after placement): as the topic comes forward the card
+  //    is already creeping toward it, then commits — accelerating, bowing on
+  //    an arc, leaning into the travel (see place()), stretching like taffy,
+  //    landing above the composer just as the topic finishes sharpening. ──
   tl.addLabel('pull', T.pull)
   tl.fromTo(
     s,
@@ -473,7 +473,7 @@ export function buildScenario1(opts: {
     {
       immediateRender: false,
       keyframes: [
-        { dockP: 0.07, lift: 0.96, duration: 0.5, ease: 'power1.inOut' },
+        { dockP: 0.1, lift: 0.94, duration: 0.55, ease: 'power1.inOut' },
         { dockP: 1, lift: 0, duration: 0.5, ease: 'power2.in' },
       ],
     },
@@ -490,7 +490,7 @@ export function buildScenario1(opts: {
         { squash: 1, pinch: 1, duration: 0.22, ease: 'back.out(2.5)' },
       ],
     },
-    T.pull + 0.62,
+    T.pull + 0.65,
   )
   tl.fromTo(
     s,
@@ -502,7 +502,7 @@ export function buildScenario1(opts: {
         { blurY: 0, duration: 0.16, ease: 'power2.out' },
       ],
     },
-    T.pull + 0.55,
+    T.pull + 0.58,
   )
   tl.addLabel('handoff', T.handoff)
   tl.fromTo(s, { cardOpacity: 1 }, { cardOpacity: 0, duration: 0.06, immediateRender: false }, T.handoff)

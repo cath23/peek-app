@@ -37,7 +37,7 @@ The frozen snapshots share the live app on 5173, so app-side demo-data changes
 can drift what they show; each version's **rendered mp4 in `renders/` is its
 authoritative record**.
 
-## The film, v3 — ~11.7s, 30fps, one orchestrated take
+## The film, v3 — ~11.1s, 30fps, one orchestrated take
 
 **No cuts (ruling):** the highlights must visibly be the same object from call
 to topic. **And no beat fully stops before the next begins (ruling):** every
@@ -63,20 +63,18 @@ continuously from the pop to the landing.
 05.0–05.5  HOLD on the bar. One line, "Expand".
 05.5–06.1  POP. Copies swap on the frame the label changes; content sweeps in
            over 9f; back.out(4) overshoot with a ±1° tilt.      [SFX soft pop]
-05.85–7.3  READ, WHILE THE TOPIC APPROACHES FROM DEPTH: the pop is still
-           settling when the topic starts forward — small, soft, dim far
-           behind the pin-sharp card, scale + focus + light on one shared
-           curve. Reading time and the approach are the same beat.
+05.85–6.5  CONVERGE. The topic approaches from depth WHILE the card creeps
+           toward it — both moving at once, meeting in the middle. Scale +
+           focus + light on one shared curve behind the pin-sharp card.
                                                                [SFX low rise]
-07.3–07.8  THE CREEP. The card starts drifting toward the topic — the magnet
-           beginning to win — while the topic finishes settling.
-07.8–08.55 THE COMMIT. It accelerates, bows on an arc, leans ~1.3° into the
-           travel, stretches like taffy — lands directly above the compose box
-           with a squash and snaps back square. The app's own card is revealed
-           2–3 frames before the copy fades, underneath, invisible — any
-           earlier and it ghosts behind the flying card.    [SFX snap-thunk]
-08.55–9.2  REST on the docked card. Nothing else appears (ruling: no reply).
-09.2–11.7  MIRROR. The topic sinks into exactly the opening's blur-and-dim
+06.5–07.0  THE COMMIT. The card accelerates out of its creep, bows on an arc,
+           leans ~1.3° into the travel, stretches like taffy — lands directly
+           above the compose box, with the squash, just as the topic finishes
+           sharpening. The app's own card is revealed 2–3 frames before the
+           copy fades, underneath, invisible.               [SFX snap-thunk]
+07.2–08.6  DOCKED READ. 1.4s dead still on the landed card — the reading time
+           lives here, in the app (ruling: read after placement).
+08.6–11.1  MIRROR. The topic sinks into exactly the opening's blur-and-dim
            and the same small title returns, same size, same position. First
            frame: the call about to happen. Last frame: what it produced.
                                                         [SFX riser, resolve]
@@ -97,8 +95,9 @@ change against the beat table. v3:
 | genie pour | 3.68 | 10.39 | the showpiece; one 22-frame run with the sway |
 | bar streaks in | 1.57 | 10.39 | inside the pour's tail — true overlap |
 | pop open | 0.52 | 1.07 | card-sized subject; area-weighted metric |
-| read + approach | 0.26 | 0.55 | sustained, 43 frames — reading IS the approach |
-| creep → commit → land | 0.26 → 0.50 | 0.97 | unbroken motion from pop to landing |
+| converge (approach+creep) | 0.62 | 0.90 | both moving at once, one 18-frame run |
+| commit + land | 0.69 | 1.32 | continuous into the landing |
+| docked READ | 0.00 | — | 1.4s dead still — the reading time |
 | every HOLD | 0.00 | — | genuinely still |
 
 The metric is area-weighted: full-frame moves always out-score card-sized

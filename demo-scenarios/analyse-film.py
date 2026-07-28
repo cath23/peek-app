@@ -18,12 +18,11 @@ BEATS = [
     ("bar streaks in (overlap)", 4.35, 5.00),
     ("bar HOLD",                 5.00, 5.50),
     ("pop open",                 5.50, 6.10),
-    ("read + topic approaches",  5.85, 7.30),
-    ("creep (magnet wins)",      7.30, 7.80),
-    ("commit + land",            7.80, 8.55),
-    ("docked rest",              8.55, 9.20),
-    ("blur down + brand back",   9.20, 10.35),
-    ("end HOLD",                 10.35, 11.70),
+    ("converge: approach+creep", 5.85, 6.50),
+    ("commit + land",            6.50, 7.20),
+    ("docked READ",              7.20, 8.60),
+    ("blur down + brand back",   8.60, 9.75),
+    ("end HOLD",                 9.75, 11.10),
 ]
 
 cap = cv2.VideoCapture(video)
