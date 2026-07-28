@@ -21,35 +21,17 @@ export const googleSans = {
 
 // ── Camera-off avatar tiles ──
 //
-// Every participant renders as a letter tile (ruling 2026-07-28), all built
-// from Alice's Figma tile (681:2339): a coloured initial circle over a dim
-// radial vignette of the same hue. The vignette decay factors are lifted from
-// Alice's original gradient stops, so her tile stays the pixel reference and
-// the others inherit the exact treatment in their own colour.
-
-const VIGNETTE_DECAY: [number, number][] = [
-  [0, 1],
-  [0.35, 0.8],
-  [0.65, 0.64],
-  [0.825, 0.45],
-  [1, 0.27],
-]
-
-function vignette([r, g, b]: [number, number, number]) {
-  const stops = VIGNETTE_DECAY.map(
-    ([off, f]) =>
-      `<stop stop-color='rgba(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)},1)' offset='${off}'/>`,
-  ).join('')
-  return {
-    backgroundImage: `url("data:image/svg+xml;utf8,<svg viewBox='0 0 684 389' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='1'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(48.857 0 0 27.786 342 194.5)'>${stops}</radialGradient></defs></svg>")`,
-  }
-}
+// Every participant renders as a letter tile (ruling 2026-07-28): a coloured
+// initial circle on a FLAT neutral dark tile — Meet's own camera-off look.
+// Flat matters beyond authenticity: the genie squeezes each ribbon by a
+// different amount, and any gradient background shows the mismatch between
+// neighbouring ribbons as banding. A solid survives the warp seamlessly.
+const TILE_BG = '#3C4043'
 
 function AvatarTile({
   name,
   letter,
   circle,
-  tint,
   badge,
   badgeOpacity = 0.17,
 }: {
@@ -57,13 +39,11 @@ function AvatarTile({
   letter: string
   /** The initial circle's colour (Meet's avatar palette). */
   circle: string
-  /** Vignette centre — a dimmed cousin of the circle colour. */
-  tint: [number, number, number]
   badge?: string
   badgeOpacity?: number
 }) {
   return (
-    <div className="overflow-clip relative rounded-[24px]" style={vignette(tint)}>
+    <div className="overflow-clip relative rounded-[24px]" style={{ backgroundColor: TILE_BG }}>
       <NameLabel name={name} />
       <div
         className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 rounded-full size-[88px] top-[calc(50%+0.5px)]"
@@ -152,12 +132,11 @@ export function MeetCall() {
 
         {/* 2×2 participant grid — all letter tiles, Meet's avatar palette. */}
         <div className="absolute gap-[12px] grid grid-cols-2 grid-rows-2 h-[790px] left-[30px] top-[69px] w-[1380px]">
-          <AvatarTile name="Greg Bothman" letter="G" circle="#00838F" tint={[15, 54, 60]} />
+          <AvatarTile name="Greg Bothman" letter="G" circle="#00838F" />
           <AvatarTile
             name="Peek Designer"
             letter="P"
             circle="#7E57C2"
-            tint={[50, 37, 76]}
             badge={micBadgeDesigner}
             badgeOpacity={0.33}
           />
@@ -165,10 +144,9 @@ export function MeetCall() {
             name="Alice Curtis"
             letter="A"
             circle="#4058B9"
-            tint={[44, 55, 99]}
             badge={micBadgeAlice}
           />
-          <AvatarTile name="Stripe Engineer" letter="S" circle="#C26401" tint={[70, 43, 13]} />
+          <AvatarTile name="Stripe Engineer" letter="S" circle="#C26401" />
         </div>
 
         {/* Center control bar */}
