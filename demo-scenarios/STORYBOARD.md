@@ -32,6 +32,9 @@ Rendered cuts live in `renders/` (gitignored). Render one with
 `node demo-scenarios/render-film.mjs <outdir> 30` — it seeks the timeline frame
 by frame and shoots each one (deterministic, exactly 30fps), then encode the
 sequence with ffmpeg (`npm i --no-save ffmpeg-static @ffprobe-installer/ffprobe`).
+For delivery quality set `SCALE=2` (renders at 2880×2048 device pixels — crisp
+text) and encode with `-crf 13 -preset slow`; 1× / crf 16 is fine for the
+measurement loop.
 
 The frozen snapshots share the live app on 5173, so app-side demo-data changes
 can drift what they show; each version's **rendered mp4 in `renders/` is its

@@ -16,9 +16,15 @@ const browser = await chromium.launch({
   executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
   headless: true,
 })
-// Viewport = the stage exactly, so the stage renders at scale 1 and every
-// screenshot is pixel-exact 1440×1024.
-const page = await browser.newPage({ viewport: { width: 1440, height: 1024 } })
+// Viewport = the stage exactly, so the stage renders at scale 1. SCALE=2
+// renders at 2× device pixels (2880×2048): the browser rasterises every
+// glyph and edge at double density, which is what makes the export crisp —
+// upscaling after the fact cannot recover detail that was never drawn.
+const SCALE = Number(process.env.SCALE ?? 1)
+const page = await browser.newPage({
+  viewport: { width: 1440, height: 1024 },
+  deviceScaleFactor: SCALE,
+})
 page.on('pageerror', (e) => console.log('[pageerror]', e.message))
 
 const PLAYER = process.env.PLAYER ?? 'http://localhost:5202/?hud=0'

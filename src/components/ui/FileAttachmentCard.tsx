@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   IconFile,
@@ -11,10 +11,12 @@ import {
   IconFileTypeTxt,
   IconJson,
   IconMarkdown,
+  IconMovie,
+  IconPlayerPlayFilled,
   IconX,
   IconDownload,
 } from '@tabler/icons-react'
-import { fileExtension, isImageAttachment, formatBytes, fileTypeLabel } from '@/lib/fileAttachments'
+import { fileExtension, isImageAttachment, isVideoAttachment, formatBytes, fileTypeLabel } from '@/lib/fileAttachments'
 import type { FileAttachment } from '@/api'
 import { IconButton } from './IconButton'
 import { cn } from '@/lib/utils'
@@ -57,8 +59,17 @@ const ICON_BY_EXT: Record<string, React.FC<{ size?: number; stroke?: number; cla
 }
 
 function FileIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = ICON_BY_EXT[fileExtension(name)] ?? IconFile
+  const Icon = ICON_BY_EXT[fileExtension(name)] ?? (isVideoAttachment(name) ? IconMovie : IconFile)
   return <Icon size={20} stroke={1.5} className={className} />
+}
+
+/** `0:42`, `12:03`, `1:02:07`. */
+function formatDuration(seconds: number): string {
+  const s = Math.round(seconds)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = String(s % 60).padStart(2, '0')
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
 }
 
 /** A simple full-screen viewer for uploaded images (mirrors FrameLightbox). */
@@ -97,8 +108,16 @@ interface FileAttachmentCardProps {
  */
 export function FileAttachmentCard({ file, className }: FileAttachmentCardProps) {
   const [lightbox, setLightbox] = useState(false)
+  // Video state: playing reveals the native controls; a decode failure (e.g.
+  // an HEVC .mov on a machine without the codec) drops the card to the
+  // generic file row so the attachment is never a dead end.
+  const [playing, setPlaying] = useState(false)
+  const [duration, setDuration] = useState<number | null>(null)
+  const [videoError, setVideoError] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const href = file.url ?? file.previewUrl
   const isImage = isImageAttachment(file.name, file.contentType)
+  const isVideo = isVideoAttachment(file.name, file.contentType)
 
   /** Download control (shared IconButton) — only when the file has a URL.
    *  Fades in on card hover (or keyboard focus); it keeps its layout slot so
@@ -149,6 +168,59 @@ export function FileAttachmentCard({ file, className }: FileAttachmentCardProps)
     )
   }
 
+  if (isVideo && href && !videoError) {
+    return (
+      <div
+        data-interactive
+        className={cn(
+          'group relative flex flex-col w-[280px] rounded-lg border border-border-subtle overflow-hidden bg-bg-inset hover:border-border-default transition-colors',
+          className,
+        )}
+      >
+        {/* 16:9 media area. preload=metadata paints the first frame as a free
+            poster and yields the duration; scrubbing streams byte ranges. */}
+        <div className="relative w-full h-[157px] bg-black">
+          <video
+            ref={videoRef}
+            src={href}
+            preload="metadata"
+            playsInline
+            controls={playing}
+            className="w-full h-full object-contain"
+            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+            onError={() => setVideoError(true)}
+            onClick={(e) => e.stopPropagation()}
+          />
+          {!playing && (
+            <button
+              type="button"
+              aria-label={`Play ${file.name}`}
+              className="absolute inset-0 flex items-center justify-center cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                setPlaying(true)
+                void videoRef.current?.play()
+              }}
+            >
+              <span className="size-12 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white transition-transform group-hover:scale-105">
+                <IconPlayerPlayFilled size={20} />
+              </span>
+              {duration !== null && Number.isFinite(duration) && (
+                <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-sm bg-black/70 text-white text-[11px] leading-[1.2] tabular-nums">
+                  {formatDuration(duration)}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1 pl-2 pr-1 py-1 min-w-0">
+          <span className="flex-1 text-[12px] leading-[1.3] text-text-primary truncate">{file.name}</span>
+          {downloadButton}
+        </div>
+      </div>
+    )
+  }
+
   // Non-image (or image without a URL yet): a compact file row. The body opens
   // the file in a new tab (preview); the trailing IconButton downloads it.
   const body = (
@@ -160,6 +232,7 @@ export function FileAttachmentCard({ file, className }: FileAttachmentCardProps)
         <span className="text-[12px] font-medium leading-[1.3] text-text-primary truncate">{file.name}</span>
         <span className="text-[10px] leading-[1.2] text-text-secondary truncate">
           {fileTypeLabel(file.name)} · {formatBytes(file.size)}
+          {videoError && ' · Preview unavailable'}
         </span>
       </div>
     </>

@@ -10,10 +10,20 @@
 /** 25 MB — 5× the avatar limit; documents/zips are legitimately larger. */
 export const FILE_MAX_BYTES = 25 * 1024 * 1024
 
-/** Extensions we accept (see the product ruling 2026-07-17). */
+/** 100 MB for video only — a 30s screen recording is 10–40 MB, so the
+ *  general cap would reject the most common video use case (ruling
+ *  2026-07-28). */
+export const VIDEO_MAX_BYTES = 100 * 1024 * 1024
+
+/** Extensions we accept (see the product ruling 2026-07-17; video added
+ *  2026-07-28 — browser-decodable containers only, no avi/mkv/wmv). */
 export const ALLOWED_EXTENSIONS = [
   // images
   'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'heif', 'svg',
+  // video — mov is accepted because every iPhone clip and macOS screen
+  // recording is one; the rare HEVC-inside-mov that a browser can't decode
+  // falls back to a download row in the card, never a rejection here.
+  'mp4', 'm4v', 'webm', 'mov',
   // documents
   'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'txt', 'md', 'rtf',
   // data / archive
@@ -26,6 +36,7 @@ export const BLOCKED_EXTENSIONS = [
 ] as const
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'heif', 'svg'])
+const VIDEO_EXTENSIONS = new Set(['mp4', 'm4v', 'webm', 'mov'])
 
 /** Lowercased extension without the dot (''/no-dot filenames → ''). */
 export function fileExtension(name: string): string {
@@ -35,6 +46,10 @@ export function fileExtension(name: string): string {
 
 export function isImageAttachment(name: string, contentType?: string): boolean {
   return IMAGE_EXTENSIONS.has(fileExtension(name)) || (contentType?.startsWith('image/') ?? false)
+}
+
+export function isVideoAttachment(name: string, contentType?: string): boolean {
+  return VIDEO_EXTENSIONS.has(fileExtension(name)) || (contentType?.startsWith('video/') ?? false)
 }
 
 /** `'2.4 MB'`, `'812 KB'`, `'340 bytes'`. */
@@ -64,8 +79,9 @@ export function validateFile(file: File): string | null {
   if (!(ALLOWED_EXTENSIONS as readonly string[]).includes(ext)) {
     return `${fileTypeLabel(file.name)} files aren't supported.`
   }
-  if (file.size > FILE_MAX_BYTES) {
-    return `${file.name} is larger than ${formatBytes(FILE_MAX_BYTES)}.`
+  const maxBytes = isVideoAttachment(file.name, file.type) ? VIDEO_MAX_BYTES : FILE_MAX_BYTES
+  if (file.size > maxBytes) {
+    return `${file.name} is larger than ${formatBytes(maxBytes)}.`
   }
   return null
 }
