@@ -57,28 +57,19 @@ const KICK_OFF_HIGHLIGHTS: HighlightsData = {
     {
       kind: 'highlight',
       type: 'insight',
-      lines: [
-        'Went with Stripe Checkout for v1 instead of a custom card form.',
-        'Walked through the failure and 3DS-declined states and where customers get stuck.',
-      ],
+      lines: ['Stripe Checkout for v1, not a custom card form.'],
     },
     {
       kind: 'highlight',
       type: 'question',
-      lines: ['What does Stripe return after a 3DS decline, and which codes do we show the customer?'],
-    },
-    {
-      kind: 'highlight',
-      type: 'conclusion',
-      lines: ['Agreed reconciliation needs a fallback in case a webhook is late.'],
+      lines: ['What does Stripe return after a 3DS decline?'],
     },
     { kind: 'heading', text: 'Action items' },
     {
       kind: 'todos',
       items: [
-        { text: 'Draft the payment flow in Figma, including failure states', assignee: 'Alice Curtis' },
-        { text: 'Scope webhooks and the reconciliation job as the first PR', assignee: 'Greg Bothman' },
-        { text: 'Send Stripe test keys and the decline codes to handle', assignee: 'Juan Foley' },
+        { text: 'Draft the payment flow, failure states included', assignee: 'Alice Curtis' },
+        { text: 'Scope webhooks and reconciliation', assignee: 'Greg Bothman' },
       ],
     },
   ],
@@ -112,6 +103,16 @@ export const DEMO_TOPIC_CONVERSATIONS: ConvGroup[] = [
         timestamp: KICK_OFF_HIGHLIGHTS.timestamp,
         body: '',
         highlights: KICK_OFF_HIGHLIGHTS,
+      },
+      // The film's last beat: the highlights land, and someone picks work up
+      // out of them. Hidden until then (the bridge holds it), but present from
+      // the start so the stream's layout — and the card's docking slot — never
+      // shifts when it appears.
+      {
+        id: 'd1_reply',
+        authorName: 'Greg Bothman',
+        timestamp: '11:14 AM',
+        body: "Taking the webhooks one. First PR by Thursday.",
       },
     ],
   },

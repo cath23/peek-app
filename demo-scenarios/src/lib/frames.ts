@@ -95,6 +95,7 @@ export function usePeekFrames(): Frames {
 
       // Put each frame into the one state it holds for the whole film.
       send('app', 'set-card-visible', { visible: false })
+      send('app', 'set-reply-visible', { visible: false })
       send('app', 'set-expanded', { expanded: true })
       send('bar', 'set-expanded', { expanded: false })
       send('card', 'set-expanded', { expanded: true })

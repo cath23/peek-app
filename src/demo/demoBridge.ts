@@ -43,6 +43,7 @@ type Command =
   | { source: typeof TAG; type: 'measure' }
   | { source: typeof TAG; type: 'set-expanded'; expanded: boolean }
   | { source: typeof TAG; type: 'set-card-visible'; visible: boolean }
+  | { source: typeof TAG; type: 'set-reply-visible'; visible: boolean }
 
 function card(): HTMLElement | null {
   return document.querySelector<HTMLElement>('[data-highlights-card]')
@@ -111,6 +112,24 @@ function setCardVisible(visible: boolean) {
 }
 
 /**
+ * The reply that lands under the highlights on the film's last beat. Same
+ * reasoning as the card: it holds its space from the start, so revealing it
+ * can't shift the stream — it just appears.
+ */
+function replyRow(): HTMLElement | null {
+  const rows = document.querySelectorAll<HTMLElement>('[data-message-card]')
+  return rows.length ? rows[rows.length - 1] : null
+}
+
+function setReplyVisible(visible: boolean) {
+  const el = replyRow()
+  if (!el) return
+  el.style.opacity = visible ? '1' : '0'
+  el.style.transform = visible ? 'none' : 'translateY(6px)'
+  el.style.transition = 'opacity 260ms ease-out, transform 260ms ease-out'
+}
+
+/**
  * Measure the card in both states, then leave it as it was. Runs once at
  * load, before the player builds its timeline.
  */
@@ -157,6 +176,9 @@ export function installDemoBridge() {
         break
       case 'set-card-visible':
         setCardVisible(e.data.visible)
+        break
+      case 'set-reply-visible':
+        setReplyVisible(e.data.visible)
         break
       default:
         post('card-rect', { rect: rect(), expanded: isExpanded() })

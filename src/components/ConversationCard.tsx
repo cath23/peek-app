@@ -474,6 +474,9 @@ export function ConversationCard({
   return (
     <>
       <div
+        // Stable hook for the demo rig, which reveals a row on a beat (see
+        // src/demo/demoBridge.ts). Inert everywhere else.
+        data-message-card
         className={cn(
           'relative rounded-lg transition-colors border',
           isEditing

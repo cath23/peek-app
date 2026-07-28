@@ -38,3 +38,8 @@ PROTOTYPE.md
 *.njsproj
 *.sln
 *.sw?
+
+# Demo-film working artefacts: frozen player snapshots and rendered videos.
+# The snapshots are recoverable from history; the renders are large binaries.
+demo-scenarios-v1/
+demo-scenarios/renders/

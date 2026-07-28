@@ -7,15 +7,17 @@ Craft rules: the `motion-design` and `motion-teardown` skills in `.claude/skills
 
 ## Running it
 
-Two dev servers — the player needs both:
+Three servers. The app on 5173, and one per film version — **each version keeps
+its own URL** so an earlier cut stays watchable (ruling 2026-07-28):
 
 ```
-npx vite --port 5173                       # the app, from the repo root
-Set-Location demo-scenarios; npx vite --port 5200
+npx vite --port 5173                                    # the app
+Set-Location demo-scenarios-v1; npx vite --port 5200    # v1, frozen
+Set-Location demo-scenarios;    npx vite --port 5201    # v2, current
 ```
 
-Then http://localhost:5200. `?peek=http://host:port` points at a different app
-server; `?t=6.5` or `?t=expand` deep-links a moment; `?autoplay=1` plays on load.
+`?peek=http://host:port` points at a different app server; `?t=6.5` or
+`?t=expand` deep-links a moment; `?autoplay=1` plays on load.
 
 | Key | |
 |---|---|
@@ -25,58 +27,74 @@ server; `?t=6.5` or `?t=expand` deep-links a moment; `?autoplay=1` plays on load
 | H | hide the HUD (do this before recording) |
 | G | GSDevTools — scrub and tune |
 
-Playback waits until all three embedded app frames have reported their
-geometry, so a slow dev-server compile can never be caught on film.
+Rendered cuts live in `renders/` (gitignored). Render one with
+`node demo-scenarios/render-film.mjs <outdir> 30`, which seeks the timeline frame by frame
+and shoots each one — deterministic, exactly 30fps, no dropped frames — then
+encode the sequence with ffmpeg. That's also what gets measured; see below.
 
-## The film — 12.5s, 30fps, 120bpm
+## The film — 13.5s, 30fps, 120bpm, one continuous take
 
-Every beat lands on a 0.5s marker (one beat; 15 frames). Cuts that don't sit on
-the grid are what "feels off but looks fine" means.
+**No cuts, by ruling.** The point of the film is that the highlights you watch
+leave the call are demonstrably the same object that lands in the topic; a cut
+would break exactly the causality it exists to show. Where a move was invisible
+the fix was contrast, not an edit.
 
 ```
-00.0–02.5  MEET, COLD OPEN. The call is already live — no logo, no build-up.
-           Window inset to 88%, rounded, soft shadow on the void.
-   00.3–01.3  TITLE over the call, dimmed to 58%: "Scenario 01" /
-              "Highlights in Huddle". 3 words, 50ms stagger, mask reveal +
-              blur 7→0, back.out(1.6). UI holds still — text and UI take turns.
-   01.3–02.0  HOLD. Nothing moves.
-   02.0–02.35 Title out: fade + 10px down (exit ≈ 60% of the entry). Dim lifts.
-02.5–03.0  CURSOR in from bottom-right, arcs to the hang-up button. 15f,
-           decelerating, 7px overshoot before it settles.
-03.0–03.27 PUNCH-IN toward the button, 1.0→1.12, 8f — the most reliable beat
-           in the genre. Then hold.
-03.5       CLICK. Cursor press 2f, button press + brightness 2f.      [SFX click]
-03.5–04.0  MINIMISE. Swells 2% for 2f (anticipation), then collapses into the
-           click point, 13f power2.in, y-blur 0→14, opacity out over the last
-           5f.                                                [SFX whoosh, −3f]
-04.0–04.5  EMPTY VOID. 15f of nothing. The pause is the tension.
-04.5–05.0  WHIP left→right. The collapsed card enters from the right, 12f
-           power4.inOut + 3f settle, x-blur 0→14→0, glow parallax at a slower
-           rate — one object alone reads as an object, two layers at different
-           rates read as a camera.                            [SFX whoosh, −3f]
-05.0–06.0  HOLD 30f. The bar alone on the void: one line, "Expand".
-06.0–06.6  SPRING OPEN. The two clipped copies swap in a single frame, on the
-           frame the button label changes — which is what a click looks like.
-           Reveal 12f power3.out; the bounce lives in scale, back.out(2.6) 18f.
-                                                                 [SFX soft pop]
-06.6–08.0  HOLD 45f. The hero card, dead still. Reading time.
-08.0–08.53 PEEK RISES. y+150→0, 0.94→1, 16f back.out(1.15), y-blur 0→6→0.
-                                                              [SFX whoosh, −3f]
-08.5–09.0  CARD DOCKS. 15f power3.inOut into its slot in the topic; landing
-           squash 2f + settle 4f back.out(2.5). The app's own card is revealed
-           8f earlier underneath — same pixels, so the swap can't be seen.
-                                                                  [SFX click]
-09.0–10.5  HOLD 45f. The topic with the card in it. Nothing moves.
-10.5–12.5  END CARD. UI dips to 18% + 9px blur, Peek mark + one line, mask
-           reveal, hold 45f. Music resolves on the final frame.    [SFX riser]
+00.0–02.0  THE TOPIC, WAITING. Empty, no highlights, nothing to read. The
+           bookend card fades up over it — mark, name, one line, which doubles
+           as the title and says what you're about to watch. Scrim behind the
+           text only.
+02.0–02.5  SWAP. The topic lifts away and the call comes up into the same
+           space. One space, two things in it — not a cut.
+02.5–03.4  THE CALL, holding.                                    [SFX room tone]
+03.4–04.0  CURSOR arcs to the hang-up button, decelerating, small overshoot.
+04.0–04.3  PUNCH-IN toward the button, 1.0→1.12.
+04.5       CLICK. Cursor press, button press, and a ring expanding off it.
+                                                                    [SFX click]
+04.5–05.0  MINIMISE. Swells 1.5% then folds into the click point, y-blur.
+           Deliberately calmer than the hero beats.           [SFX whoosh, -3f]
+05.0–05.5  EMPTY VOID. 15 frames of nothing.
+05.5–06.15 THE CAMERA TRAVELS RIGHT and finds the card. A light sweep crosses
+           with it and the field brightens; the card arrives oversized and
+           settles. Measured at 0.13 before that contrast existed — invisible.
+                                                              [SFX whoosh, -3f]
+06.15–07.0 HOLD on the collapsed bar: one line, "Expand".
+07.0–07.75 SPRING OPEN. The two clipped copies swap on the frame the button
+           label changes — which is what a click looks like. Reveal sweeps top
+           to bottom; the bounce lives in scale.                 [SFX soft pop]
+07.75–09.0 HOLD on the hero card. Four lines, readable.
+09.0–09.55 THE TOPIC COMES BACK for it, rising from below.    [SFX whoosh, -3f]
+09.5–10.05 THE CARD DOCKS into its slot, with a landing squash. The app's own
+           card is revealed underneath 8 frames earlier — same pixels, so the
+           swap can't be seen.                                      [SFX click]
+10.5–10.9  A TEAMMATE PICKS IT UP. Greg's reply appears under the highlights
+           and the camera leans in 3.5%. Its space is reserved from the start,
+           so nothing shifts.                                      [SFX ping]
+11.5–13.5  BOOKEND, SECOND PASS. The UI dips and defocuses, the same card
+           returns — now reading as a result, not a promise. Holds 42 frames.
+                                                                   [SFX riser]
 ```
-
-Shot lengths: 3.0 / 1.0 / 1.0 / 1.0 / 2.0 / 1.0 / 1.5 / 2.0 — average 1.7s,
-inside the 1.5–3s target.
 
 **Sound is added in post** (the rig is silent). Whooshes peak 2–3 frames
-*before* their move; clicks sit well under the music; the riser carries into
-the end card.
+*before* their move; clicks sit well under the music.
+
+## Measured, not asserted
+
+`demo-scenarios/analyse-film.py` reads the rendered mp4 and reports per-frame change against
+the beat table above; `.claude/skills/motion-teardown/scripts/teardown.py`
+gives the shot list and cut lengths. v2, measured:
+
+| Beat | v1 | v2 | |
+|---|---|---|---|
+| whip | 0.13 | **1.10** | was classified a static hold — invisible |
+| reply appears | — | **0.73** | 0.01 before the camera leaned in |
+| minimise | 6.29 | 5.61 | pulled back; it shouldn't be the biggest thing |
+| every HOLD | 0.00–0.06 | 0.00–0.09 | genuinely still |
+
+Two things the metric can't see, worth knowing: it is area-weighted, so a
+full-frame window move will always out-score a card-sized subject (the spring
+and the dock sit at ~0.5 and that is fine); and the cursor is far too small to
+register at all, which is why the click ring exists.
 
 ## How the Peek beats work
 
