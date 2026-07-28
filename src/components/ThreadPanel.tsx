@@ -1,67 +1,109 @@
-import { useRef, useEffect, useState, Fragment } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { IconX, IconExternalLink, IconCircleDashed, IconCircleCheck, IconLock, IconChecks, IconArrowNarrowRight } from '@tabler/icons-react'
+import { IconX, IconExternalLink, IconCircleDashed, IconCircleCheck, IconLock, IconArrowNarrowRight } from '@tabler/icons-react'
 import { Avatar } from './ui/Avatar'
 import { IconButton } from './ui/IconButton'
 import { ThreadReplyCard } from './ThreadReplyCard'
 import { ComposeBox, type SendPayload } from './ui/ComposeBox'
 import { DateDivider } from './ui/DateDivider'
-import type { ConversationData, HighlightType, ReactionData, ThreadReply } from '@/api'
+import { formatReplyTimestamp } from '@/api'
+import type { ConversationData, HighlightType, ReactionData, ResolutionEvent, ThreadReply } from '@/api'
 import { PinnedMessage } from './ui/PinnedMessage'
 import { SkeletonConversationList } from './ui/Skeleton'
 import { partitionRepliesAroundPromotion } from '@/lib/threadPartition'
+import { cn } from '@/lib/utils'
 
 // ── Thread Panel ──
 
 /**
- * The resolution as a chronological event INSIDE the thread (user feedback
- * 2026-07-28: the feed showed the banner but the thread had no trace of it).
- * Rendered directly below the reply that triggered the resolution
- * (resolvedByReplyId), or at the end of the list when it was resolved from
- * the composer or menu. Same visual as ConversationCard's feed banner —
- * except the message WRAPS here: the thread is the detail view.
+ * Resolve/reopen history as timeline bullets sitting chronologically among
+ * the replies (ruling 2026-07-28: bullets, not banners/dividers — and the
+ * FULL history, so resolve → reopen → resolve reads as a timeline).
+ * Consecutive events share one block with a connecting line between dots.
  */
-function ResolutionEventRow({ resolvedBy, message }: { resolvedBy?: string; message?: string }) {
+function ResolutionTimeline({ events }: { events: ResolutionEvent[] }) {
   return (
-    <div
-      data-resolution-event
-      className="flex items-start gap-2 px-2 py-1 signal:rounded-[10px] signal:border signal:border-[rgba(63,222,140,0.22)] signal:bg-[color:var(--success-wash)] signal:px-3 signal:py-2.5"
-    >
-      <IconChecks size={16} stroke={1.5} className="text-success-default shrink-0 signal:drop-shadow-[0_0_5px_rgba(63,222,140,0.6)]" />
-      <p className="text-[12px] leading-[1.4] font-medium min-w-0">
-        <span className="text-success-default whitespace-nowrap">{resolvedBy || 'Someone'} resolved</span>
-        {message && (
-          <>
-            <IconArrowNarrowRight size={12} stroke={1.5} className="inline shrink-0 mx-1.5 -mt-px text-text-primary" />
-            <span className="text-text-primary">{message}</span>
-          </>
-        )}
-      </p>
+    <div data-resolution-timeline className="relative flex flex-col gap-2 py-1 px-1">
+      {events.length > 1 && (
+        <div aria-hidden className="absolute left-[11.5px] top-[14px] bottom-[14px] w-px bg-border-default" />
+      )}
+      {events.map((e, i) => (
+        <div
+          key={e.key ?? `${e.kind}-${e.atMs ?? i}`}
+          data-resolution-event={e.kind}
+          className="relative flex items-start gap-2"
+        >
+          {/* Dot sits on its own opaque disc so the connector line passes behind it. */}
+          <span className="flex items-center justify-center size-4 shrink-0 rounded-full bg-bg-surface mt-px">
+            <span className={cn('size-2 rounded-full', e.kind === 'resolved' ? 'bg-success-default' : 'bg-text-muted')} />
+          </span>
+          <p className="text-[12px] leading-[1.4] font-medium min-w-0">
+            {e.kind === 'resolved' ? (
+              <>
+                <span className="text-success-default whitespace-nowrap">{e.by || 'Someone'} resolved</span>
+                {e.message && (
+                  <>
+                    <IconArrowNarrowRight size={12} stroke={1.5} className="inline shrink-0 mx-1.5 -mt-px text-text-primary" />
+                    <span className="text-text-primary">{e.message}</span>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="text-text-primary">{e.by || 'Someone'}</span>
+                <span className="text-text-secondary"> reopened</span>
+              </>
+            )}
+            {e.atMs !== undefined && (
+              <span className="text-[11px] font-normal text-text-muted whitespace-nowrap signal:font-mono signal:text-[10px] signal:tracking-[0.02em] signal:tabular-nums">
+                {' '}· {formatReplyTimestamp(e.atMs)}
+              </span>
+            )}
+          </p>
+        </div>
+      ))}
     </div>
   )
 }
 
+type ThreadRow =
+  | { t: 'reply'; reply: ThreadReply }
+  | { t: 'divider' }
+  | { t: 'events'; events: ResolutionEvent[] }
+
 /**
- * A reopen as a quiet system note in the timeline — same visual register as
- * the promotion divider ("huddle created" style): line + dashed circle +
- * "{name} reopened · time". Anchored after the reply that was last when the
- * reopen happened; a thread reopened before any reply notes at the top.
+ * Interleave the resolution events into the reply sequence by time: an event
+ * renders after every reply that predates it. Replies without a timestamp
+ * (static mocks) sort before all events; events without a timestamp (legacy
+ * data) sort after everything. Adjacent events merge into one timeline block.
  */
-function ReopenNoteRow({ reopenedBy, timeLabel }: { reopenedBy?: string; timeLabel?: string }) {
-  return (
-    <DateDivider
-      className="px-0 py-1"
-      label={
-        <span className="flex items-center gap-1.5 text-text-secondary whitespace-nowrap" data-reopen-note>
-          <IconCircleDashed size={14} stroke={1.5} className="shrink-0" />
-          <span>
-            <span className="text-text-primary">{reopenedBy || 'Someone'}</span> reopened
-            {timeLabel ? ` · ${timeLabel}` : ''}
-          </span>
-        </span>
+function buildThreadRows(
+  above: ThreadReply[],
+  below: ThreadReply[],
+  hasDivider: boolean,
+  events: ResolutionEvent[]
+): ThreadRow[] {
+  const sorted = [...events].sort((a, b) => (a.atMs ?? Infinity) - (b.atMs ?? Infinity))
+  const rows: ThreadRow[] = []
+  let ei = 0
+  const append = (e: ResolutionEvent) => {
+    const last = rows[rows.length - 1]
+    if (last?.t === 'events') last.events.push(e)
+    else rows.push({ t: 'events', events: [e] })
+  }
+  const walk = (replies: ThreadReply[]) => {
+    for (const reply of replies) {
+      while (ei < sorted.length && (sorted[ei].atMs ?? Infinity) < (reply.createdAtMs ?? 0)) {
+        append(sorted[ei++])
       }
-    />
-  )
+      rows.push({ t: 'reply', reply })
+    }
+  }
+  walk(above)
+  if (hasDivider) rows.push({ t: 'divider' })
+  walk(below)
+  while (ei < sorted.length) append(sorted[ei++])
+  return rows
 }
 
 interface ThreadPanelProps {
@@ -90,12 +132,8 @@ interface ThreadPanelProps {
   resolvedByReplyId?: string
   /** Current resolution message on the parent conv. Forwarded to the resolution-owning reply card. */
   resolutionMsg?: string
-  /** Latest reopen event — renders as a system note in the timeline. */
-  reopenedBy?: string
-  /** Preformatted time label for the reopen note (e.g. "2:41 PM"). */
-  reopenedAtLabel?: string
-  /** Reply the reopen note anchors after; undefined = top of the list. */
-  reopenedAfterReplyId?: string
+  /** Full resolve/reopen history — rendered as timeline bullets among the replies. */
+  resolutionEvents?: ResolutionEvent[]
   /** Called when the resolution-owning reply card edits the resolution. The parent updates the
    *  parent conv's resolution override accordingly (or reopens it when removed). */
   onResolutionChange?: (resolved: boolean, message?: string) => void
@@ -166,9 +204,7 @@ export function ThreadPanel({
   onInitialHighlightChange,
   resolvedByReplyId,
   resolutionMsg,
-  reopenedBy,
-  reopenedAtLabel,
-  reopenedAfterReplyId,
+  resolutionEvents = [],
   onResolutionChange,
   onOpenInDm,
   onClose,
@@ -202,6 +238,9 @@ export function ThreadPanel({
   const { above: aboveReplies, below: postDividerSent } = promotionDivider
     ? partitionRepliesAroundPromotion({ replies, sentReplies, promotedAtMs: promotionDivider.promotedAtMs })
     : { above: allReplies, below: [] as typeof sentReplies }
+
+  // Replies + resolution events interleaved by time into one render sequence.
+  const threadRows = buildThreadRows(aboveReplies, postDividerSent, !!promotionDivider, resolutionEvents)
 
   // Scroll to bottom when new replies are added
   useEffect(() => {
@@ -301,41 +340,39 @@ export function ThreadPanel({
             and the post-promotion replies (sentReplies). */}
         <div className="flex flex-col px-4 pb-4 gap-2">
           {isLoadingReplies && showSkeleton && <SkeletonConversationList />}
-          {/* Reopened before any reply existed — the note leads the list. */}
-          {reopenedBy && !reopenedAfterReplyId && (
-            <ReopenNoteRow reopenedBy={reopenedBy} timeLabel={reopenedAtLabel} />
-          )}
-          {aboveReplies.map((reply) => (
-            <div key={reply.id} data-reply-id={reply.id} className="flex flex-col gap-2">
-            <ThreadReplyCard
-              authorName={reply.authorName}
-              timestamp={reply.timestamp}
-              body={reply.body}
-              attachments={reply.attachments}
-              files={reply.files}
-              highlightType={reply.highlightType}
-              reactions={reply.reactions}
-              isNew={reply.isNew}
-              isUrgent={reply.isUrgent}
-              ownsResolution={resolvedByReplyId === reply.id}
-              resolutionMsg={resolvedByReplyId === reply.id ? resolutionMsg : undefined}
-              onResolutionChange={resolvedByReplyId === reply.id ? onResolutionChange : undefined}
-              onDelete={onDeleteReply ? () => onDeleteReply(reply.id) : undefined}
-              onBodyChange={onReplyBodyChange ? (b) => onReplyBodyChange(reply.id, b) : undefined}
-              onHighlightChange={onReplyHighlightChange ? (h) => onReplyHighlightChange(reply.id, h) : undefined}
-              onReactionsChange={onReplyReactionsChange ? (r) => onReplyReactionsChange(reply.id, r) : undefined}
-            />
-            {/* Reopen predates any current resolution, so its note renders first. */}
-            {reopenedBy && reopenedAfterReplyId === reply.id && (
-              <ReopenNoteRow reopenedBy={reopenedBy} timeLabel={reopenedAtLabel} />
-            )}
-            {isResolved && resolvedByReplyId === reply.id && (
-              <ResolutionEventRow resolvedBy={conversation.resolvedBy} message={resolutionMsg} />
-            )}
-            </div>
-          ))}
-          {promotionDivider && (
+          {threadRows.map((row, i) => {
+            if (row.t === 'events') {
+              return <ResolutionTimeline key={row.events[0]?.key ?? `events-${i}`} events={row.events} />
+            }
+            if (row.t === 'reply') {
+              const reply = row.reply
+              return (
+                <div key={reply.id} data-reply-id={reply.id}>
+                  <ThreadReplyCard
+                    authorName={reply.authorName}
+                    timestamp={reply.timestamp}
+                    body={reply.body}
+                    attachments={reply.attachments}
+                    files={reply.files}
+                    highlightType={reply.highlightType}
+                    reactions={reply.reactions}
+                    isNew={reply.isNew}
+                    isUrgent={reply.isUrgent}
+                    ownsResolution={resolvedByReplyId === reply.id}
+                    resolutionMsg={resolvedByReplyId === reply.id ? resolutionMsg : undefined}
+                    onResolutionChange={resolvedByReplyId === reply.id ? onResolutionChange : undefined}
+                    onDelete={onDeleteReply ? () => onDeleteReply(reply.id) : undefined}
+                    onBodyChange={onReplyBodyChange ? (b) => onReplyBodyChange(reply.id, b) : undefined}
+                    onHighlightChange={onReplyHighlightChange ? (h) => onReplyHighlightChange(reply.id, h) : undefined}
+                    onReactionsChange={onReplyReactionsChange ? (r) => onReplyReactionsChange(reply.id, r) : undefined}
+                  />
+                </div>
+              )
+            }
+            // Promotion divider row
+            return promotionDivider ? (
             <DateDivider
+              key="promotion-divider"
               className="px-0 py-1"
               label={
                 <span className="flex items-center gap-1.5 text-text-secondary min-w-0">
@@ -370,44 +407,8 @@ export function ThreadPanel({
                 </span>
               }
             />
-          )}
-          {promotionDivider && postDividerSent.map((reply) => (
-            <Fragment key={reply.id}>
-            <ThreadReplyCard
-              authorName={reply.authorName}
-              timestamp={reply.timestamp}
-              body={reply.body}
-              attachments={reply.attachments}
-              files={reply.files}
-              highlightType={reply.highlightType}
-              reactions={reply.reactions}
-              isNew={reply.isNew}
-              isUrgent={reply.isUrgent}
-              ownsResolution={resolvedByReplyId === reply.id}
-              resolutionMsg={resolvedByReplyId === reply.id ? resolutionMsg : undefined}
-              onResolutionChange={resolvedByReplyId === reply.id ? onResolutionChange : undefined}
-              onDelete={onDeleteReply ? () => onDeleteReply(reply.id) : undefined}
-              onBodyChange={onReplyBodyChange ? (b) => onReplyBodyChange(reply.id, b) : undefined}
-              onHighlightChange={onReplyHighlightChange ? (h) => onReplyHighlightChange(reply.id, h) : undefined}
-              onReactionsChange={onReplyReactionsChange ? (r) => onReplyReactionsChange(reply.id, r) : undefined}
-            />
-            {reopenedBy && reopenedAfterReplyId === reply.id && (
-              <ReopenNoteRow reopenedBy={reopenedBy} timeLabel={reopenedAtLabel} />
-            )}
-            {isResolved && resolvedByReplyId === reply.id && (
-              <ResolutionEventRow resolvedBy={conversation.resolvedBy} message={resolutionMsg} />
-            )}
-            </Fragment>
-          ))}
-          {/* Anchor reply no longer listed (e.g. deleted) — note falls back to the end. */}
-          {reopenedBy && reopenedAfterReplyId != null && !allReplies.some((r) => r.id === reopenedAfterReplyId) && (
-            <ReopenNoteRow reopenedBy={reopenedBy} timeLabel={reopenedAtLabel} />
-          )}
-          {/* Resolved from the composer or the menu — no owning reply, so the
-              event sits at the end of the timeline, where it happened. */}
-          {isResolved && !(resolvedByReplyId != null && allReplies.some((r) => r.id === resolvedByReplyId)) && (
-            <ResolutionEventRow resolvedBy={conversation.resolvedBy} message={resolutionMsg} />
-          )}
+            ) : null
+          })}
         </div>
       </div>
 

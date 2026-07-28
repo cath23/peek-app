@@ -12,7 +12,6 @@ import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useOpenWorkOverrides } from '@/api/internal/openWork'
 import { hasConvex, useDmRuntime } from './store'
 import { CURRENT_USER_NAME } from './currentUser'
-import { REPLIES } from '@/data/replyData'
 import type { UploadedFile } from './uploads'
 import type { ConversationData, FileAttachment, HighlightType, Huddle, ReactionData, ReplyData } from './types'
 
@@ -66,20 +65,32 @@ export function usePeekActions() {
   const addTopicsToOpenWorkRemote = useMutation(api.desk.addTopicsToOpenWork)
   const removeTopicFromOpenWorkRemote = useMutation(api.desk.removeTopicFromOpenWork)
 
-  /** The reopen fields of an existing override, carried across a re-resolve
-   *  so the thread's reopen note survives the newer resolution. */
-  const keepReopen = (o?: { reopenedBy?: string; reopenedAtMs?: number; reopenedAfterReplyId?: string }) =>
-    o ? { reopenedBy: o.reopenedBy, reopenedAtMs: o.reopenedAtMs, reopenedAfterReplyId: o.reopenedAfterReplyId } : {}
+  /** Fresh optimistic event key — the Convex mutation stores it so the merge
+   *  can drop the local copy once the reactive read carries the real one. */
+  const newEventKey = () => `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
-  /** A fresh reopen event: You, now, anchored to the thread's last reply as
-   *  currently rendered (static mocks first, then runtime-sent). The Convex
-   *  mutation computes the server-side equivalent from the replies table. */
-  const stampReopen = (id: string) => {
-    const sent = m.sentReplies[id]
-    const statics = REPLIES[id]
-    const last = sent?.length ? sent[sent.length - 1].id : statics?.length ? statics[statics.length - 1].id : undefined
-    return { reopenedBy: CURRENT_USER_NAME, reopenedAtMs: Date.now(), reopenedAfterReplyId: last }
+  type OverrideEvents = { kind: 'resolved' | 'reopened'; by?: string; atMs: number; message?: string; key?: string }
+
+  /** Append a resolve event — unless the message is already resolved, in
+   *  which case the last resolved event's text is updated (resolution edit),
+   *  mirroring the mutation's behavior. */
+  const withResolvedEvent = (
+    prev: { resolved: boolean; events?: OverrideEvents[] } | undefined,
+    message: string | undefined,
+    key: string,
+  ): OverrideEvents[] => {
+    const base = prev?.events ?? []
+    const last = base[base.length - 1]
+    if (prev?.resolved && last?.kind === 'resolved') {
+      return base.map((e, i) => (i === base.length - 1 ? { ...e, message } : e))
+    }
+    return [...base, { kind: 'resolved', by: CURRENT_USER_NAME, atMs: Date.now(), message, key }]
   }
+
+  const withReopenedEvent = (prev: { events?: OverrideEvents[] } | undefined, key: string): OverrideEvents[] => [
+    ...(prev?.events ?? []),
+    { kind: 'reopened', by: CURRENT_USER_NAME, atMs: Date.now(), key },
+  ]
 
   const persistMessage = (
     parentKind: 'topic' | 'dm' | 'huddle',
@@ -247,19 +258,21 @@ export function usePeekActions() {
      *  (who + after which reply) so the thread renders a system note at its
      *  chronological spot; resolving keeps an earlier reopen note alive. */
     setResolution(id: string, resolved: boolean, resolvedBy?: string, message?: string) {
+      const eventKey = newEventKey()
       m.setResolvedOverrides((prev) => ({
         ...prev,
         [id]: resolved
-          ? { resolved, resolvedBy, message, ...keepReopen(prev[id]) }
-          : { resolved: false, ...stampReopen(id) },
+          ? { resolved, resolvedBy, message, events: withResolvedEvent(prev[id], message, eventKey) }
+          : { resolved: false, events: withReopenedEvent(prev[id], eventKey) },
       }))
-      if (hasConvex) void setResolutionRemote({ key: id, resolved, resolutionMessage: message, dropReplyPointer: true })
+      if (hasConvex) void setResolutionRemote({ key: id, resolved, resolutionMessage: message, dropReplyPointer: true, eventKey })
     },
 
     /** Thread-panel resolution edit: resolving keeps the reply pointer so the
      *  owning reply card can keep editing it inline; reopening clears the
      *  resolution and stamps the reopen event. */
     setThreadResolution(id: string, resolved: boolean, message?: string) {
+      const eventKey = newEventKey()
       m.setResolvedOverrides((prev) => {
         const existing = prev[id]
         if (resolved) {
@@ -270,13 +283,13 @@ export function usePeekActions() {
               resolvedBy: CURRENT_USER_NAME,
               message,
               resolvedByReplyId: existing?.resolvedByReplyId,
-              ...keepReopen(existing),
+              events: withResolvedEvent(existing, message, eventKey),
             },
           }
         }
-        return { ...prev, [id]: { resolved: false, ...stampReopen(id) } }
+        return { ...prev, [id]: { resolved: false, events: withReopenedEvent(existing, eventKey) } }
       })
-      if (hasConvex) void setResolutionRemote({ key: id, resolved, resolutionMessage: resolved ? message : undefined })
+      if (hasConvex) void setResolutionRemote({ key: id, resolved, resolutionMessage: resolved ? message : undefined, eventKey })
     },
 
     // ── Replies ──
@@ -311,6 +324,7 @@ export function usePeekActions() {
         }
       }
       if (resolution) {
+        const eventKey = newEventKey()
         m.setResolvedOverrides((prev) => ({
           ...prev,
           [messageId]: {
@@ -318,7 +332,7 @@ export function usePeekActions() {
             resolvedBy: CURRENT_USER_NAME,
             message: resolution.message,
             resolvedByReplyId: newReplyId,
-            ...keepReopen(prev[messageId]),
+            events: withResolvedEvent(prev[messageId], resolution.message, eventKey),
           },
         }))
         if (hasConvex) {
@@ -327,6 +341,7 @@ export function usePeekActions() {
             resolved: true,
             resolutionMessage: resolution.message,
             resolvedByReplyKey: newReplyId,
+            eventKey,
           })
         }
       }

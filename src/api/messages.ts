@@ -18,7 +18,7 @@ import { REPLIES } from '@/data/replyData'
 import { useTopicMutations } from '@/api/internal/topicMutations'
 import { useTopicStore } from '@/api/internal/topicStore'
 import { useTopicLookup } from './topics'
-import { formatDateLabel, formatTimestamp, dayKey } from './format'
+import { formatDateLabel, formatTimestamp, formatReplyTimestamp, dayKey } from './format'
 import { CURRENT_USER_NAME, useCurrentUser } from './currentUser'
 import { hasConvex, useDmRuntime } from './store'
 import { useHuddleLookup } from './huddles'
@@ -76,7 +76,8 @@ function toReplyData(r: RemoteReply, meId: string | undefined): ReplyData {
   return {
     id: r.id,
     authorName: r.authorId && r.authorId === meId ? CURRENT_USER_NAME : r.authorName,
-    timestamp: formatTimestamp(r.createdAt),
+    // Reply cards carry their own day (no date dividers in the thread panel).
+    timestamp: formatReplyTimestamp(r.createdAt),
     body: r.body,
     isNew: r.isNew,
     isUrgent: r.isUrgent,
@@ -167,6 +168,17 @@ export interface TopicMessages {
   showEarlier: () => void
 }
 
+/** One resolve/reopen event in a thread's history. The thread renders the
+ *  full log as timeline bullets, placed among the replies by `atMs`; events
+ *  without a time (synthesized for legacy mock data) sort to the end. */
+export interface ResolutionEvent {
+  kind: 'resolved' | 'reopened'
+  by?: string
+  atMs?: number
+  message?: string
+  key?: string
+}
+
 export interface ThreadData {
   conversation: ConversationData | null
   /** Persisted replies, overrides merged. Render above any promotion divider. */
@@ -176,11 +188,8 @@ export interface ThreadData {
   /** Resolution bookkeeping for the parent (drives inline resolution editing). */
   resolvedByReplyId: string | undefined
   resolutionMessage: string | undefined
-  /** Latest reopen event — the thread renders it as a system note at its
-   *  chronological spot (after reopenedAfterReplyId; top of list if undefined). */
-  reopenedBy: string | undefined
-  reopenedAtMs: number | undefined
-  reopenedAfterReplyId: string | undefined
+  /** Full resolve/reopen history, chronological. */
+  resolutionEvents: ResolutionEvent[]
   /** True while the Convex replies query is in flight. */
   isLoading: boolean
 }
@@ -441,7 +450,7 @@ export function useThread(messageId: string | null): ThreadData {
   const remoteReplies = useQuery(api.replies.list, hasConvex && messageId ? { messageKey: messageId } : 'skip')
 
   if (!messageId) {
-    return { conversation: null, replies: [], sentReplies: [], resolvedByReplyId: undefined, resolutionMessage: undefined, reopenedBy: undefined, reopenedAtMs: undefined, reopenedAfterReplyId: undefined, isLoading: false }
+    return { conversation: null, replies: [], sentReplies: [], resolvedByReplyId: undefined, resolutionMessage: undefined, resolutionEvents: [], isLoading: false }
   }
 
   const find = (): ConversationData | undefined => {
@@ -508,6 +517,31 @@ export function useThread(messageId: string | null): ThreadData {
   }
   const resolution = o.resolvedOverrides[messageId]
 
+  // Event log: remote history (own events render as 'You') + this session's
+  // optimistic events, deduped by key once the reactive read carries them.
+  const remoteEvents: ResolutionEvent[] = (remoteMsg?.resolutionEvents ?? []).map((e) => ({
+    kind: e.kind,
+    by: e.byId && e.byId === me?.id ? CURRENT_USER_NAME : e.by,
+    atMs: e.atMs,
+    message: e.message,
+    key: e.key,
+  }))
+  const remoteKeys = new Set(remoteEvents.map((e) => e.key).filter(Boolean))
+  const localEvents = (resolution?.events ?? []).filter((e) => !e.key || !remoteKeys.has(e.key))
+  const resolutionEvents = [...remoteEvents, ...localEvents].sort(
+    (a, b) => (a.atMs ?? Infinity) - (b.atMs ?? Infinity)
+  )
+  // Legacy/mock bridge: a resolved conversation with no recorded history
+  // still shows its current resolution as one (untimed) event at the end.
+  const mergedIsResolved = resolution ? resolution.resolved : conversation?.isResolved
+  if (resolutionEvents.length === 0 && mergedIsResolved) {
+    resolutionEvents.push({
+      kind: 'resolved',
+      by: resolution ? resolution.resolvedBy : conversation?.resolvedBy,
+      message: resolution ? resolution.message : conversation?.resolutionMessage,
+    })
+  }
+
   return {
     conversation,
     replies,
@@ -516,14 +550,7 @@ export function useThread(messageId: string | null): ThreadData {
     // pointer); otherwise the persisted resolution from Convex applies.
     resolvedByReplyId: resolution ? resolution.resolvedByReplyId : remoteMsg?.resolvedByReplyId,
     resolutionMessage: resolution ? resolution.message : remoteMsg?.resolutionMessage,
-    // The viewer's own reopen renders as 'You' — same rule as resolvedBy.
-    reopenedBy: resolution
-      ? resolution.reopenedBy
-      : remoteMsg?.reopenedById && remoteMsg.reopenedById === me?.id
-        ? CURRENT_USER_NAME
-        : remoteMsg?.reopenedBy,
-    reopenedAtMs: resolution ? resolution.reopenedAtMs : remoteMsg?.reopenedAtMs,
-    reopenedAfterReplyId: resolution ? resolution.reopenedAfterReplyId : remoteMsg?.reopenedAfterReplyId,
+    resolutionEvents,
     isLoading,
   }
 }

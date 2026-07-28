@@ -11,12 +11,16 @@ interface ResolvedOverride {
    *  this holds that reply's id so we can surface and edit the resolution inline on that
    *  specific reply card. Undefined when the resolution came from the conv-level menu. */
   resolvedByReplyId?: string
-  /** Latest reopen event — renders as a system note in the thread timeline.
-   *  Kept across a later re-resolve (note + newer resolution both show). */
-  reopenedBy?: string
-  reopenedAtMs?: number
-  /** Last reply at reopen time; undefined = reopened before any reply. */
-  reopenedAfterReplyId?: string
+  /** Session-local resolve/reopen events (optimistic mirror of the server's
+   *  resolutionEvents log; deduped by `key` once the reactive read catches
+   *  up). The thread renders these as timeline bullets among the replies. */
+  events?: Array<{
+    kind: 'resolved' | 'reopened'
+    by?: string
+    atMs: number
+    message?: string
+    key?: string
+  }>
 }
 
 /**

@@ -14,7 +14,6 @@ import {
   CURRENT_USER_NAME,
   useDmMessages,
   useThread,
-  formatTimestamp,
   usePromotedHuddleLookup,
   useTopicLookup,
   useIsTopicResolved,
@@ -318,9 +317,7 @@ export function useDmConversationView({ dmId, dmName, onToggleStarred, showUnrea
       }
       resolvedByReplyId={thread.resolvedByReplyId}
       resolutionMsg={thread.resolutionMessage}
-      reopenedBy={thread.reopenedBy}
-      reopenedAtLabel={thread.reopenedAtMs !== undefined ? formatTimestamp(thread.reopenedAtMs) : undefined}
-      reopenedAfterReplyId={thread.reopenedAfterReplyId}
+      resolutionEvents={thread.resolutionEvents}
       onResolutionChange={
         threadConvId
           ? (resolved, message) => actions.setThreadResolution(threadConvId, resolved, message)

@@ -148,6 +148,19 @@ export async function resolveFileAttachments(
   return out.length > 0 ? out : undefined
 }
 
+/** Legacy bridge: records resolved/reopened before the event log existed
+ *  synthesize their history from the single-state fields. */
+function legacyEvents(m: Doc<'messages'>) {
+  const out: Array<{ kind: 'resolved' | 'reopened'; byId: Id<'users'>; at: number; message?: string; key?: string }> = []
+  if (m.resolved && m.resolvedById && m.resolvedAt) {
+    out.push({ kind: 'resolved', byId: m.resolvedById, at: m.resolvedAt, message: m.resolutionMessage })
+  }
+  if (m.reopenedById && m.reopenedAt) {
+    out.push({ kind: 'reopened', byId: m.reopenedById, at: m.reopenedAt })
+  }
+  return out.sort((a, b) => a.at - b.at)
+}
+
 export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, names: Map<Id<'users'>, string>) {
   const resolvedByReply = m.resolvedByReplyId ? await ctx.db.get(m.resolvedByReplyId) : null
   const reopenedAfterReply = m.reopenedAfterReplyId ? await ctx.db.get(m.reopenedAfterReplyId) : null
@@ -168,6 +181,14 @@ export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, nam
     reopenedById: m.reopenedById ? (m.reopenedById as string) : undefined,
     reopenedAtMs: m.reopenedAt,
     reopenedAfterReplyId: reopenedAfterReply ? reopenedAfterReply.seedKey ?? (reopenedAfterReply._id as string) : undefined,
+    resolutionEvents: (m.resolutionEvents ?? legacyEvents(m)).map((e) => ({
+      kind: e.kind,
+      by: names.get(e.byId),
+      byId: e.byId as string,
+      atMs: e.at,
+      message: e.message,
+      key: e.key,
+    })),
     attachments: m.attachments,
     files: await resolveFileAttachments(ctx, m.fileAttachments),
   }
@@ -395,8 +416,10 @@ export const setResolution = mutation({
     resolvedByReplyKey: v.optional(v.string()),
     /** Card-level resolve drops an earlier reply pointer; thread-level keeps it. */
     dropReplyPointer: v.optional(v.boolean()),
+    /** Client's optimistic event id — merge dedupe, same idea as seedKey. */
+    eventKey: v.optional(v.string()),
   },
-  handler: async (ctx, { key, resolved, resolutionMessage, resolvedByReplyKey, dropReplyPointer }) => {
+  handler: async (ctx, { key, resolved, resolutionMessage, resolvedByReplyKey, dropReplyPointer, eventKey }) => {
     const m = await findMessageByKey(ctx, key)
     if (!m) return
     if (!resolved) {
@@ -420,6 +443,10 @@ export const setResolution = mutation({
               reopenedById: reopener._id,
               reopenedAt: Date.now(),
               reopenedAfterReplyId: lastReply?._id,
+              resolutionEvents: [
+                ...(m.resolutionEvents ?? legacyEvents(m)),
+                { kind: 'reopened' as const, byId: reopener._id, at: Date.now(), key: eventKey },
+              ],
             }
           : {}),
       })
@@ -436,12 +463,20 @@ export const setResolution = mutation({
     } else if (!dropReplyPointer) {
       resolvedByReplyId = m.resolvedByReplyId
     }
+    // Re-saving an already-resolved message (resolution edit) updates the
+    // last resolved event's text instead of appending a duplicate.
+    const baseEvents = m.resolutionEvents ?? legacyEvents(m)
+    const resolutionEvents =
+      m.resolved && baseEvents.length > 0 && baseEvents[baseEvents.length - 1].kind === 'resolved'
+        ? baseEvents.map((e, i) => (i === baseEvents.length - 1 ? { ...e, message: resolutionMessage } : e))
+        : [...baseEvents, { kind: 'resolved' as const, byId: you._id, at: Date.now(), message: resolutionMessage, key: eventKey }]
     await ctx.db.patch(m._id, {
       resolved: true,
       resolvedById: you._id,
       resolutionMessage,
       resolvedByReplyId,
       resolvedAt: Date.now(),
+      resolutionEvents,
     })
   },
 })

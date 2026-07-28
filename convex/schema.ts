@@ -113,13 +113,27 @@ export default defineSchema({
     /** Set when resolution came from a `→ msg` reply — drives inline editing. */
     resolvedByReplyId: v.optional(v.id('replies')),
     resolvedAt: v.optional(v.number()),
-    /** Latest reopen event — renders as a system note in the thread timeline.
-     *  Survives a later re-resolve (reopen note + newer resolution both show). */
+    /** Latest reopen event (legacy single-slot form — superseded by
+     *  resolutionEvents; still read to synthesize history for old records). */
     reopenedById: v.optional(v.id('users')),
     reopenedAt: v.optional(v.number()),
     /** Last reply at reopen time (the note's anchor). Undefined = reopened
      *  before any reply existed → note renders at the top of the list. */
     reopenedAfterReplyId: v.optional(v.id('replies')),
+    /** Full resolve/reopen history — the thread renders it as timeline
+     *  bullets placed chronologically among the replies. `key` is the
+     *  client's optimistic id (dedupe on merge, same idea as seedKey). */
+    resolutionEvents: v.optional(
+      v.array(
+        v.object({
+          kind: v.union(v.literal('resolved'), v.literal('reopened')),
+          byId: v.id('users'),
+          at: v.number(),
+          message: v.optional(v.string()),
+          key: v.optional(v.string()),
+        })
+      )
+    ),
     /** Figma frame ids (static integration mocks, §6). */
     attachments: v.optional(v.array(v.string())),
     /** Real uploaded files (Phase 5) — separate lane from Figma `attachments`. */
