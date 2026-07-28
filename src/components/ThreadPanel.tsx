@@ -1,6 +1,6 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, Fragment } from 'react'
 import { Link } from 'react-router-dom'
-import { IconX, IconExternalLink, IconCircleDashed, IconCircleCheck, IconLock } from '@tabler/icons-react'
+import { IconX, IconExternalLink, IconCircleDashed, IconCircleCheck, IconLock, IconChecks, IconArrowNarrowRight } from '@tabler/icons-react'
 import { Avatar } from './ui/Avatar'
 import { IconButton } from './ui/IconButton'
 import { ThreadReplyCard } from './ThreadReplyCard'
@@ -12,6 +12,34 @@ import { SkeletonConversationList } from './ui/Skeleton'
 import { partitionRepliesAroundPromotion } from '@/lib/threadPartition'
 
 // ── Thread Panel ──
+
+/**
+ * The resolution as a chronological event INSIDE the thread (user feedback
+ * 2026-07-28: the feed showed the banner but the thread had no trace of it).
+ * Rendered directly below the reply that triggered the resolution
+ * (resolvedByReplyId), or at the end of the list when it was resolved from
+ * the composer or menu. Same visual as ConversationCard's feed banner —
+ * except the message WRAPS here: the thread is the detail view.
+ */
+function ResolutionEventRow({ resolvedBy, message }: { resolvedBy?: string; message?: string }) {
+  return (
+    <div
+      data-resolution-event
+      className="flex items-start gap-2 px-2 py-1 signal:rounded-[10px] signal:border signal:border-[rgba(63,222,140,0.22)] signal:bg-[color:var(--success-wash)] signal:px-3 signal:py-2.5"
+    >
+      <IconChecks size={16} stroke={1.5} className="text-success-default shrink-0 signal:drop-shadow-[0_0_5px_rgba(63,222,140,0.6)]" />
+      <p className="text-[12px] leading-[1.4] font-medium min-w-0">
+        <span className="text-success-default whitespace-nowrap">{resolvedBy || 'Someone'} resolved</span>
+        {message && (
+          <>
+            <IconArrowNarrowRight size={12} stroke={1.5} className="inline shrink-0 mx-1.5 -mt-px text-text-primary" />
+            <span className="text-text-primary">{message}</span>
+          </>
+        )}
+      </p>
+    </div>
+  )
+}
 
 interface ThreadPanelProps {
   conversation: ConversationData
@@ -242,7 +270,7 @@ export function ThreadPanel({
         <div className="flex flex-col px-4 pb-4 gap-2">
           {isLoadingReplies && showSkeleton && <SkeletonConversationList />}
           {aboveReplies.map((reply) => (
-            <div key={reply.id} data-reply-id={reply.id}>
+            <div key={reply.id} data-reply-id={reply.id} className="flex flex-col gap-2">
             <ThreadReplyCard
               authorName={reply.authorName}
               timestamp={reply.timestamp}
@@ -261,6 +289,9 @@ export function ThreadPanel({
               onHighlightChange={onReplyHighlightChange ? (h) => onReplyHighlightChange(reply.id, h) : undefined}
               onReactionsChange={onReplyReactionsChange ? (r) => onReplyReactionsChange(reply.id, r) : undefined}
             />
+            {isResolved && resolvedByReplyId === reply.id && (
+              <ResolutionEventRow resolvedBy={conversation.resolvedBy} message={resolutionMsg} />
+            )}
             </div>
           ))}
           {promotionDivider && (
@@ -301,8 +332,8 @@ export function ThreadPanel({
             />
           )}
           {promotionDivider && postDividerSent.map((reply) => (
+            <Fragment key={reply.id}>
             <ThreadReplyCard
-              key={reply.id}
               authorName={reply.authorName}
               timestamp={reply.timestamp}
               body={reply.body}
@@ -320,7 +351,16 @@ export function ThreadPanel({
               onHighlightChange={onReplyHighlightChange ? (h) => onReplyHighlightChange(reply.id, h) : undefined}
               onReactionsChange={onReplyReactionsChange ? (r) => onReplyReactionsChange(reply.id, r) : undefined}
             />
+            {isResolved && resolvedByReplyId === reply.id && (
+              <ResolutionEventRow resolvedBy={conversation.resolvedBy} message={resolutionMsg} />
+            )}
+            </Fragment>
           ))}
+          {/* Resolved from the composer or the menu — no owning reply, so the
+              event sits at the end of the timeline, where it happened. */}
+          {isResolved && !(resolvedByReplyId != null && allReplies.some((r) => r.id === resolvedByReplyId)) && (
+            <ResolutionEventRow resolvedBy={conversation.resolvedBy} message={resolutionMsg} />
+          )}
         </div>
       </div>
 
