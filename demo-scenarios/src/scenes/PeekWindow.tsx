@@ -13,7 +13,7 @@ export function PeekWindow({ frame }: { frame: FrameLink }) {
   return (
     <div data-layer="peek" className="absolute inset-0" style={{ opacity: 0 }}>
       <Window>
-        <div className="bg-white relative size-full">
+        <div className="bg-[#131314] relative size-full">
           <BrowserChrome
             tabTitle="Payment integration"
             urlHost="app.peek.com"

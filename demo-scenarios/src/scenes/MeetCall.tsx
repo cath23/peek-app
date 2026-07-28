@@ -112,7 +112,7 @@ function RoundControl({
 /** Scenario 1, scene 1 — the Google Meet in-call grid (Figma 666:658). */
 export function MeetCall() {
   return (
-    <div className="bg-white relative size-full">
+    <div className="bg-[#131314] relative size-full">
       <BrowserChrome tabTitle="Meet - Kick off" urlHost="meet.google.com" urlPath="/uir-wmte-coi?authuser=2" />
 
       <div className="absolute bg-[#131314] h-[945px] left-0 overflow-clip top-[79px] w-[1440px]">
