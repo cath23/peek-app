@@ -66,6 +66,21 @@ export function usePeekActions() {
   const addTopicsToOpenWorkRemote = useMutation(api.desk.addTopicsToOpenWork)
   const removeTopicFromOpenWorkRemote = useMutation(api.desk.removeTopicFromOpenWork)
 
+  /** The reopen fields of an existing override, carried across a re-resolve
+   *  so the thread's reopen note survives the newer resolution. */
+  const keepReopen = (o?: { reopenedBy?: string; reopenedAtMs?: number; reopenedAfterReplyId?: string }) =>
+    o ? { reopenedBy: o.reopenedBy, reopenedAtMs: o.reopenedAtMs, reopenedAfterReplyId: o.reopenedAfterReplyId } : {}
+
+  /** A fresh reopen event: You, now, anchored to the thread's last reply as
+   *  currently rendered (static mocks first, then runtime-sent). The Convex
+   *  mutation computes the server-side equivalent from the replies table. */
+  const stampReopen = (id: string) => {
+    const sent = m.sentReplies[id]
+    const statics = REPLIES[id]
+    const last = sent?.length ? sent[sent.length - 1].id : statics?.length ? statics[statics.length - 1].id : undefined
+    return { reopenedBy: CURRENT_USER_NAME, reopenedAtMs: Date.now(), reopenedAfterReplyId: last }
+  }
+
   const persistMessage = (
     parentKind: 'topic' | 'dm' | 'huddle',
     parentKey: string,
@@ -303,6 +318,7 @@ export function usePeekActions() {
             resolvedBy: CURRENT_USER_NAME,
             message: resolution.message,
             resolvedByReplyId: newReplyId,
+            ...keepReopen(prev[messageId]),
           },
         }))
         if (hasConvex) {

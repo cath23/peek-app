@@ -24,6 +24,7 @@ import {
   useTopicMessages,
   useHuddleMessages,
   useThread,
+  formatTimestamp,
   useHuddleLookup,
   useHuddlesLoading,
   useTopicLookup,
@@ -786,6 +787,9 @@ export function useTopicView({
       }
       resolvedByReplyId={thread.resolvedByReplyId}
       resolutionMsg={thread.resolutionMessage}
+      reopenedBy={thread.reopenedBy}
+      reopenedAtLabel={thread.reopenedAtMs !== undefined ? formatTimestamp(thread.reopenedAtMs) : undefined}
+      reopenedAfterReplyId={thread.reopenedAfterReplyId}
       onResolutionChange={
         threadConvId
           ? (resolved, message) => actions.setThreadResolution(threadConvId, resolved, message)

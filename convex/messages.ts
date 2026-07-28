@@ -165,6 +165,7 @@ export async function shape(ctx: QueryCtx | MutationCtx, m: Doc<'messages'>, nam
     resolutionMessage: m.resolutionMessage,
     resolvedByReplyId: resolvedByReply ? resolvedByReply.seedKey ?? (resolvedByReply._id as string) : undefined,
     reopenedBy: m.reopenedById ? names.get(m.reopenedById) : undefined,
+    reopenedById: m.reopenedById ? (m.reopenedById as string) : undefined,
     reopenedAtMs: m.reopenedAt,
     reopenedAfterReplyId: reopenedAfterReply ? reopenedAfterReply.seedKey ?? (reopenedAfterReply._id as string) : undefined,
     attachments: m.attachments,

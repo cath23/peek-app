@@ -41,6 +41,29 @@ function ResolutionEventRow({ resolvedBy, message }: { resolvedBy?: string; mess
   )
 }
 
+/**
+ * A reopen as a quiet system note in the timeline — same visual register as
+ * the promotion divider ("huddle created" style): line + dashed circle +
+ * "{name} reopened · time". Anchored after the reply that was last when the
+ * reopen happened; a thread reopened before any reply notes at the top.
+ */
+function ReopenNoteRow({ reopenedBy, timeLabel }: { reopenedBy?: string; timeLabel?: string }) {
+  return (
+    <DateDivider
+      className="px-0 py-1"
+      label={
+        <span className="flex items-center gap-1.5 text-text-secondary whitespace-nowrap" data-reopen-note>
+          <IconCircleDashed size={14} stroke={1.5} className="shrink-0" />
+          <span>
+            <span className="text-text-primary">{reopenedBy || 'Someone'}</span> reopened
+            {timeLabel ? ` · ${timeLabel}` : ''}
+          </span>
+        </span>
+      }
+    />
+  )
+}
+
 interface ThreadPanelProps {
   conversation: ConversationData
   /** Merged replies (body/highlight/reactions already applied by the seam). */
@@ -67,6 +90,12 @@ interface ThreadPanelProps {
   resolvedByReplyId?: string
   /** Current resolution message on the parent conv. Forwarded to the resolution-owning reply card. */
   resolutionMsg?: string
+  /** Latest reopen event — renders as a system note in the timeline. */
+  reopenedBy?: string
+  /** Preformatted time label for the reopen note (e.g. "2:41 PM"). */
+  reopenedAtLabel?: string
+  /** Reply the reopen note anchors after; undefined = top of the list. */
+  reopenedAfterReplyId?: string
   /** Called when the resolution-owning reply card edits the resolution. The parent updates the
    *  parent conv's resolution override accordingly (or reopens it when removed). */
   onResolutionChange?: (resolved: boolean, message?: string) => void
@@ -137,6 +166,9 @@ export function ThreadPanel({
   onInitialHighlightChange,
   resolvedByReplyId,
   resolutionMsg,
+  reopenedBy,
+  reopenedAtLabel,
+  reopenedAfterReplyId,
   onResolutionChange,
   onOpenInDm,
   onClose,
@@ -269,6 +301,10 @@ export function ThreadPanel({
             and the post-promotion replies (sentReplies). */}
         <div className="flex flex-col px-4 pb-4 gap-2">
           {isLoadingReplies && showSkeleton && <SkeletonConversationList />}
+          {/* Reopened before any reply existed — the note leads the list. */}
+          {reopenedBy && !reopenedAfterReplyId && (
+            <ReopenNoteRow reopenedBy={reopenedBy} timeLabel={reopenedAtLabel} />
+          )}
           {aboveReplies.map((reply) => (
             <div key={reply.id} data-reply-id={reply.id} className="flex flex-col gap-2">
             <ThreadReplyCard
@@ -289,6 +325,10 @@ export function ThreadPanel({
               onHighlightChange={onReplyHighlightChange ? (h) => onReplyHighlightChange(reply.id, h) : undefined}
               onReactionsChange={onReplyReactionsChange ? (r) => onReplyReactionsChange(reply.id, r) : undefined}
             />
+            {/* Reopen predates any current resolution, so its note renders first. */}
+            {reopenedBy && reopenedAfterReplyId === reply.id && (
+              <ReopenNoteRow reopenedBy={reopenedBy} timeLabel={reopenedAtLabel} />
+            )}
             {isResolved && resolvedByReplyId === reply.id && (
               <ResolutionEventRow resolvedBy={conversation.resolvedBy} message={resolutionMsg} />
             )}
@@ -351,11 +391,18 @@ export function ThreadPanel({
               onHighlightChange={onReplyHighlightChange ? (h) => onReplyHighlightChange(reply.id, h) : undefined}
               onReactionsChange={onReplyReactionsChange ? (r) => onReplyReactionsChange(reply.id, r) : undefined}
             />
+            {reopenedBy && reopenedAfterReplyId === reply.id && (
+              <ReopenNoteRow reopenedBy={reopenedBy} timeLabel={reopenedAtLabel} />
+            )}
             {isResolved && resolvedByReplyId === reply.id && (
               <ResolutionEventRow resolvedBy={conversation.resolvedBy} message={resolutionMsg} />
             )}
             </Fragment>
           ))}
+          {/* Anchor reply no longer listed (e.g. deleted) — note falls back to the end. */}
+          {reopenedBy && reopenedAfterReplyId != null && !allReplies.some((r) => r.id === reopenedAfterReplyId) && (
+            <ReopenNoteRow reopenedBy={reopenedBy} timeLabel={reopenedAtLabel} />
+          )}
           {/* Resolved from the composer or the menu — no owning reply, so the
               event sits at the end of the timeline, where it happened. */}
           {isResolved && !(resolvedByReplyId != null && allReplies.some((r) => r.id === resolvedByReplyId)) && (

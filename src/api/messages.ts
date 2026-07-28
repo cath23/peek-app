@@ -176,6 +176,11 @@ export interface ThreadData {
   /** Resolution bookkeeping for the parent (drives inline resolution editing). */
   resolvedByReplyId: string | undefined
   resolutionMessage: string | undefined
+  /** Latest reopen event — the thread renders it as a system note at its
+   *  chronological spot (after reopenedAfterReplyId; top of list if undefined). */
+  reopenedBy: string | undefined
+  reopenedAtMs: number | undefined
+  reopenedAfterReplyId: string | undefined
   /** True while the Convex replies query is in flight. */
   isLoading: boolean
 }
@@ -436,7 +441,7 @@ export function useThread(messageId: string | null): ThreadData {
   const remoteReplies = useQuery(api.replies.list, hasConvex && messageId ? { messageKey: messageId } : 'skip')
 
   if (!messageId) {
-    return { conversation: null, replies: [], sentReplies: [], resolvedByReplyId: undefined, resolutionMessage: undefined, isLoading: false }
+    return { conversation: null, replies: [], sentReplies: [], resolvedByReplyId: undefined, resolutionMessage: undefined, reopenedBy: undefined, reopenedAtMs: undefined, reopenedAfterReplyId: undefined, isLoading: false }
   }
 
   const find = (): ConversationData | undefined => {
@@ -511,6 +516,14 @@ export function useThread(messageId: string | null): ThreadData {
     // pointer); otherwise the persisted resolution from Convex applies.
     resolvedByReplyId: resolution ? resolution.resolvedByReplyId : remoteMsg?.resolvedByReplyId,
     resolutionMessage: resolution ? resolution.message : remoteMsg?.resolutionMessage,
+    // The viewer's own reopen renders as 'You' — same rule as resolvedBy.
+    reopenedBy: resolution
+      ? resolution.reopenedBy
+      : remoteMsg?.reopenedById && remoteMsg.reopenedById === me?.id
+        ? CURRENT_USER_NAME
+        : remoteMsg?.reopenedBy,
+    reopenedAtMs: resolution ? resolution.reopenedAtMs : remoteMsg?.reopenedAtMs,
+    reopenedAfterReplyId: resolution ? resolution.reopenedAfterReplyId : remoteMsg?.reopenedAfterReplyId,
     isLoading,
   }
 }
