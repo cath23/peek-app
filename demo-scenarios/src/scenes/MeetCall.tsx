@@ -1,8 +1,4 @@
 import { BrowserChrome } from './BrowserChrome'
-import greg from '../assets/meet/greg.png'
-import designer from '../assets/meet/designer.png'
-import stripeEng from '../assets/meet/stripe-eng.png'
-import aliceCircle from '../assets/meet/alice-circle.svg'
 import micBadgeDesigner from '../assets/meet/mic-badge-designer.svg'
 import micBadgeAlice from '../assets/meet/mic-badge-alice.svg'
 import micOff from '../assets/meet/mic-off.svg'
@@ -23,10 +19,65 @@ export const googleSans = {
   fontFamily: "'Google Sans Flex', 'Google Sans', 'Roboto', sans-serif",
 }
 
-// The dim radial vignette behind Alice's initial tile (Figma 681:2339 fill).
-const aliceGradient = {
-  backgroundImage:
-    "url(\"data:image/svg+xml;utf8,<svg viewBox='0 0 684 389' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='1'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(48.857 0 0 27.786 342 194.5)'><stop stop-color='rgba(44,55,99,1)' offset='0'/><stop stop-color='rgba(34,44,84,1)' offset='0.35'/><stop stop-color='rgba(26,35,71,1)' offset='0.65'/><stop stop-color='rgba(18,25,54,1)' offset='0.825'/><stop stop-color='rgba(10,15,36,1)' offset='1'/></radialGradient></defs></svg>\")",
+// ── Camera-off avatar tiles ──
+//
+// Every participant renders as a letter tile (ruling 2026-07-28), all built
+// from Alice's Figma tile (681:2339): a coloured initial circle over a dim
+// radial vignette of the same hue. The vignette decay factors are lifted from
+// Alice's original gradient stops, so her tile stays the pixel reference and
+// the others inherit the exact treatment in their own colour.
+
+const VIGNETTE_DECAY: [number, number][] = [
+  [0, 1],
+  [0.35, 0.8],
+  [0.65, 0.64],
+  [0.825, 0.45],
+  [1, 0.27],
+]
+
+function vignette([r, g, b]: [number, number, number]) {
+  const stops = VIGNETTE_DECAY.map(
+    ([off, f]) =>
+      `<stop stop-color='rgba(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)},1)' offset='${off}'/>`,
+  ).join('')
+  return {
+    backgroundImage: `url("data:image/svg+xml;utf8,<svg viewBox='0 0 684 389' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='1'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(48.857 0 0 27.786 342 194.5)'>${stops}</radialGradient></defs></svg>")`,
+  }
+}
+
+function AvatarTile({
+  name,
+  letter,
+  circle,
+  tint,
+  badge,
+  badgeOpacity = 0.17,
+}: {
+  name: string
+  letter: string
+  /** The initial circle's colour (Meet's avatar palette). */
+  circle: string
+  /** Vignette centre — a dimmed cousin of the circle colour. */
+  tint: [number, number, number]
+  badge?: string
+  badgeOpacity?: number
+}) {
+  return (
+    <div className="overflow-clip relative rounded-[24px]" style={vignette(tint)}>
+      <NameLabel name={name} />
+      <div
+        className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 rounded-full size-[88px] top-[calc(50%+0.5px)]"
+        style={{ backgroundColor: circle }}
+      />
+      <div
+        className="-translate-x-1/2 -translate-y-1/2 absolute flex flex-col font-normal justify-center leading-[0] left-1/2 size-[88px] text-[48px] text-center text-white top-[calc(50%+0.5px)]"
+        style={googleSans}
+      >
+        <p className="leading-[normal]">{letter}</p>
+      </div>
+      {badge && <MutedBadge src={badge} bgOpacity={badgeOpacity} />}
+    </div>
+  )
 }
 
 function NameLabel({ name }: { name: string }) {
@@ -99,33 +150,25 @@ export function MeetCall() {
           <img alt="" className="absolute block inset-0 max-w-none size-full" src={info} />
         </div>
 
-        {/* 2×2 participant grid */}
+        {/* 2×2 participant grid — all letter tiles, Meet's avatar palette. */}
         <div className="absolute gap-[12px] grid grid-cols-2 grid-rows-2 h-[790px] left-[30px] top-[69px] w-[1380px]">
-          <div className="overflow-clip relative rounded-[24px]">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[24px]">
-              <img alt="" className="absolute h-[175.84%] left-0 max-w-none top-[-10.69%] w-full" src={greg} />
-            </div>
-            <NameLabel name="Greg Bothman" />
-          </div>
-          <div className="overflow-clip relative rounded-[24px]">
-            <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none rounded-[24px] size-full" src={designer} />
-            <NameLabel name="Peek Designer" />
-            <MutedBadge src={micBadgeDesigner} bgOpacity={0.33} />
-          </div>
-          <div className="overflow-clip relative rounded-[24px]" style={aliceGradient}>
-            <NameLabel name="Alice Curtis" />
-            <div className="-translate-x-1/2 -translate-y-1/2 absolute left-1/2 size-[88px] top-[calc(50%+0.5px)]">
-              <img alt="" className="absolute block inset-0 max-w-none size-full" src={aliceCircle} />
-            </div>
-            <div className="-translate-x-1/2 -translate-y-1/2 absolute flex flex-col font-normal justify-center leading-[0] left-1/2 size-[88px] text-[48px] text-center text-white top-[calc(50%+0.5px)]" style={googleSans}>
-              <p className="leading-[normal]">A</p>
-            </div>
-            <MutedBadge src={micBadgeAlice} bgOpacity={0.17} />
-          </div>
-          <div className="overflow-clip relative rounded-[24px]">
-            <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none rounded-[24px] size-full" src={stripeEng} />
-            <NameLabel name="Stripe Engineer" />
-          </div>
+          <AvatarTile name="Greg Bothman" letter="G" circle="#00838F" tint={[15, 54, 60]} />
+          <AvatarTile
+            name="Peek Designer"
+            letter="P"
+            circle="#7E57C2"
+            tint={[50, 37, 76]}
+            badge={micBadgeDesigner}
+            badgeOpacity={0.33}
+          />
+          <AvatarTile
+            name="Alice Curtis"
+            letter="A"
+            circle="#4058B9"
+            tint={[44, 55, 99]}
+            badge={micBadgeAlice}
+          />
+          <AvatarTile name="Stripe Engineer" letter="S" circle="#C26401" tint={[70, 43, 13]} />
         </div>
 
         {/* Center control bar */}
