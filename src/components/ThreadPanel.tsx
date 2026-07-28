@@ -23,19 +23,24 @@ import { cn } from '@/lib/utils'
  */
 function ResolutionTimeline({ events }: { events: ResolutionEvent[] }) {
   return (
-    <div data-resolution-timeline className="relative flex flex-col gap-2 py-1 px-1">
+    <div data-resolution-timeline className="relative flex flex-col gap-2 py-1">
+      {/* Connector runs through the dot column's center — x = 20px, the same
+          axis as the reply cards' avatars (card p-2 + 24px avatar). */}
       {events.length > 1 && (
-        <div aria-hidden className="absolute left-[11.5px] top-[14px] bottom-[14px] w-px bg-border-default" />
+        <div aria-hidden className="absolute left-[19.5px] top-[12px] bottom-[12px] w-px bg-border-default" />
       )}
       {events.map((e, i) => (
         <div
           key={e.key ?? `${e.kind}-${e.atMs ?? i}`}
           data-resolution-event={e.kind}
-          className="relative flex items-start gap-2"
+          className="relative flex items-start"
         >
-          {/* Dot sits on its own opaque disc so the connector line passes behind it. */}
-          <span className="flex items-center justify-center size-4 shrink-0 rounded-full bg-bg-surface mt-px">
-            <span className={cn('size-2 rounded-full', e.kind === 'resolved' ? 'bg-success-default' : 'bg-text-muted')} />
+          {/* Dot column mirrors the cards' avatar column (40px, centered) so
+              bullets line up with avatars; the disc masks the connector. */}
+          <span className="flex items-center justify-center w-10 h-[17px] shrink-0">
+            <span className="flex items-center justify-center size-2 rounded-full bg-bg-surface">
+              <span className={cn('size-1 rounded-full', e.kind === 'resolved' ? 'bg-success-default' : 'bg-text-muted')} />
+            </span>
           </span>
           <p className="text-[12px] leading-[1.4] font-medium min-w-0">
             {e.kind === 'resolved' ? (
@@ -73,36 +78,56 @@ type ThreadRow =
 
 /**
  * Interleave the resolution events into the reply sequence by time: an event
- * renders after every reply that predates it. Replies without a timestamp
- * (static mocks) sort before all events; events without a timestamp (legacy
- * data) sort after everything. Adjacent events merge into one timeline block.
+ * renders after every reply that predates it. Two clock domains are never
+ * mixed: PERSISTED replies interleave with SETTLED events (both server
+ * clocks), then this session's optimistic replies + pending events form the
+ * tail, ordered among themselves by the client clock. Mixing domains made a
+ * fresh optimistic reply (client clock) flash between settled bullets
+ * (server clock) until its server copy arrived. Replies without a timestamp
+ * (static mocks) sort before all events; events without a timestamp sort
+ * after everything. Adjacent events merge into one timeline block.
  */
 function buildThreadRows(
-  above: ThreadReply[],
-  below: ThreadReply[],
+  persisted: ThreadReply[],
+  sent: ThreadReply[],
   hasDivider: boolean,
+  promotedAtMs: number | undefined,
   events: ResolutionEvent[]
 ): ThreadRow[] {
-  const sorted = [...events].sort((a, b) => (a.atMs ?? Infinity) - (b.atMs ?? Infinity))
+  const byAt = (a: ResolutionEvent, b: ResolutionEvent) => (a.atMs ?? Infinity) - (b.atMs ?? Infinity)
   const rows: ThreadRow[] = []
-  let ei = 0
   const append = (e: ResolutionEvent) => {
     const last = rows[rows.length - 1]
     if (last?.t === 'events') last.events.push(e)
     else rows.push({ t: 'events', events: [e] })
   }
-  const walk = (replies: ThreadReply[]) => {
+  /** Walk one reply list, emitting queued events that predate each reply;
+   *  returns the events that belong after every reply in the list. */
+  const interleave = (replies: ThreadReply[], queue: ResolutionEvent[]): ResolutionEvent[] => {
+    let ei = 0
     for (const reply of replies) {
-      while (ei < sorted.length && (sorted[ei].atMs ?? Infinity) < (reply.createdAtMs ?? 0)) {
-        append(sorted[ei++])
+      while (ei < queue.length && (queue[ei].atMs ?? Infinity) < (reply.createdAtMs ?? 0)) {
+        append(queue[ei++])
       }
       rows.push({ t: 'reply', reply })
     }
+    return queue.slice(ei)
   }
-  walk(above)
+
+  const settled = events.filter((e) => !e.pending).sort(byAt)
+  const pending = events.filter((e) => e.pending).sort(byAt)
+
+  // Persisted section (server clock), settled leftovers before the tail.
+  interleave(persisted, settled).forEach(append)
+
+  // Optimistic tail (client clock), split by the promotion divider if any.
+  const { above: sentPre, below: sentPost } = promotedAtMs !== undefined
+    ? partitionRepliesAroundPromotion({ replies: [], sentReplies: sent, promotedAtMs })
+    : { above: sent, below: [] as ThreadReply[] }
+  let rest = interleave(sentPre, pending)
   if (hasDivider) rows.push({ t: 'divider' })
-  walk(below)
-  while (ei < sorted.length) append(sorted[ei++])
+  rest = interleave(sentPost, rest)
+  rest.forEach(append)
   return rows
 }
 
@@ -235,12 +260,14 @@ export function ThreadPanel({
 
   // When a promotion divider is rendered, replies are split chronologically
   // around the promotion event (see lib/threadPartition for the rule).
-  const { above: aboveReplies, below: postDividerSent } = promotionDivider
-    ? partitionRepliesAroundPromotion({ replies, sentReplies, promotedAtMs: promotionDivider.promotedAtMs })
-    : { above: allReplies, below: [] as typeof sentReplies }
-
   // Replies + resolution events interleaved by time into one render sequence.
-  const threadRows = buildThreadRows(aboveReplies, postDividerSent, !!promotionDivider, resolutionEvents)
+  const threadRows = buildThreadRows(
+    replies,
+    sentReplies,
+    !!promotionDivider,
+    promotionDivider?.promotedAtMs,
+    resolutionEvents
+  )
 
   // Scroll to bottom when new replies are added
   useEffect(() => {

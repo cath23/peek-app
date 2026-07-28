@@ -177,6 +177,11 @@ export interface ResolutionEvent {
   atMs?: number
   message?: string
   key?: string
+  /** True for this session's optimistic events (not yet read back from the
+   *  server). Pending events order against optimistic replies by the CLIENT
+   *  clock and always render after everything persisted — mixing client and
+   *  server clocks in one sort made fresh replies flash into wrong spots. */
+  pending?: boolean
 }
 
 export interface ThreadData {
@@ -527,7 +532,9 @@ export function useThread(messageId: string | null): ThreadData {
     key: e.key,
   }))
   const remoteKeys = new Set(remoteEvents.map((e) => e.key).filter(Boolean))
-  const localEvents = (resolution?.events ?? []).filter((e) => !e.key || !remoteKeys.has(e.key))
+  const localEvents = (resolution?.events ?? [])
+    .filter((e) => !e.key || !remoteKeys.has(e.key))
+    .map((e) => ({ ...e, pending: true }))
   const resolutionEvents = [...remoteEvents, ...localEvents].sort(
     (a, b) => (a.atMs ?? Infinity) - (b.atMs ?? Infinity)
   )
@@ -535,10 +542,12 @@ export function useThread(messageId: string | null): ThreadData {
   // still shows its current resolution as one (untimed) event at the end.
   const mergedIsResolved = resolution ? resolution.resolved : conversation?.isResolved
   if (resolutionEvents.length === 0 && mergedIsResolved) {
+    // pending → sorts to the very end of the thread (untimed, legacy/mock).
     resolutionEvents.push({
       kind: 'resolved',
       by: resolution ? resolution.resolvedBy : conversation?.resolvedBy,
       message: resolution ? resolution.message : conversation?.resolutionMessage,
+      pending: true,
     })
   }
 
