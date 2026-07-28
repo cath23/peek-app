@@ -10,7 +10,7 @@ video = sys.argv[1]
 FPS = 30.0
 
 # What the timeline says it does (seconds) — from scenario1.tsx.
-BEATS = [
+BEATS_S1 = [
     ("brand over blurred call",  0.00, 1.60),
     ("brand out + focus pull",   1.60, 2.60),
     ("cursor + punch (overlap)", 2.60, 3.50),
@@ -24,6 +24,28 @@ BEATS = [
     ("blur down + brand back",   8.60, 9.75),
     ("end HOLD",                 9.75, 11.10),
 ]
+
+# From scenario2.tsx. The typing and shimmer beats are text-scale subjects:
+# the area-weighted metric can't see them, so a low mean there is expected —
+# what matters is that the camera beats register and the holds are truly still.
+BEATS_S2 = [
+    ("brand over blurred canvas", 0.00, 1.60),
+    ("brand out + focus pull",    1.60, 2.60),
+    ("cursor + punch to panel",   2.50, 3.60),
+    ("typing (text-scale)",       3.60, 5.35),
+    ("send + bubble",             5.35, 5.95),
+    ("shimmer (text-scale)",      5.95, 7.35),
+    ("answer cascade",            7.35, 8.50),
+    ("modal read HOLD",           8.50, 9.00),
+    ("pull out + pins pop",       9.00, 10.05),
+    ("punch to sticky corner",    10.05, 11.00),
+    ("comment bloom",             10.55, 11.15),
+    ("docked READ",               11.15, 12.75),
+    ("blur down + brand back",    12.75, 14.10),
+    ("end HOLD",                  14.10, 15.20),
+]
+
+BEATS = BEATS_S2 if (len(sys.argv) > 2 and sys.argv[2] == "s2") else BEATS_S1
 
 cap = cv2.VideoCapture(video)
 series = []

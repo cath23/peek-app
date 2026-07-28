@@ -10,7 +10,7 @@ import { STAGE_H, STAGE_W } from '../lib/stage'
  * No scrim of its own: the background behind it is blurred and dimmed by the
  * timeline, and that treatment is what carries the text.
  */
-export function BrandCard() {
+export function BrandCard({ line = 'Highlights land in the topic.' }: { line?: string } = {}) {
   return (
     <div
       data-layer="brand"
@@ -39,7 +39,7 @@ export function BrandCard() {
         data-brand-line
         style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', letterSpacing: '-0.005em' }}
       >
-        Highlights land in the topic.
+        {line}
       </p>
     </div>
   )

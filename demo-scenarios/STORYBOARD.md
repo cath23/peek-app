@@ -1,4 +1,4 @@
-# Nostr-for-Business demo — Scenario 1
+# Nostr-for-Business demo — Scenarios 1 & 2
 
 Source for the story: the Linear doc
 [Scenarios of Nostr for Business](https://linear.app/peek-app/document/scenarios-of-nostr-for-business-49287455c230).
@@ -15,6 +15,7 @@ npx vite --port 5173                                    # the app
 Set-Location demo-scenarios-v1; npx vite --port 5200    # v1, frozen
 Set-Location demo-scenarios-v2; npx vite --port 5201    # v2, frozen
 Set-Location demo-scenarios;    npx vite --port 5202    # v3, current
+Set-Location demo-scenarios;    npx vite --port 5203    # scenario 2 (open /scenario2.html)
 ```
 
 `?peek=http://host:port` points at a different app server; `?t=6.5` or
@@ -144,7 +145,66 @@ after it.
   repeatable.
 - No 9:16 cut (ruling): a vertical crop keeps only the centre 576px of 1440.
 
-## Scenario 2 — parked until S1 is signed off
+## Scenario 2 — "The answer just shows up" (~15.2s, one orchestrated take)
 
-Figma-app scene: canvas with payment-flow frames, Linear project widget,
-feedback panel with staged typing and the "Asking Stripe sub-agent" beat.
+Story (Linear doc, scenario 2, 2026-07-25 revision — **no Stripe**, ruling
+2026-07-29): the designer finishes the payment-flow draft in Figma and asks
+the AI for feedback; Figma AI calls a **Linear sub-agent** for relevant
+customer feedback; the reply surfaces three feedback items as widgets and
+leaves three comments on the canvas; the opened comment leads with a Linear
+feedback widget and says what to change. Design source: the user's mock,
+Figma `761:1286` (canvas + chrome + AI panel; feedback widgets and the opened
+thread are designed to the widget family's tokens).
+
+Run it: `Set-Location demo-scenarios; npx vite --port 5203` →
+`http://localhost:5203/scenario2.html`. Same keys/params as S1. No embedded
+app — every pixel is hand-built, so it waits only for fonts.
+
+```
+00.0–01.6  BOOKEND. Peek mark + "The answer just shows up." over the Figma
+           canvas, blurred and dimmed. Identical treatment to S1 (ruling).
+01.6–02.6  FOCUS PULL. The canvas sharpens, grows ~5%, settles into centre —
+           payment-flow drafts, the Linear project widget, the designer's
+           sticky note: "which decline reasons? 3DS declined state??"
+                                                        [SFX room tone up]
+02.5–03.6  THE ASK. Cursor arcs to the AI panel's input WHILE the camera
+           punches toward the panel (Z 1.6, framed to hold panel + drafts).
+                                                              [SFX click]
+03.6–05.35 TYPING. The ask types on in one quick confident burst with two
+           micro-hitches; the input grows a line; caret live.  [SFX keys]
+05.35–5.95 SEND. Cursor hops to send, ring off the button, the ask becomes
+           the bubble on the frame the input clears.       [SFX soft pop]
+05.95–7.35 THE SUB-AGENT. "Asking Linear sub-agent for relevant customer
+           feedback…" shimmers twice; the camera drifts in a breath — the
+           ecosystem moment, given air.               [SFX low shimmer]
+07.35–8.5  THE ANSWER. Three Linear feedback widgets cascade into the reply,
+           then: "I've left 3 comments on the canvas."   [SFX 3 soft ticks]
+08.5–09.0  Modal read hold — dead still.
+09.0–10.3  OUT OF THE CHAT. The camera pulls wide WHILE the panel slips
+           away and three pins pop onto the drafts, left to right, ending
+           by the sticky note.                  [SFX whoosh + pop-pop-pop]
+10.05–11.1 THE BLOOM. Punch into the sticky-note corner while the last pin
+           settles; the comment blooms out of its pin: the 3DS feedback
+           widget + what to change.                        [SFX bloom]
+11.15–12.75 DOCKED READ. 1.6s dead still — the reading time (ruling).
+12.75–15.2 MIRROR. The canvas sinks into the opening blur; the same card
+           returns. First frame: a draft with a question stuck to it. Last:
+           the answer, placed on the design.        [SFX riser, resolve]
+```
+
+Craft notes: the camera is a real rig here (x/y/zoom on one wrapper,
+`transformOrigin 0 0`) because the film has two punch-in targets — framings
+are computed from geometry (`camTarget`), never hand-tuned; the panel framing
+is left-biased so no frame ever shows void past the window edge. The AI
+panel's whole conversation exists in the DOM from frame 0 and the timeline
+reveals it in order — typed text derives from one `typeP` state (whole
+characters only), so scrubbing backwards un-types the ask. The hero pin
+deviates from the mock (ruling): it sits by the sticky note so the final
+zoom lands on the answer to the handwritten question.
+
+Measured (v1, `analyse-film.py <mp4> s2`): punch-in mean 2.87 / peak 10.5;
+pull-out + pins 3.50 / 11.7; punch + bloom 4.33 / 11.7; mirror 2.83 / 10.8;
+every hold and both reads exactly 0.00. The typing / send / cascade beats
+measure ≤0.13 by design — text-scale subjects on a dark panel are invisible
+to the area-weighted metric (same caveat as S1's cursor); verified visually
+frame-by-frame instead.
