@@ -7,13 +7,14 @@ Craft rules: the `motion-design` and `motion-teardown` skills in `.claude/skills
 
 ## Running it
 
-Three servers. The app on 5173, and one per film version — **each version keeps
-its own URL** so an earlier cut stays watchable (ruling 2026-07-28):
+The app on 5173, and one server per film version — **each version keeps its own
+URL** so an earlier cut stays watchable (ruling 2026-07-28):
 
 ```
 npx vite --port 5173                                    # the app
 Set-Location demo-scenarios-v1; npx vite --port 5200    # v1, frozen
-Set-Location demo-scenarios;    npx vite --port 5201    # v2, current
+Set-Location demo-scenarios-v2; npx vite --port 5201    # v2, frozen
+Set-Location demo-scenarios;    npx vite --port 5202    # v3, current
 ```
 
 `?peek=http://host:port` points at a different app server; `?t=6.5` or
@@ -28,113 +29,118 @@ Set-Location demo-scenarios;    npx vite --port 5201    # v2, current
 | G | GSDevTools — scrub and tune |
 
 Rendered cuts live in `renders/` (gitignored). Render one with
-`node demo-scenarios/render-film.mjs <outdir> 30`, which seeks the timeline frame by frame
-and shoots each one — deterministic, exactly 30fps, no dropped frames — then
-encode the sequence with ffmpeg. That's also what gets measured; see below.
+`node demo-scenarios/render-film.mjs <outdir> 30` — it seeks the timeline frame
+by frame and shoots each one (deterministic, exactly 30fps), then encode the
+sequence with ffmpeg (`npm i --no-save ffmpeg-static @ffprobe-installer/ffprobe`).
 
-## The film — 13.5s, 30fps, 120bpm, one continuous take
+The frozen snapshots share the live app on 5173, so app-side demo-data changes
+can drift what they show; each version's **rendered mp4 in `renders/` is its
+authoritative record**.
 
-**No cuts, by ruling.** The point of the film is that the highlights you watch
-leave the call are demonstrably the same object that lands in the topic; a cut
-would break exactly the causality it exists to show. Where a move was invisible
-the fix was contrast, not an edit.
+## The film, v3 — ~12.1s, 30fps, one orchestrated take
+
+**No cuts (ruling):** the highlights must visibly be the same object from call
+to topic. **And no beat fully stops before the next begins (ruling):** every
+move's tail overlaps the next move's head.
 
 ```
-00.0–02.0  THE TOPIC, WAITING. Empty, no highlights, nothing to read. The
-           bookend card fades up over it — mark, name, one line, which doubles
-           as the title and says what you're about to watch. Scrim behind the
-           text only.
-02.0–02.5  SWAP. The topic lifts away and the call comes up into the same
-           space. One space, two things in it — not a cut.
-02.5–03.4  THE CALL, holding.                                    [SFX room tone]
-03.4–04.0  CURSOR arcs to the hang-up button, decelerating, small overshoot.
-04.0–04.3  PUNCH-IN toward the button, 1.0→1.12.
-04.5       CLICK. Cursor press, button press, and a ring expanding off it.
-                                                                    [SFX click]
-04.5–05.0  MINIMISE. Swells 1.5% then folds into the click point, y-blur.
-           Deliberately calmer than the hero beats.           [SFX whoosh, -3f]
-05.0–05.5  EMPTY VOID. 15 frames of nothing.
-05.5–06.15 THE CAMERA TRAVELS RIGHT and finds the card. A light sweep crosses
-           with it and the field brightens; the card arrives oversized and
-           settles. Measured at 0.13 before that contrast existed — invisible.
-                                                              [SFX whoosh, -3f]
-06.15–07.0 HOLD on the collapsed bar: one line, "Expand".
-07.0–07.75 SPRING OPEN. The two clipped copies swap on the frame the button
-           label changes — which is what a click looks like. Reveal sweeps top
-           to bottom; the bounce lives in scale.                 [SFX soft pop]
-07.75–09.0 HOLD on the hero card. Four lines, readable.
-09.0–09.55 THE TOPIC COMES BACK for it, rising from below.    [SFX whoosh, -3f]
-09.5–10.05 THE CARD DOCKS into its slot, with a landing squash. The app's own
-           card is revealed underneath 8 frames earlier — same pixels, so the
-           swap can't be seen.                                      [SFX click]
-10.5–10.9  A TEAMMATE PICKS IT UP. Greg's reply appears under the highlights
-           and the camera leans in 3.5%. Its space is reserved from the start,
-           so nothing shifts.                                      [SFX ping]
-11.5–13.5  BOOKEND, SECOND PASS. The UI dips and defocuses, the same card
-           returns — now reading as a result, not a promise. Holds 42 frames.
-                                                                   [SFX riser]
+00.0–01.6  BOOKEND. Small Peek mark + name + "Highlights land in the topic."
+           over the CALL, blurred and dimmed. No scrim — the blur carries it.
+01.6–02.6  FOCUS PULL. The title dissolves upward while the call sharpens,
+           brightens, grows ~5% and settles into centre — arriving, not
+           switching on.                                    [SFX room tone up]
+02.4–03.5  THE CLICK. Cursor in while the frame still sharpens, arcs to the
+           hang-up button; the camera pushes to 1.12 WHILE it travels; button
+           brightens; press + expanding ring.                      [SFX click]
+03.6–04.5  THE GENIE. The window swaps for its ribbon twin on one frame (same
+           pixels) and pours into a dock point at the bottom — bottom ribbons
+           lead, the window necks into a funnel, vertical motion blur scales
+           with pour speed.                                [SFX genie whoosh]
+04.35–5.0  THE HIGHLIGHTS STREAK IN while the last ribbons are still pouring —
+           motion blur only, oversized arrival settling to hero size.
+                                                            [SFX whoosh, −3f]
+05.0–05.5  HOLD on the bar. One line, "Expand".
+05.5–06.1  POP. Copies swap on the frame the label changes; content sweeps in
+           over 9f; the card overshoots with back.out(4) and a ±1° tilt as it
+           snaps back. Fast and cheeky.                         [SFX soft pop]
+06.1–07.0  READ. Dead still. Four lines.
+07.0–07.95 THE TOPIC APPROACHES FROM DEPTH, during the read: small, soft and
+           dim far behind the card, coming forward — scale, focus and light on
+           one shared curve, so it reads as one object approaching, not three
+           effects. The card stays pin-sharp in front.         [SFX low rise]
+08.0–08.8  THE JELLY PULL. The card is sucked into the topic: accelerating,
+           bowing on an arc, leaning ~1.3° into the travel, stretching like
+           taffy mid-flight — then lands directly above the compose box with
+           a squash and snaps back square. Handoff to the app's own card 7f
+           earlier, underneath, invisible.                  [SFX snap-thunk]
+08.8–09.6  REST on the docked card. Nothing else appears (ruling: no reply).
+09.6–12.1  MIRROR. The topic sinks into exactly the opening's blur-and-dim
+           and the same small title returns, same size, same position. First
+           frame: the call about to happen. Last frame: what it produced.
+                                                        [SFX riser, resolve]
 ```
 
 **Sound is added in post** (the rig is silent). Whooshes peak 2–3 frames
-*before* their move; clicks sit well under the music.
+*before* their move.
 
 ## Measured, not asserted
 
-`demo-scenarios/analyse-film.py` reads the rendered mp4 and reports per-frame change against
-the beat table above; `.claude/skills/motion-teardown/scripts/teardown.py`
-gives the shot list and cut lengths. v2, measured:
+`demo-scenarios/analyse-film.py` reads a rendered mp4 and reports per-frame
+change against the beat table. v3:
 
-| Beat | v1 | v2 | |
+| Beat | mean | peak | |
 |---|---|---|---|
-| whip | 0.13 | **1.10** | was classified a static hold — invisible |
-| reply appears | — | **0.73** | 0.01 before the camera leaned in |
-| minimise | 6.29 | 5.61 | pulled back; it shouldn't be the biggest thing |
-| every HOLD | 0.00–0.06 | 0.00–0.09 | genuinely still |
+| focus pull | 0.74 | 1.85 | visible arrival |
+| cursor + punch | 1.54 | 6.61 | the punch registers |
+| genie pour | 3.89 | 10.71 | the showpiece — biggest event by design |
+| bar streaks in | 0.77 | 6.60 | overlaps the pour's tail (runs 3.77–4.43 and 4.35→) |
+| pop open | 0.45 | 1.07 | card-sized subject; area-weighted metric |
+| topic from depth | 0.30 | 0.59 | sustained approach, 28 frames |
+| jelly pull | 0.53 | 1.30 | with landing spike |
+| every HOLD | 0.00 | — | genuinely still |
 
-Two things the metric can't see, worth knowing: it is area-weighted, so a
-full-frame window move will always out-score a card-sized subject (the spring
-and the dock sit at ~0.5 and that is fine); and the cursor is far too small to
-register at all, which is why the click ring exists.
+The metric is area-weighted: full-frame moves always out-score card-sized
+subjects, and the cursor is too small to register at all — the click ring and
+the punch carry that beat.
 
 ## How the Peek beats work
 
-They embed the REAL app — three copies of it, all in demo mode (`?demo=1`, see
+The film embeds the REAL app — three copies, all in demo mode (`?demo=1`, see
 `src/demo/` in the app):
 
-- **app** — the whole app in its browser window. Its highlights card is hidden
-  until the handoff, so the topic reads as empty while the card is still
-  arriving.
-- **bar** — clipped to the COLLAPSED card. This is what the whip brings in.
-- **card** — clipped to the EXPANDED card. This springs open and docks.
+- **app** — the whole app in its browser window; its highlights card hidden
+  until the handoff, so the topic reads as empty while the card is arriving.
+- **bar** — clipped to the COLLAPSED card (the streak-in).
+- **card** — clipped to the EXPANDED card (the pop and the pull).
 
 Two clipped copies rather than one that expands: the collapsed and expanded
-layouts put the card in different places, so asking a frame to expand mid-beat
-would show the wrong slice for a frame or two while the message crossed. Each
-frame is put into its state once, before playback, and never touched again.
+layouts put the card in different places, so expanding a frame mid-beat would
+show the wrong slice while the message crossed. Each frame holds one state for
+the whole film. Nothing is a replica — it is the real card throughout, which
+is why the landing is exact and why none of this rots when the component
+changes. Geometry comes from the app over postMessage (`src/demo/demoBridge.ts`),
+measured before the timeline is built.
 
-Nothing is a replica — it is the real card throughout, which is why the landing
-is exact and why none of this rots when the component changes. Geometry comes
-from the app over postMessage (`src/demo/demoBridge.ts`), measured before the
-timeline is built: a timeline that awaits something mid-run can't be scrubbed
-backwards.
+The genie is the same idea applied to Meet: the window is rendered 28 times,
+each copy clipped to one horizontal ribbon; at rest the ribbons tile the
+original exactly, so the live window and its sliced twin swap on one frame
+invisibly. The pour bends the ribbons toward the dock point, bottom first.
 
-The topic itself is **empty apart from the highlights** (ruling 2026-07-27) —
-nobody has typed a word in it, so the first thing in it is what the call
-produced. Its members come from the topic, not from message authors.
+The topic contains **nothing but the highlights** (ruling): it docks at the
+bottom of the stream, directly above the compose box, and nothing appears
+after it.
 
 ## Working rules
 
-- Committed to the repo (ruling 2026-07-24), isolated from the app build —
-  nothing in `src/` may import from `demo-scenarios/`.
+- Committed to the repo, isolated from the app build — nothing in `src/` may
+  import from `demo-scenarios/`.
 - Third-party app scenes are hand-built pixel-perfect from Figma via the Figma
   MCP, verified by screenshot diff.
-- Play the film hands-free rather than stepping it: keypress rhythm isn't
-  repeatable and shows up as jitter between takes.
-- No 9:16 cut (ruling 2026-07-27): a vertical crop keeps only the centre 576px
-  of 1440, so the card can't be read at that width. A vertical version would
-  need its own framing pass, not a crop.
+- Play the film hands-free rather than stepping it; keypress rhythm isn't
+  repeatable.
+- No 9:16 cut (ruling): a vertical crop keeps only the centre 576px of 1440.
 
-## Scenario 2 — parked until S1 is filmed
+## Scenario 2 — parked until S1 is signed off
 
 Figma-app scene: canvas with payment-flow frames, Linear project widget,
 feedback panel with staged typing and the "Asking Stripe sub-agent" beat.

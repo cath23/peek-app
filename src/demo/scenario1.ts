@@ -97,22 +97,15 @@ export const DEMO_TOPIC_CONVERSATIONS: ConvGroup[] = [
   {
     dateLabel: 'Today',
     convs: [
+      // The only thing in the topic, so it sits at the very bottom of the
+      // stream, directly above the compose box — which is where the film
+      // docks it (ruling 2026-07-28: nothing before it, nothing after it).
       {
         id: 'd1_hl',
         authorName: 'Highlights',
         timestamp: KICK_OFF_HIGHLIGHTS.timestamp,
         body: '',
         highlights: KICK_OFF_HIGHLIGHTS,
-      },
-      // The film's last beat: the highlights land, and someone picks work up
-      // out of them. Hidden until then (the bridge holds it), but present from
-      // the start so the stream's layout — and the card's docking slot — never
-      // shifts when it appears.
-      {
-        id: 'd1_reply',
-        authorName: 'Greg Bothman',
-        timestamp: '11:14 AM',
-        body: "Taking the webhooks one. First PR by Thursday.",
       },
     ],
   },

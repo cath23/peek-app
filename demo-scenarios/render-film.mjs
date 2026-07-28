@@ -21,7 +21,7 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 1024 } })
 page.on('pageerror', (e) => console.log('[pageerror]', e.message))
 
-const PLAYER = process.env.PLAYER ?? 'http://localhost:5201/?hud=0'
+const PLAYER = process.env.PLAYER ?? 'http://localhost:5202/?hud=0'
 await page.goto(PLAYER, { waitUntil: 'domcontentloaded' })
 await page.waitForFunction(() => !!window.__tl, null, { timeout: 60000 })
 // Let the embedded apps finish painting before frame 0.

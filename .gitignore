@@ -43,3 +43,4 @@ PROTOTYPE.md
 # The snapshots are recoverable from history; the renders are large binaries.
 demo-scenarios-v1/
 demo-scenarios/renders/
+demo-scenarios-v2/
