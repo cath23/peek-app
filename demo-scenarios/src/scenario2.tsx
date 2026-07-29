@@ -141,8 +141,10 @@ export function buildScenario2(opts: { root: HTMLElement }): {
   const caret = one<HTMLElement>('[data-ai-caret]')
   const placeholder = one<HTMLElement>('[data-ai-placeholder]')
   const send = one<HTMLElement>('[data-ai-send]')
+  const sendArrow = one<SVGElement>('[data-ai-send-arrow]')
   const panel = one<HTMLElement>('[data-ai-panel]')
   const pins = q('[data-pin]') as HTMLElement[]
+  const heroRing = one<HTMLElement>('[data-pin="hero"] [data-pin-ring]')
   const thread = one<HTMLElement>('[data-thread]')
   const threadItems = Array.from(thread.children) as HTMLElement[]
 
@@ -237,8 +239,11 @@ export function buildScenario2(opts: { root: HTMLElement }): {
   tl.to(caret, { opacity: 1, duration: 0.01 }, T.clickInput + 0.5)
   tl.to(cursor, { opacity: 0, duration: 0.25, ease: 'power1.in' }, T.clickInput + 0.2)
 
-  // ── Typing, one quick confident burst with two micro-hitches. ──
+  // ── Typing, one quick confident burst with two micro-hitches. The send
+  //    arrow wakes up on the first character. ──
   tl.addLabel('type', T.type)
+  tl.to(send, { backgroundColor: '#0c8ce9', duration: 0.25, ease: 'power1.out' }, T.type + 0.06)
+  tl.to(sendArrow, { stroke: '#ffffff', duration: 0.25, ease: 'power1.out' }, T.type + 0.06)
   tl.to(
     s,
     {
@@ -270,6 +275,9 @@ export function buildScenario2(opts: { root: HTMLElement }): {
   )
   tl.to(caret, { opacity: 0, duration: 0.01 }, T.send)
   tl.to(s, { typeP: 0, duration: 0.001 }, T.send + 0.06)
+  // The field is empty again, so the arrow goes back to sleep.
+  tl.to(send, { backgroundColor: '#4e4e4e', duration: 0.2, ease: 'power1.out' }, T.send + 0.1)
+  tl.to(sendArrow, { stroke: '#9e9e9e', duration: 0.2, ease: 'power1.out' }, T.send + 0.1)
   tl.fromTo(
     bubble,
     { opacity: 0, y: 10, scale: 0.96 },
@@ -368,6 +376,14 @@ export function buildScenario2(opts: { root: HTMLElement }): {
     { opacity: 0, y: 8 },
     { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', stagger: 0.06, immediateRender: false },
     T.bloom + 0.12,
+  )
+  // Figma's opened-comment highlight: the blue ring lights the hero pin so
+  // you know which comment is open.
+  tl.fromTo(
+    heroRing,
+    { opacity: 0, scale: 0.6 },
+    { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2)', immediateRender: false },
+    T.bloom + 0.05,
   )
 
   // ── The read: dead still. Then the mirror — the topic sinks into exactly

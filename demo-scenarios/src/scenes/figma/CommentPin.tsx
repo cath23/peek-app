@@ -1,4 +1,5 @@
 import pinMark from '../../assets/figma/pin-figma-mark.png'
+import avatarUser from '../../assets/figma/avatar-user.jpg'
 import { FEEDBACK, FeedbackWidget } from './LinearWidget'
 
 const inter = { fontFamily: "'Inter', sans-serif" }
@@ -28,7 +29,9 @@ function PinBadge({ size = 28 }: { size?: number }) {
   )
 }
 
-/** A pin on the canvas, positioned by its anchor (the square corner). */
+/** A pin on the canvas, positioned by its anchor (the square corner). The
+ *  ring is Figma's opened-comment highlight — the timeline lights it on the
+ *  hero pin when its thread opens. */
 export function CommentPin({ x, y, id }: { x: number; y: number; id: string }) {
   return (
     <div
@@ -36,6 +39,11 @@ export function CommentPin({ x, y, id }: { x: number; y: number; id: string }) {
       className="absolute"
       style={{ left: x, top: y - 28, width: 28, height: 28, transformOrigin: '0 100%' }}
     >
+      <div
+        data-pin-ring
+        className="absolute rounded-full"
+        style={{ inset: -5, border: '2px solid #0c8ce9', opacity: 0 }}
+      />
       <PinBadge />
     </div>
   )
@@ -72,11 +80,24 @@ export function CommentThread({ x, y }: { x: number; y: number }) {
       <p className="font-normal leading-[1.45] text-[#d4d4d8] text-[12.5px]">
         Customers dead-end when 3DS fails. Show Stripe's decline reason here, with a route back to payment methods.
       </p>
-      <div
-        className="flex items-center px-[10px]"
-        style={{ height: 30, border: '1px solid #494949', borderRadius: 15 }}
-      >
-        <p className="font-normal leading-[normal] text-[#808080] text-[12px]">Reply</p>
+      <div className="flex gap-[7px] items-center">
+        <img
+          alt=""
+          className="block rounded-full object-cover shrink-0"
+          src={avatarUser}
+          style={{ width: 20, height: 20 }}
+        />
+        <div
+          className="flex flex-1 items-center justify-between pl-[10px] pr-[4px]"
+          style={{ height: 30, background: '#383838', borderRadius: 15 }}
+        >
+          <p className="font-normal leading-[normal] text-[#808080] text-[12px]">Reply</p>
+          <div className="flex items-center justify-center rounded-full" style={{ width: 22, height: 22, background: '#4e4e4e' }}>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path d="M6 10V2M2.5 5.5L6 2L9.5 5.5" stroke="#9e9e9e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
   )

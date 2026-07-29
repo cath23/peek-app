@@ -107,13 +107,15 @@ export function AiPanel() {
         </div>
         <div className="flex items-center shrink-0" style={{ gap: 6, margin: '0 12px 10px 0' }}>
           <img alt="" className="block" src={inputAsk} style={{ width: 28, height: 38, margin: '5px 0 -5px 0' }} />
+          {/* Disabled until there is something to send — the timeline turns
+              it blue on the first typed character and grey again on clear. */}
           <div
             data-ai-send
             className="flex items-center justify-center rounded-full"
-            style={{ width: 28, height: 28, background: '#0c8ce9' }}
+            style={{ width: 28, height: 28, background: '#4e4e4e' }}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M6 10V2M2.5 5.5L6 2L9.5 5.5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              <path data-ai-send-arrow d="M6 10V2M2.5 5.5L6 2L9.5 5.5" stroke="#9e9e9e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
         </div>

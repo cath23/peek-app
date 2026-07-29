@@ -211,7 +211,11 @@ bloom showed them, reset them invisible, and faded them in again (the v1
 double-appear bug). v2 rulings: send is the blue arrow, not the mock's stop
 square; the shine passes row 1 then row 2 (the mock draws two gradient
 nodes); the chat is born "New chat" and renamed after the ask; feedback
-tickets carry the project's PEE prefix.
+tickets carry the project's PEE prefix. v3 rulings: the send arrow sleeps
+grey until the first typed character, turns blue while there is something
+to send, and sleeps again when the field clears; the opened comment's pin
+carries Figma's blue selection ring so you know which one is open; the
+thread's reply row is the real Figma anatomy (avatar + field + arrow).
 
 Measured (v2, `analyse-film.py <mp4> s2`): punch-in mean 2.87 / peak 10.5;
 pull-out + pins ~3.5 / ~11.7; punch + bloom ~4.3 / ~11.7; mirror ~2.8; every
@@ -219,4 +223,5 @@ hold and both reads 0.00. The typing / thinking / answer beats measure ≤0.4
 by design — text-scale subjects on a dark panel are invisible to the
 area-weighted metric (same caveat as S1's cursor); verified visually
 frame-by-frame instead. mp4s: `v1-scenario2*.mp4` = the pre-notes cut,
-`v2-scenario2*.mp4` = this cut (30fps + 60fps 2×).
+`v2-scenario2*.mp4` = the first notes round, `v3-scenario2*.mp4` = current
+(ring + arrow states; 30fps + 60fps 2×).
