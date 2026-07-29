@@ -41,8 +41,15 @@ export function CommentPin({ x, y, id }: { x: number; y: number; id: string }) {
     >
       <div
         data-pin-ring
-        className="absolute rounded-full"
-        style={{ inset: -5, border: '2px solid #0c8ce9', opacity: 0 }}
+        className="absolute"
+        style={{
+          inset: -4,
+          border: '2px solid #0c8ce9',
+          // The highlight traces the pin's own teardrop silhouette — three
+          // rounded corners, square at the anchor — not a detached circle.
+          borderRadius: '18px 18px 18px 0',
+          opacity: 0,
+        }}
       />
       <PinBadge />
     </div>
