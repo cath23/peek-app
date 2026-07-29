@@ -145,7 +145,7 @@ after it.
   repeatable.
 - No 9:16 cut (ruling): a vertical crop keeps only the centre 576px of 1440.
 
-## Scenario 2 — "The answer just shows up" (~15.2s, one orchestrated take)
+## Scenario 2 — "The answer just shows up" (~18.1s, one orchestrated take)
 
 Story (Linear doc, scenario 2, 2026-07-25 revision — **no Stripe**, ruling
 2026-07-29): the designer finishes the payment-flow draft in Figma and asks
@@ -169,25 +169,30 @@ app — every pixel is hand-built, so it waits only for fonts.
                                                         [SFX room tone up]
 02.5–03.6  THE ASK. Cursor arcs to the AI panel's input WHILE the camera
            punches toward the panel (Z 1.6, framed to hold panel + drafts).
-                                                              [SFX click]
-03.6–05.35 TYPING. The ask types on in one quick confident burst with two
-           micro-hitches; the input grows a line; caret live.  [SFX keys]
-05.35–5.95 SEND. Cursor hops to send, ring off the button, the ask becomes
-           the bubble on the frame the input clears.       [SFX soft pop]
-05.95–7.35 THE SUB-AGENT. "Asking Linear sub-agent for relevant customer
-           feedback…" shimmers twice; the camera drifts in a breath — the
-           ecosystem moment, given air.               [SFX low shimmer]
-07.35–8.5  THE ANSWER. Three Linear feedback widgets cascade into the reply,
-           then: "I've left 3 comments on the canvas."   [SFX 3 soft ticks]
-08.5–09.0  Modal read hold — dead still.
-09.0–10.3  OUT OF THE CHAT. The camera pulls wide WHILE the panel slips
+           The panel is titled "New chat".                    [SFX click]
+03.6–05.15 TYPING. "…Review it based on any relevant customer feedback."
+           types on in one confident burst, two micro-hitches; the input
+           grows a line; caret live.                           [SFX keys]
+05.15–5.75 SEND. Cursor hops to the arrow, ring off the button, the ask
+           becomes the bubble on the frame the input clears — and the AI
+           names the chat: "Request for feedback on draft". [SFX soft pop]
+05.75–9.9  THE SUB-AGENT, unhurried. The spark spins the whole time while
+           "Asking Linear sub-agent for relevant / customer feedback…"
+           shines one row after the other, twice; the camera drifts a
+           breath. Real thinking takes a moment.       [SFX low shimmer]
+09.9–11.1  THE ANSWER replaces the thinking (it dissolves): "I've left 3
+           comments on the canvas:" lands first, then the three feedback
+           widgets (PEE-214/231/246) pop in below.  [SFX 3 soft ticks]
+11.1–11.9  Modal read hold — dead still.
+11.9–13.2  OUT OF THE CHAT. The camera pulls wide WHILE the panel slips
            away and three pins pop onto the drafts, left to right, ending
            by the sticky note.                  [SFX whoosh + pop-pop-pop]
-10.05–11.1 THE BLOOM. Punch into the sticky-note corner while the last pin
+12.95–14.0 THE BLOOM. Punch into the sticky-note corner while the last pin
            settles; the comment blooms out of its pin: the 3DS feedback
-           widget + what to change.                        [SFX bloom]
-11.15–12.75 DOCKED READ. 1.6s dead still — the reading time (ruling).
-12.75–15.2 MIRROR. The canvas sinks into the opening blur; the same card
+           widget + what to change, contents revealed exactly once.
+                                                             [SFX bloom]
+14.05–15.65 DOCKED READ. 1.6s dead still — the reading time (ruling).
+15.65–18.1 MIRROR. The canvas sinks into the opening blur; the same card
            returns. First frame: a draft with a question stuck to it. Last:
            the answer, placed on the design.        [SFX riser, resolve]
 ```
@@ -200,11 +205,18 @@ panel's whole conversation exists in the DOM from frame 0 and the timeline
 reveals it in order — typed text derives from one `typeP` state (whole
 characters only), so scrubbing backwards un-types the ask. The hero pin
 deviates from the mock (ruling): it sits by the sticky note so the final
-zoom lands on the answer to the handwritten question.
+zoom lands on the answer to the handwritten question. The comment thread's
+contents are hidden from frame 0 — with the natural DOM state visible, the
+bloom showed them, reset them invisible, and faded them in again (the v1
+double-appear bug). v2 rulings: send is the blue arrow, not the mock's stop
+square; the shine passes row 1 then row 2 (the mock draws two gradient
+nodes); the chat is born "New chat" and renamed after the ask; feedback
+tickets carry the project's PEE prefix.
 
-Measured (v1, `analyse-film.py <mp4> s2`): punch-in mean 2.87 / peak 10.5;
-pull-out + pins 3.50 / 11.7; punch + bloom 4.33 / 11.7; mirror 2.83 / 10.8;
-every hold and both reads exactly 0.00. The typing / send / cascade beats
-measure ≤0.13 by design — text-scale subjects on a dark panel are invisible
-to the area-weighted metric (same caveat as S1's cursor); verified visually
-frame-by-frame instead.
+Measured (v2, `analyse-film.py <mp4> s2`): punch-in mean 2.87 / peak 10.5;
+pull-out + pins ~3.5 / ~11.7; punch + bloom ~4.3 / ~11.7; mirror ~2.8; every
+hold and both reads 0.00. The typing / thinking / answer beats measure ≤0.4
+by design — text-scale subjects on a dark panel are invisible to the
+area-weighted metric (same caveat as S1's cursor); verified visually
+frame-by-frame instead. mp4s: `v1-scenario2*.mp4` = the pre-notes cut,
+`v2-scenario2*.mp4` = this cut (30fps + 60fps 2×).

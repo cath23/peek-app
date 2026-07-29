@@ -78,9 +78,9 @@ export interface FeedbackItem {
 }
 
 export const FEEDBACK: FeedbackItem[] = [
-  { title: 'Payment declined with no reason shown', customer: 'Acme', id: 'LIN-482' },
-  { title: 'Stuck on a blank screen after 3DS check', customer: 'Northwind', id: 'LIN-517' },
-  { title: 'No way to change card after a failure', customer: 'Globex', id: 'LIN-533' },
+  { title: 'Payment declined with no reason shown', customer: 'Acme', id: 'PEE-214' },
+  { title: 'Stuck on a blank screen after 3DS check', customer: 'Northwind', id: 'PEE-231' },
+  { title: 'No way to change card after a failure', customer: 'Globex', id: 'PEE-246' },
 ]
 
 export function FeedbackWidget({ item, width }: { item: FeedbackItem; width?: number }) {

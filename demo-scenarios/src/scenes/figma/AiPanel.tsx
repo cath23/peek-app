@@ -1,6 +1,6 @@
 import headerControls from '../../assets/figma/modal-header-controls.png'
 import inputLeft from '../../assets/figma/modal-input-left.png'
-import inputRight from '../../assets/figma/modal-input-right.png'
+import inputAsk from '../../assets/figma/modal-input-a.png'
 import avatarUser from '../../assets/figma/avatar-user.jpg'
 import sparkIcon from '../../assets/figma/spark-icon.svg'
 import { FEEDBACK, FeedbackWidget } from './LinearWidget'
@@ -9,9 +9,13 @@ const inter = { fontFamily: "'Inter', sans-serif" }
 
 // The Figma AI panel (mock 813:14684), floating over the canvas bottom-right.
 // Every stage of the conversation exists in the DOM from frame 0 — the ask
-// being typed, the sent bubble, the sub-agent shimmer, the reply widgets —
-// and the timeline reveals them in order. One element per stage, so scrubbing
+// being typed, the sent bubble, the sub-agent shimmer, the reply — and the
+// timeline reveals them in order. One element per stage, so scrubbing
 // backwards un-sends the message for free.
+//
+// Two titles because the chat is born nameless: "New chat" until the ask is
+// sent, then the AI names it. Two shimmer lines because the shine passes one
+// row at a time (ruling) — the mock itself draws them as two gradient nodes.
 
 export const AI_PANEL_W = 361
 export const AI_PANEL_H = 415
@@ -20,7 +24,16 @@ export const AI_PANEL_X = 976
 export const AI_PANEL_Y = 470
 
 export const ASK_TEXT =
-  "I've finished the first draft. Give me feedback on the first version based on everything you know about the project"
+  "I've finished the first draft. Review it based on any relevant customer feedback."
+
+const shimmerStyle = {
+  color: 'transparent',
+  background: 'linear-gradient(100deg, #686868 38%, #d7d7d7 50%, #686868 62%)',
+  backgroundSize: '250% 100%',
+  backgroundPosition: '100% 0',
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+} as const
 
 export function AiPanel() {
   return (
@@ -29,8 +42,11 @@ export function AiPanel() {
       className="absolute bg-[#2c2c2c] overflow-clip rounded-[16px] shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.4),0px_10px_15px_-3px_rgba(0,0,0,0.5)]"
       style={{ ...inter, left: AI_PANEL_X, top: AI_PANEL_Y, width: AI_PANEL_W, height: AI_PANEL_H, border: '1px solid #494949' }}
     >
-      {/* Header */}
-      <p className="absolute font-medium leading-[normal] text-[13px] text-white tracking-[0.2px] whitespace-nowrap" style={{ left: 15, top: 12 }}>
+      {/* Header — the chat is renamed after the ask is sent. */}
+      <p data-ai-title-new className="absolute font-medium leading-[normal] text-[13px] text-white tracking-[0.2px] whitespace-nowrap" style={{ left: 15, top: 12 }}>
+        New chat
+      </p>
+      <p data-ai-title-named className="absolute font-medium leading-[normal] text-[13px] text-white tracking-[0.2px] whitespace-nowrap" style={{ left: 15, top: 12 }}>
         Request for feedback on draft
       </p>
       <img alt="" className="absolute block" src={headerControls} style={{ left: 299, top: 10, width: 46, height: 22 }} />
@@ -49,37 +65,27 @@ export function AiPanel() {
         />
       </div>
 
-      {/* The sub-agent moment: spark + shimmering line. */}
-      <div data-ai-status className="absolute flex gap-[3px] items-start" style={{ left: 15, top: 139, width: 300 }}>
-        <img alt="" className="block shrink-0" src={sparkIcon} style={{ width: 16, height: 16 }} />
-        <p
-          data-ai-shimmer
-          className="font-medium leading-[1.25] text-[13px] tracking-[0.2px]"
-          style={{
-            width: 283,
-            color: 'transparent',
-            background: 'linear-gradient(100deg, #686868 38%, #d7d7d7 50%, #686868 62%)',
-            backgroundSize: '250% 100%',
-            backgroundPosition: '100% 0',
-            WebkitBackgroundClip: 'text',
-            backgroundClip: 'text',
-          }}
-        >
-          Asking Linear sub-agent for relevant customer feedback…
-        </p>
+      {/* The sub-agent moment: spinning spark + two lines the shine passes
+          one after the other. Disappears when the answer lands. */}
+      <div data-ai-status className="absolute flex gap-[3px] items-start" style={{ left: 15, top: 123, width: 300 }}>
+        <img data-ai-spark alt="" className="block shrink-0" src={sparkIcon} style={{ width: 16, height: 16 }} />
+        <div className="font-medium leading-[1.25] text-[13px] tracking-[0.2px]" style={{ width: 283 }}>
+          <p data-ai-shim1 style={shimmerStyle}>Asking Linear sub-agent for relevant</p>
+          <p data-ai-shim2 style={shimmerStyle}>customer feedback…</p>
+        </div>
       </div>
 
-      {/* The answer: three feedback widgets, then the line that moves the film
-          back onto the canvas. */}
-      <div data-ai-reply className="absolute flex flex-col gap-[8px] items-start" style={{ left: 15, top: 188, width: 283 }}>
+      {/* The answer, replacing the thinking: the line first, then the three
+          feedback widgets below it (ruling). */}
+      <div data-ai-reply className="absolute flex flex-col gap-[8px] items-start" style={{ left: 15, top: 123, width: 283 }}>
+        <p data-ai-replyline className="font-medium leading-[normal] text-[#f4f4f4] text-[13px] tracking-[0.2px]">
+          I've left 3 comments on the canvas:
+        </p>
         {FEEDBACK.map((item) => (
           <div data-ai-fb key={item.id}>
             <FeedbackWidget item={item} />
           </div>
         ))}
-        <p data-ai-replyline className="font-medium leading-[normal] text-[#f4f4f4] text-[13px] tracking-[0.2px]">
-          I've left 3 comments on the canvas.
-        </p>
       </div>
 
       {/* Input, anchored to the bottom edge; it grows upward while the ask is
@@ -99,7 +105,18 @@ export function AiPanel() {
             />
           </p>
         </div>
-        <img data-ai-send alt="" className="block shrink-0" src={inputRight} style={{ width: 62, height: 38, margin: '0 0 5px 0' }} />
+        <div className="flex items-center shrink-0" style={{ gap: 6, margin: '0 12px 10px 0' }}>
+          <img alt="" className="block" src={inputAsk} style={{ width: 28, height: 38, margin: '5px 0 -5px 0' }} />
+          <div
+            data-ai-send
+            className="flex items-center justify-center rounded-full"
+            style={{ width: 28, height: 28, background: '#0c8ce9' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 10V2M2.5 5.5L6 2L9.5 5.5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
   )

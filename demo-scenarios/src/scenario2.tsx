@@ -13,17 +13,19 @@ gsap.registerPlugin(SplitText)
 //
 // Title over the blurred Figma canvas → focus pulls and the canvas settles →
 // the cursor clicks into the AI panel while the camera punches toward it →
-// the ask types on in a quick burst → send → "Asking Linear sub-agent…"
-// shimmers while the camera holds → three feedback widgets cascade into the
-// reply → "I've left 3 comments on the canvas." → the camera pulls out WHILE
-// the panel slips away and the pins pop onto the design one after another →
-// punch into the pin by the sticky note → the comment blooms open: the
-// feedback widget and what to change → dead-still read → the mirror.
+// the ask types on in a quick burst → send — the chat renames itself → the
+// spark spins while "Asking Linear sub-agent…" shines one row after the
+// other, twice, unhurried → the thinking dissolves and the answer replaces
+// it: "I've left 3 comments on the canvas:" then three feedback widgets →
+// the camera pulls wide WHILE the panel slips away and the pins pop onto the
+// drafts → punch into the sticky-note corner → the comment blooms out of its
+// pin (contents hidden from frame 0, revealed exactly once) → dead-still
+// read → the mirror.
 //
 // Same rig discipline as scenario 1: one paused master timeline, one writer
-// per element, all state derived from the playhead. The new tool here is a
-// real camera (x, y, zoom on one wrapper) because this film has two punch-in
-// targets; targets are computed, never hand-tuned to a layout.
+// per element, all state derived from the playhead. The camera is a real rig
+// (x, y, zoom on one wrapper) because this film has two punch-in targets;
+// framings are computed, never hand-tuned to a layout.
 
 const T = {
   brandIn: 0.2,
@@ -33,18 +35,19 @@ const T = {
   punchIn: 2.85, // camera moves while the cursor is still travelling
   clickInput: 3.45,
   type: 3.6,
-  send: 5.5,
-  status: 5.95, // the sub-agent moment — shimmer, held on camera
-  cascade: 7.35, // the three widgets, arriving while the shimmer is still fading
-  replyLine: 8.05,
-  pullOut: 9.0, // camera widens WHILE the panel slips away
-  pins: 9.3,
-  punchHero: 10.05,
-  bloom: 10.55,
-  read: 11.15, // dead still — the reading time (ruling: read after placement)
-  endBlur: 12.75,
-  brandBack: 13.0,
-  end: 15.2,
+  send: 5.15,
+  rename: 5.55, // the AI names the chat just after the ask arrives
+  status: 5.75, // the sub-agent moment — spark spins, rows shine in turn
+  answer: 9.9, // thinking dissolves; the answer takes its place
+  widgets: 10.3,
+  pullOut: 11.9, // camera widens WHILE the panel slips away
+  pins: 12.2,
+  punchHero: 12.95,
+  bloom: 13.45,
+  read: 14.05, // dead still — the reading time (ruling: read after placement)
+  endBlur: 15.65,
+  brandBack: 15.9,
+  end: 18.1,
 }
 
 /** Camera framings. A target is "point P (window-local) at frame centre,
@@ -125,9 +128,13 @@ export function buildScenario2(opts: { root: HTMLElement }): {
   const brand = one<HTMLElement>('[data-layer="brand"]')
   const brandMark = one<HTMLElement>('[data-brand-mark]')
 
+  const titleNew = one<HTMLElement>('[data-ai-title-new]')
+  const titleNamed = one<HTMLElement>('[data-ai-title-named]')
   const bubble = one<HTMLElement>('[data-ai-bubble]')
   const status = one<HTMLElement>('[data-ai-status]')
-  const shimmer = one<HTMLElement>('[data-ai-shimmer]')
+  const spark = one<HTMLElement>('[data-ai-spark]')
+  const shim1 = one<HTMLElement>('[data-ai-shim1]')
+  const shim2 = one<HTMLElement>('[data-ai-shim2]')
   const widgets = q('[data-ai-fb]') as HTMLElement[]
   const replyLine = one<HTMLElement>('[data-ai-replyline]')
   const inputText = one<HTMLElement>('[data-ai-input-text]')
@@ -162,7 +169,7 @@ export function buildScenario2(opts: { root: HTMLElement }): {
   /** Window-local points the cursor visits (the camera carries it, so these
    *  stay glued to the UI through every punch). */
   const INPUT_AT = { x: 1022, y: CHROME_H + AI_PANEL_Y + 390 }
-  const SEND_AT = { x: 1305, y: CHROME_H + AI_PANEL_Y + 387 }
+  const SEND_AT = { x: 1311, y: CHROME_H + AI_PANEL_Y + 387 }
 
   const tl = gsap.timeline({ paused: true })
 
@@ -179,12 +186,17 @@ export function buildScenario2(opts: { root: HTMLElement }): {
   gsap.set(cursor, { ...tipAt(1350, 1075), opacity: 0, scale: 1 })
   gsap.set(flash, { opacity: 0, scale: 0.5 })
   gsap.set(brand, { opacity: 0 })
+  gsap.set(titleNamed, { opacity: 0 })
   gsap.set(bubble, { opacity: 0 })
   gsap.set(status, { opacity: 0 })
-  gsap.set([...widgets, replyLine], { opacity: 0 })
+  gsap.set([replyLine, ...widgets], { opacity: 0 })
   gsap.set(caret, { opacity: 0 })
   gsap.set(pins, { scale: 0 })
   gsap.set(thread, { opacity: 0, scale: 0.55 })
+  // Hidden from frame 0 so the bloom reveals them exactly once — with the
+  // natural DOM state visible, the container fade-in showed the contents,
+  // then the reveal tween reset them to invisible and faded them in again.
+  gsap.set(threadItems, { opacity: 0 })
   render()
 
   // ── Bookend, first pass: small, over the blurred canvas. ──
@@ -200,9 +212,9 @@ export function buildScenario2(opts: { root: HTMLElement }): {
   tl.to(figma, { scale: 1, y: 0, duration: 0.75, ease: 'power2.out' }, T.reveal)
   tl.to(figma, { filter: 'blur(0px) brightness(1)', duration: 0.7, ease: 'power2.out' }, T.reveal)
 
-  // ── The ask. The cursor enters while the frame still sharpens and arcs to
-  //    the AI panel's input; the camera punches toward the panel while the
-  //    cursor is still travelling. ──
+  // ── The ask. The cursor enters while the frame is still sharpening and
+  //    arcs to the AI panel's input; the camera punches toward the panel
+  //    while the cursor is still travelling. ──
   tl.addLabel('cursor', T.cursor)
   tl.to(cursor, { opacity: 1, duration: 0.16, ease: 'power1.out' }, T.cursor - 0.05)
   tl.to(
@@ -232,23 +244,24 @@ export function buildScenario2(opts: { root: HTMLElement }): {
     {
       immediateRender: false,
       keyframes: [
-        { typeP: 0.16, duration: 0.3, ease: 'none' },
-        { typeP: 0.18, duration: 0.09, ease: 'none' },
-        { typeP: 0.58, duration: 0.62, ease: 'none' },
-        { typeP: 0.61, duration: 0.11, ease: 'none' },
-        { typeP: 1, duration: 0.62, ease: 'none' },
+        { typeP: 0.16, duration: 0.28, ease: 'none' },
+        { typeP: 0.18, duration: 0.08, ease: 'none' },
+        { typeP: 0.58, duration: 0.52, ease: 'none' },
+        { typeP: 0.61, duration: 0.1, ease: 'none' },
+        { typeP: 1, duration: 0.47, ease: 'none' },
       ],
     },
     T.type,
   )
 
-  // ── Send: the cursor hops to the button, presses, and the ask becomes the
-  //    bubble on the same beat the input clears. ──
+  // ── Send: the cursor hops to the arrow, presses, and the ask becomes the
+  //    bubble on the beat the input clears. A moment later the AI names the
+  //    chat: "New chat" → "Request for feedback on draft". ──
   tl.to(cursor, { opacity: 1, duration: 0.12, ease: 'power1.out' }, T.send - 0.35)
   tl.to(cursor, { ...tipAt(SEND_AT.x, SEND_AT.y), duration: 0.32, ease: 'power2.inOut' }, T.send - 0.35)
   tl.addLabel('send', T.send)
   tl.to(cursor, { scale: 0.86, duration: 0.06, yoyo: true, repeat: 1, ease: 'power2.inOut' }, T.send)
-  tl.to(send, { scale: 0.92, duration: 0.07, yoyo: true, repeat: 1, ease: 'power2.inOut' }, T.send)
+  tl.to(send, { scale: 0.88, duration: 0.07, yoyo: true, repeat: 1, ease: 'power2.inOut' }, T.send)
   tl.fromTo(
     flash,
     { ...toStage(SEND_AT.x, SEND_AT.y), opacity: 0.55, scale: 0.32 },
@@ -264,9 +277,18 @@ export function buildScenario2(opts: { root: HTMLElement }): {
     T.send + 0.06,
   )
   tl.to(cursor, { opacity: 0, duration: 0.3, ease: 'power1.in' }, T.send + 0.25)
+  tl.addLabel('rename', T.rename)
+  tl.to(titleNew, { opacity: 0, y: -4, duration: 0.22, ease: 'power2.in' }, T.rename)
+  tl.fromTo(
+    titleNamed,
+    { opacity: 0, y: 4 },
+    { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', immediateRender: false },
+    T.rename + 0.12,
+  )
 
-  // ── The sub-agent moment. The line shimmers while the camera holds — a
-  //    slow drift keeps the frame alive without stealing the beat. ──
+  // ── The sub-agent moment, unhurried: the spark spins the whole time and
+  //    the shine passes row one, then row two — twice — while the camera
+  //    drifts a breath. Real thinking takes a moment. ──
   tl.addLabel('status', T.status)
   tl.fromTo(
     status,
@@ -275,29 +297,42 @@ export function buildScenario2(opts: { root: HTMLElement }): {
     T.status,
   )
   tl.fromTo(
-    shimmer,
-    { backgroundPosition: '100% 0' },
-    { backgroundPosition: '-150% 0', duration: 0.8, ease: 'none', repeat: 1, immediateRender: false },
-    T.status + 0.15,
+    spark,
+    { rotation: 0 },
+    { rotation: 1440, duration: 4.15, ease: 'none', immediateRender: false },
+    T.status + 0.05,
   )
-  tl.to(s, { ...camTarget(DRIFT_ZOOM, PANEL_CENTER.x, PANEL_CENTER.y), duration: 1.4, ease: 'power1.inOut' }, T.status)
+  for (const [el, at] of [
+    [shim1, 6.0],
+    [shim2, 6.6],
+    [shim1, 8.0],
+    [shim2, 8.6],
+  ] as const) {
+    tl.fromTo(
+      el,
+      { backgroundPosition: '100% 0' },
+      { backgroundPosition: '-150% 0', duration: 1.2, ease: 'none', immediateRender: false },
+      at,
+    )
+  }
+  tl.to(s, { ...camTarget(DRIFT_ZOOM, PANEL_CENTER.x, PANEL_CENTER.y), duration: 3.9, ease: 'power1.inOut' }, T.status)
 
-  // ── The answer: the shimmer resolves to rest and the three feedback
-  //    widgets cascade in over its tail, then the line that sends the film
-  //    back to the canvas. ──
-  tl.addLabel('cascade', T.cascade)
-  tl.to(shimmer, { opacity: 0.55, duration: 0.3, ease: 'power1.inOut' }, T.cascade - 0.15)
-  tl.fromTo(
-    widgets,
-    { opacity: 0, y: 12, scale: 0.97 },
-    { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'back.out(1.7)', stagger: 0.14, immediateRender: false },
-    T.cascade,
-  )
+  // ── The answer replaces the thinking: the status dissolves, and in its
+  //    place the line lands first, then the three feedback widgets pop in
+  //    below it, one after another (ruling: line, then widgets). ──
+  tl.addLabel('answer', T.answer)
+  tl.to(status, { opacity: 0, y: -6, duration: 0.3, ease: 'power2.in' }, T.answer)
   tl.fromTo(
     replyLine,
     { opacity: 0, y: 8 },
-    { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out', immediateRender: false },
-    T.replyLine,
+    { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out', immediateRender: false },
+    T.answer + 0.18,
+  )
+  tl.fromTo(
+    widgets,
+    { opacity: 0, y: 12, scale: 0.97 },
+    { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'back.out(1.7)', stagger: 0.16, immediateRender: false },
+    T.widgets,
   )
 
   // ── Out of the chat, onto the work: the camera widens WHILE the panel
@@ -318,7 +353,7 @@ export function buildScenario2(opts: { root: HTMLElement }): {
 
   // ── The bloom: punch into the sticky-note corner while the last pin is
   //    still settling; the comment opens out of its pin, contents arriving a
-  //    breath behind the surface. ──
+  //    breath behind the surface — once. ──
   tl.addLabel('punchHero', T.punchHero)
   tl.to(s, { ...camTarget(HERO_ZOOM, HERO_CENTER.x, HERO_CENTER.y), duration: 0.95, ease: 'power3.inOut' }, T.punchHero)
   tl.addLabel('bloom', T.bloom)
@@ -335,9 +370,9 @@ export function buildScenario2(opts: { root: HTMLElement }): {
     T.bloom + 0.12,
   )
 
-  // ── The read: dead still. Then the mirror — the canvas sinks into exactly
+  // ── The read: dead still. Then the mirror — the topic sinks into exactly
   //    the opening's blur-and-dim and the same small title returns. First
-  //    frame: a draft with a question on it. Last frame: the answer, placed. ──
+  //    frame: a draft with a question stuck to it. Last: the answer, placed. ──
   tl.addLabel('read', T.read)
   tl.addLabel('endBlur', T.endBlur)
   tl.to(s, { camX: 0, camY: 0, camZ: 1, duration: 0.9, ease: 'power2.inOut' }, T.endBlur)
